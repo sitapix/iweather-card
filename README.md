@@ -11,7 +11,7 @@ A weather forecast card for [Home Assistant](https://www.home-assistant.io). Its
 [![TypeScript: strict](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](tsconfig.base.json)
 [![Tested in Chromium, Firefox and WebKit](https://img.shields.io/badge/tested%20in-Chromium%20%C2%B7%20Firefox%20%C2%B7%20WebKit-45BA4B?style=flat-square)](e2e)
 
-[Features](#features) • [Install](#install) • [Use](#use) • [Examples](docs/examples.md) • [Tiles](#detail-tiles) • [Privacy](#what-leaves-your-browser) • [All options](docs/configuration.md)
+[Demo](https://sitapix.github.io/iweather-card/) • [Features](#features) • [Install](#install) • [Use](#use) • [Examples](docs/examples.md) • [Tiles](#detail-tiles) • [Privacy](#what-leaves-your-browser) • [All options](docs/configuration.md)
 
 <img src="docs/images/hero.webp" alt="The full-page layout at sunset: 61° and partly cloudy over a live sky with the moon rising, above hourly and daily forecasts, a radar map, and air quality, wind and averages tiles." width="100%">
 
@@ -197,7 +197,7 @@ pnpm build      # dist/: the card, and the files it loads from beside itself
 pnpm demo       # _site/: the demo and setup pages, with the built card beside them
 ```
 
-The demo in `demo/` runs the card on sample weather, with controls for the weather, time of day, layout, units and language. It can also show a real place's weather from Open-Meteo. `pnpm dev` serves it from source at http://127.0.0.1:4174/demo/, and `pnpm demo` builds a static copy you can host anywhere.
+The demo in `demo/` runs the card on sample weather, with controls for the weather, time of day, layout, units and language. It can also show a real place's weather from Open-Meteo. `pnpm dev` serves it from source at http://127.0.0.1:4174/demo/, and `pnpm demo` builds a static copy you can host anywhere. Each push to `main` publishes it to [GitHub Pages](https://sitapix.github.io/iweather-card/).
 
 Before the first browser test run, install the browsers with `pnpm exec playwright install chromium-headless-shell firefox webkit`. To regenerate the cloud images, run `node scripts/clouds.ts` (needs `avifenc` from libavif). To regenerate this README's images, run `node scripts/readme-images.ts` (needs Google Chrome, ffmpeg and libwebp's tools).
 
