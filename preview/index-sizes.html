@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weather sizes</title>
+<style>
+  body { margin: 0; padding: 24px 16px; background: #f2f2f4; font: 14px system-ui, sans-serif; color: #1d1d1f; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  header p { margin: 0 0 12px; color: #6e6e73; max-width: 760px; }
+  form { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  label { display: flex; gap: 6px; align-items: center; }
+  select { font: inherit; }
+  /* One line per height, the widths side by side, each card at the size a sections
+     dashboard gives it. */
+  .line { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 18px; }
+  .line > b { flex: 0 0 64px; padding-top: 4px; color: #6e6e73; font-weight: 600; }
+  figure { margin: 0; flex: none; }
+  figcaption { font-size: 12px; color: #6e6e73; margin-bottom: 4px; }
+  iweather-card { display: block; box-shadow: 0 10px 24px -16px #0008; }
+</style>
+<header>
+  <h1>Every size</h1>
+  <p>The card at each size a sections dashboard offers: columns of a section 12 wide, rows 56 px tall with 8 px between. Each card gets the box Home Assistant would give it, and its size in <code>grid_options</code>.</p>
+</header>
+<form>
+  <label>Weather <select name="scene"></select></label>
+  <label>Section <select name="section"><option value="500">Desktop, 500 px</option><option value="400">400 px</option><option value="358">Phone, 358 px</option></select></label>
+  <label>Layout <select name="layout"><option>auto</option><option>compact</option><option>strip</option><option>expanded</option></select></label>
+  <label><input type="checkbox" name="animate"> Animate</label>
+</form>
+<main></main>
+<script type="module">
+import '/src/iweather-card.ts';
+// [title, condition, sun elevation, temperature °F, cloud cover %]
+const SCENES = [
+  ['Partly cloudy', 'partlycloudy', 40, 68, 45],
+  ['Sunny', 'sunny', 45, 74, 5],
+  ['Rain', 'rainy', 30, 55, 95],
+  ['Snow', 'snowy', 20, 28, 95],
+  ['Clear night', 'clear-night', -35, 58, 0],
+];
+const COLUMNS = [3, 4, 6, 8, 12], ROWS = [1, 2, 3, 4, 5, 6, 7, 8];
+const now = Date.now(), hour = Math.floor(now / 3600000) * 3600000;
+function hassFor([title, condition, elevation, temp, cover]) {
+  const entity = 'weather.home', night = elevation < 0, wet = /rain|snow/.test(condition);
+  const hourly = Array.from({ length: 24 }, (_, i) => ({ datetime: new Date(hour + i * 3600000).toISOString(), temperature: temp + Math.round(Math.sin(i / 5) * 4), condition, precipitation_probability: wet ? 60 + (i % 4) * 8 : 0, precipitation: wet ? 0.08 : 0, wind_speed: 5 + (i % 4), wind_bearing: 200 }));
+  const daily = Array.from({ length: 10 }, (_, i) => ({ datetime: new Date(now + i * 86400000).toISOString(), condition: i ? ['sunny', 'partlycloudy', 'cloudy', 'rainy'][i % 4] : condition, temperature: temp + 6 + (i % 3), templow: temp - 8 + (i % 2), precipitation_probability: [0, 20, 40, 70][i % 4], wind_speed: 5 + [2, 3, 1, 5, 3, 1, 7, 4, 2, 1][i] }));
+  return { entity, hass: {
+    states: {
+      [entity]: { entity_id: entity, state: condition, attributes: { temperature: temp, temperature_unit: '°F', wind_speed: 7, wind_speed_unit: 'mph', precipitation_unit: 'in', humidity: 70, cloud_coverage: cover, friendly_name: 'Chicago', supported_features: 3 } },
+      'sun.sun': { state: night ? 'below_horizon' : 'above_horizon', attributes: { elevation, rising: true } },
+    },
+    locale: { language: 'en', time_format: '12' }, config: { location_name: 'Home', time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone, latitude: 41.9, longitude: -87.6 },
+    connection: { subscribeMessage(callback, message) { queueMicrotask(() => callback({ forecast: message.forecast_type === 'hourly' ? hourly : daily })); return Promise.resolve(() => {}); } },
+  } };
+}
+const form = document.querySelector('form'), main = document.querySelector('main');
+SCENES.forEach(([title], i) => form.scene.add(new Option(title, String(i))));
+// The box a sections dashboard gives a card `columns` wide and `rows` tall.
+const box = (section, columns, rows) => [(columns * (section - 11 * 8)) / 12 + (columns - 1) * 8, rows * 64 - 8];
+function show() {
+  const scene = SCENES[Number(form.scene.value)], section = Number(form.section.value);
+  main.replaceChildren(...ROWS.map(rows => {
+    const line = document.createElement('div');
+    line.className = 'line';
+    line.append(Object.assign(document.createElement('b'), { textContent: `${rows} row${rows > 1 ? 's' : ''}` }));
+    for (const columns of COLUMNS) {
+      const [width, height] = box(section, columns, rows), { entity, hass } = hassFor(scene);
+      const figure = document.createElement('figure'), card = document.createElement('iweather-card');
+      figure.innerHTML = `<figcaption>${columns} × ${rows} · ${Math.round(width)}×${height}</figcaption>`;
+      card.style.cssText = `width:${width}px;height:${height}px`;
+      card.layout = 'grid';
+      card.setConfig({ type: 'custom:iweather-card', entity, weather_layout: form.layout.value, weather_animation: form.animate.checked, grid_options: { columns, rows } });
+      card.hass = hass;
+      figure.append(card);
+      line.append(figure);
+    }
+    return line;
+  }));
+}
+form.addEventListener('change', show);
+show();
+</script>
+</html>

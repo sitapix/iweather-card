@@ -1,0 +1,27 @@
+{
+  "integration": "meteoclimatic",
+  "from": "live",
+  "units": "us",
+  "place": "Reus, Spain",
+  "latitude": 41.16,
+  "longitude": 1.11,
+  "time_zone": "Europe/Madrid",
+  "now": "2026-11-02T19:55:20+00:00",
+  "state": {
+    "state": "clear-night",
+    "attributes": {
+      "temperature": 58,
+      "temperature_unit": "°F",
+      "humidity": 85,
+      "pressure": 30.03,
+      "pressure_unit": "inHg",
+      "wind_bearing": 286.0,
+      "wind_speed": 1.24,
+      "wind_speed_unit": "mph",
+      "visibility_unit": "mi",
+      "precipitation_unit": "in"
+    }
+  },
+  "forecasts": {},
+  "notes": "Recorded from a running Home Assistant 2026.10.4 at 20:55 local time on 2 November 2026 (Europe/Madrid), with its home and time zone set to Reus, Spain and its unit system US customary. Entry for station ESCAT4300000043206B (Reus - Nord, Tarragona), an amateur station network; entity weather.meteoclimatic_weather_for_reus_nord_tarragona_escat4300000043206b_reus_nord_tarragona. No forecast of any kind and no supported_features attribute. Attributes: condition (clear-night), temperature, humidity, pressure, wind_bearing (float), wind_speed; no visibility, though visibility_unit is set. Units: °F, inHg, mph, mi, in. Home Assistant rounds every converted temperature (temperature, templow, dew_point, apparent_temperature) to a whole degree, so they arrive as integers; other converted values carry up to two decimals. Humidity, cloud_coverage, uv_index, bearings, probabilities and datetimes are the same as in the metric recording made at the same moment."
+}

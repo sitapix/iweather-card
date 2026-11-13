@@ -1,0 +1,4 @@
+run,lcp_ms,cls,interaction_ms,offscreen_task_ms_per_second,resource_body_bytes,faults
+1,240,0,96,0.5148236280125127,1612341,0
+2,212,0,64,0.41640360929223463,1612341,0
+3,212,0,64,0.39235608582852377,1612341,0

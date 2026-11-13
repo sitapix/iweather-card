@@ -1,0 +1,215 @@
+{
+  "integration": "environment_canada",
+  "from": "snapshot",
+  "units": "us",
+  "now": "2025-02-19T19:00:00+00:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: environment_canada.json's values fed to Home Assistant's WeatherEntity as native values in the units its attributes state (°C, hPa, km/h, km, mm), state and forecasts read back through the weather component with hass.config.units set to US_CUSTOMARY_SYSTEM. Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. Daily is the snapshot test_forecast_daily_with_some_previous_days_data (the unmodified fixture; its dates and values are changed below). State and hourly were built from the same test fixture (tests/components/environment_canada/fixtures/current_conditions_data.json) run through weather.py, metric. wind_bearing is missing because the observation's bearing is 0 (north) and the code tests the value for truth, so it drops 0; it drops a 0 humidity, wind speed, pressure or visibility the same way. Current conditions never carry dew_point, apparent_temperature, wind_gust_speed, cloud_coverage or uv_index, though the API has dew point, gust and UV. Current temperature falls back to the first hourly forecast, and the condition to its icon, when the observation lacks them. Daily entries are built from day and night halves: when the first half is a night, that first entry has temperature: null and a night condition (clear-night); each daily datetime is its first half's timestamp (15:00 UTC here, for night halves too). Forecasts carry only condition, temperature, templow (daily) and precipitation_probability; hourly wind in the API is ignored. condition is null for an icon code outside the integration's table. Raw API forecasts (with text summaries) are only in the separate environment_canada.get_forecasts service. Changes for realism (test-data artefacts, not integration behaviour): the fixture's current conditions and daily forecast are from Ottawa on 2022-10-03 (14.9 C, highs of 18-20 C), but its hourly forecast is from 2025-02-19 (-11 C falling to -16 C, snow from noon the next day). Daily is moved 870 days so its first (night) half is tonight, keeping 15:00:00+00:00, and its values are February ones that follow the hourly forecast: tonight low -1 -> -16; Thursday sunny 18/3 -> snowy 70 % -7/-12; Friday 20/9 -> -9/-21; Saturday 20/7 -> -6/-14; Sunday rainy 40 % 13/1 -> 2/-4; Monday 10/3 -> -2/-9 (conditions otherwise kept). Current temperature 14.9 -> -10.6 to agree with the hour under way (-11); humidity 40 stays (dry Arctic air). The night-first daily entry with temperature null is kept as the quirk it is, though Environment Canada only leads with the night half after its afternoon issue, later than 14:00 local.",
+  "state": {
+    "state": "sunny",
+    "attributes": {
+      "humidity": 40,
+      "precipitation_unit": "in",
+      "pressure": 30.33,
+      "pressure_unit": "inHg",
+      "supported_features": 3,
+      "temperature": 13,
+      "temperature_unit": "°F",
+      "visibility": 14.98,
+      "visibility_unit": "mi",
+      "wind_speed": 0.62,
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "clear-night",
+        "datetime": "2025-02-19T15:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": null,
+        "templow": 3
+      },
+      {
+        "condition": "snowy",
+        "datetime": "2025-02-20T15:00:00+00:00",
+        "precipitation_probability": 70,
+        "temperature": 19,
+        "templow": 10
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2025-02-21T15:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 16,
+        "templow": -6
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-22T15:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 21,
+        "templow": 7
+      },
+      {
+        "condition": "rainy",
+        "datetime": "2025-02-23T15:00:00+00:00",
+        "precipitation_probability": 40,
+        "temperature": 36,
+        "templow": 25
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-24T15:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 28,
+        "templow": 16
+      }
+    ],
+    "hourly": [
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-19T19:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 12
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-19T20:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 14
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-19T21:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 14
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-19T22:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 12
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-19T23:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 12
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2025-02-20T00:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 10
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2025-02-20T01:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 9
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2025-02-20T02:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 9
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T03:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 7
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T04:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 7
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T05:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 5
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T06:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 5
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T07:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 5
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T08:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 3
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T09:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 3
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T10:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 3
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T11:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 3
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T12:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 3
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T13:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 5
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T14:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 7
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T15:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 9
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-02-20T16:00:00+00:00",
+        "precipitation_probability": 20,
+        "temperature": 12
+      },
+      {
+        "condition": "snowy",
+        "datetime": "2025-02-20T17:00:00+00:00",
+        "precipitation_probability": 70,
+        "temperature": 14
+      },
+      {
+        "condition": "snowy",
+        "datetime": "2025-02-20T18:00:00+00:00",
+        "precipitation_probability": 70,
+        "temperature": 18
+      }
+    ]
+  }
+}

@@ -1,0 +1,432 @@
+{
+  "integration": "xiaomi_weather",
+  "from": "snapshot",
+  "units": "us",
+  "now": "2026-09-08T05:00:00+00:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: xiaomi_weather.json's values fed to Home Assistant's WeatherEntity as native values in the units its attributes state (°C, hPa, km/h, km, mm), state and forecasts read back through the weather component with hass.config.units set to US_CUSTOMARY_SYSTEM. Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. State is a core snapshot. Core's forecast snapshots are hand-made one- and two-entry cases, so the forecasts are built from the test's captured response (weather.json) through the xiaomi-weather library and weather.py; they pass the counts and first-entry values the test asserts. The test does not freeze the clock, so now is the first hourly entry (the current reading was published at 04:10 UTC). Daily datetimes are local (China) midnight in UTC, so 16:00 the day before; twice-daily datetimes are the day's sunrise (day half) and sunset (night half), not fixed hours. Hourly has only temperature, condition, wind_speed and wind_bearing; daily adds templow and precipitation_probability; twice-daily has no templow, its night temperature is the day's low and its wind is the day's 'to' value. Each field is set only when the API gives it with the expected unit (℃, km/h, °), so any can be missing, and temperature is then null. A twice-daily half is skipped without a sunrise or sunset, and the condition is left out for an unknown weather code. Current visibility is left out when the API sends an empty value, as here. No changes were needed for realism.",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "apparent_temperature": 70,
+      "humidity": 71,
+      "precipitation_unit": "in",
+      "pressure": 29.94,
+      "pressure_unit": "inHg",
+      "supported_features": 7,
+      "temperature": 68,
+      "temperature_unit": "°F",
+      "uv_index": 3.0,
+      "visibility_unit": "mi",
+      "wind_bearing": 27.0,
+      "wind_speed": 3.73,
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "rainy",
+        "datetime": "2026-09-07T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 70,
+        "templow": 61,
+        "wind_bearing": 27.0,
+        "wind_speed": 3.73
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-08T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 77,
+        "templow": 57,
+        "wind_bearing": 20.48,
+        "wind_speed": 2.72
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-09T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 82,
+        "templow": 57,
+        "wind_bearing": 299.11,
+        "wind_speed": 2.86
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-10T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 82,
+        "templow": 57,
+        "wind_bearing": 260.18,
+        "wind_speed": 3.13
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-11T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 82,
+        "templow": 57,
+        "wind_bearing": 174.27,
+        "wind_speed": 2.86
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-12T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 84,
+        "templow": 57,
+        "wind_bearing": 345.14,
+        "wind_speed": 3.59
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-13T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 82,
+        "templow": 57,
+        "wind_bearing": 311.47,
+        "wind_speed": 2.8
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-14T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 82,
+        "templow": 61,
+        "wind_bearing": 143.76,
+        "wind_speed": 2.29
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-15T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 84,
+        "templow": 61,
+        "wind_bearing": 117.15,
+        "wind_speed": 2.5
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-16T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 82,
+        "templow": 66,
+        "wind_bearing": 135.7,
+        "wind_speed": 3.68
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2026-09-17T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 86,
+        "templow": 66,
+        "wind_bearing": 159.17,
+        "wind_speed": 3.62
+      },
+      {
+        "condition": "rainy",
+        "datetime": "2026-09-18T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 79,
+        "templow": 63,
+        "wind_bearing": 133.65,
+        "wind_speed": 3.7
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2026-09-19T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 79,
+        "templow": 64,
+        "wind_bearing": 153.72,
+        "wind_speed": 3.89
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2026-09-20T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "temperature": 82,
+        "templow": 66,
+        "wind_bearing": 189.11,
+        "wind_speed": 3.65
+      }
+    ],
+    "hourly": [
+      {
+        "condition": "cloudy",
+        "datetime": "2026-09-08T05:00:00+00:00",
+        "temperature": 70,
+        "wind_bearing": 37.05,
+        "wind_speed": 2.86
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2026-09-08T06:00:00+00:00",
+        "temperature": 70,
+        "wind_bearing": 46.74,
+        "wind_speed": 2.09
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T07:00:00+00:00",
+        "temperature": 70,
+        "wind_bearing": 94.55,
+        "wind_speed": 1.98
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T08:00:00+00:00",
+        "temperature": 70,
+        "wind_bearing": 210.45,
+        "wind_speed": 3.4
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T09:00:00+00:00",
+        "temperature": 70,
+        "wind_bearing": 220.56,
+        "wind_speed": 3.68
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T10:00:00+00:00",
+        "temperature": 70,
+        "wind_bearing": 213.81,
+        "wind_speed": 2.93
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T11:00:00+00:00",
+        "temperature": 68,
+        "wind_bearing": 209.82,
+        "wind_speed": 2.11
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T12:00:00+00:00",
+        "temperature": 66,
+        "wind_bearing": 194.66,
+        "wind_speed": 1.5
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T13:00:00+00:00",
+        "temperature": 64,
+        "wind_bearing": 187.25,
+        "wind_speed": 1.24
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T14:00:00+00:00",
+        "temperature": 64,
+        "wind_bearing": 169.51,
+        "wind_speed": 1.23
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T15:00:00+00:00",
+        "temperature": 63,
+        "wind_bearing": 305.88,
+        "wind_speed": 1.3
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T16:00:00+00:00",
+        "temperature": 63,
+        "wind_bearing": 5.14,
+        "wind_speed": 2.0
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T17:00:00+00:00",
+        "temperature": 63,
+        "wind_bearing": 7.26,
+        "wind_speed": 2.3
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T18:00:00+00:00",
+        "temperature": 63,
+        "wind_bearing": 350.63,
+        "wind_speed": 2.34
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T19:00:00+00:00",
+        "temperature": 63,
+        "wind_bearing": 357.19,
+        "wind_speed": 2.29
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T20:00:00+00:00",
+        "temperature": 63,
+        "wind_bearing": 3.65,
+        "wind_speed": 2.11
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T21:00:00+00:00",
+        "temperature": 63,
+        "wind_bearing": 357.4,
+        "wind_speed": 1.97
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T22:00:00+00:00",
+        "temperature": 63,
+        "wind_bearing": 11.31,
+        "wind_speed": 2.17
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T23:00:00+00:00",
+        "temperature": 64,
+        "wind_bearing": 19.09,
+        "wind_speed": 3.08
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-09T00:00:00+00:00",
+        "temperature": 66,
+        "wind_bearing": 14.91,
+        "wind_speed": 3.57
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-09T01:00:00+00:00",
+        "temperature": 70,
+        "wind_bearing": 19.13,
+        "wind_speed": 3.48
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-09T02:00:00+00:00",
+        "temperature": 72,
+        "wind_bearing": 38.61,
+        "wind_speed": 3.98
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-09T03:00:00+00:00",
+        "temperature": 73,
+        "wind_bearing": 44.34,
+        "wind_speed": 4.09
+      }
+    ],
+    "twice_daily": [
+      {
+        "condition": "rainy",
+        "datetime": "2026-09-07T21:48:00+00:00",
+        "is_daytime": true,
+        "temperature": 70,
+        "wind_bearing": 27.0,
+        "wind_speed": 3.73
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-08T10:36:00+00:00",
+        "is_daytime": false,
+        "temperature": 61,
+        "wind_bearing": 27.0,
+        "wind_speed": 3.73
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-08T21:49:00+00:00",
+        "is_daytime": true,
+        "temperature": 77,
+        "wind_bearing": 20.48,
+        "wind_speed": 2.72
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2026-09-09T10:34:00+00:00",
+        "is_daytime": false,
+        "temperature": 57,
+        "wind_bearing": 44.34,
+        "wind_speed": 4.09
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-09T21:50:00+00:00",
+        "is_daytime": true,
+        "temperature": 82,
+        "wind_bearing": 299.11,
+        "wind_speed": 2.86
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2026-09-10T10:33:00+00:00",
+        "is_daytime": false,
+        "temperature": 57,
+        "wind_bearing": 210.84,
+        "wind_speed": 5.24
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-10T21:51:00+00:00",
+        "is_daytime": true,
+        "temperature": 82,
+        "wind_bearing": 260.18,
+        "wind_speed": 3.13
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2026-09-11T10:31:00+00:00",
+        "is_daytime": false,
+        "temperature": 57,
+        "wind_bearing": 204.81,
+        "wind_speed": 5.23
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-11T21:52:00+00:00",
+        "is_daytime": true,
+        "temperature": 82,
+        "wind_bearing": 174.27,
+        "wind_speed": 2.86
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2026-09-12T10:29:00+00:00",
+        "is_daytime": false,
+        "temperature": 57,
+        "wind_bearing": 195.32,
+        "wind_speed": 5.59
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-09-12T21:53:00+00:00",
+        "is_daytime": true,
+        "temperature": 84,
+        "wind_bearing": 345.14,
+        "wind_speed": 3.59
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2026-09-13T10:28:00+00:00",
+        "is_daytime": false,
+        "temperature": 57,
+        "wind_bearing": 345.15,
+        "wind_speed": 6.11
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-09-13T21:54:00+00:00",
+        "is_daytime": true,
+        "temperature": 82,
+        "wind_bearing": 311.47,
+        "wind_speed": 2.8
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2026-09-14T10:26:00+00:00",
+        "is_daytime": false,
+        "temperature": 57,
+        "wind_bearing": 198.43,
+        "wind_speed": 3.96
+      }
+    ]
+  }
+}

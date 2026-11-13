@@ -1,0 +1,47 @@
+# HACS builds nothing and dist/ isn't committed, so what it installs is what is attached to a release:
+# the card's file and the files it loads from beside itself. A release that is public with some of
+# them missing would be installed as it is, so a tag makes a draft, with every file attached and
+# checked against the build, and the draft is published by hand once it has been looked over. A tag
+# with a hyphen (1.2.0-beta.1) makes a pre-release, which HACS offers only to those who ask for betas.
+name: Release
+on:
+  push:
+    tags: ['*']
+permissions:
+  contents: write
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Only what has reached main is released.
+      - run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The version the card reports is the tag's.
+      - run: pnpm version "$TAG" --no-git-tag-version --allow-same-version
+      - run: pnpm build
+      # The notes written for it in docs/releases, where there are some, else the list of what was merged.
+      - run: |
+          notes=(--generate-notes)
+          if [ -f "docs/releases/$TAG.md" ]; then notes=(--notes-file "docs/releases/$TAG.md"); fi
+          beta=()
+          case "$TAG" in *-*) beta=(--prerelease) ;; esac
+          gh release create "$TAG" dist/* --draft --verify-tag --title "$TAG" "${notes[@]}" "${beta[@]}"
+      # What was attached, byte for byte; a draft that differs from the build goes.
+      - run: |
+          gh release download "$TAG" --dir attached
+          if ! diff -r attached dist; then
+            gh release delete "$TAG" --yes
+            exit 1
+          fi

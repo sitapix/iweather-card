@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weather · whole screen</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; display: flex; background: #e4e5e9; font: 13px system-ui, sans-serif; color: #1d1d1f; overflow: hidden; }
+  /* The stage holds one screen, centred; a screen is a Home Assistant panel view: the toolbar,
+     then the card filling the rest. */
+  .stage { flex: 1; min-width: 0; display: grid; place-items: center; padding: 16px; }
+  body[data-size=window] .stage { padding: 0; }
+  .screen { display: flex; flex-direction: column; background: #111; overflow: hidden; box-shadow: 0 24px 60px -24px #0009; border-radius: 14px; }
+  body[data-size=window] .screen { border-radius: 0; box-shadow: none; }
+  .toolbar { flex: none; height: 56px; display: flex; align-items: center; gap: 18px; padding: 0 16px; background: #1c1c1e; color: #e8e8ea; font-size: 18px; }
+  .toolbar svg { width: 22px; height: 22px; fill: currentColor; opacity: .9; }
+  .toolbar .tab { margin-left: 8px; padding: 0 4px; height: 56px; display: flex; align-items: center; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; border-bottom: 2px solid #4fc3f7; }
+  .toolbar .grow { flex: 1; }
+  iweather-card { display: block; flex: none; }
+  /* The controls: a drawer on the right, hidden with its tab. */
+  aside { flex: none; width: 330px; height: 100%; overflow: auto; background: #f7f7f9; border-left: 1px solid #d6d7dc; padding: 14px 16px 40px; }
+  body[data-drawer=closed] aside { display: none; }
+  .drawer-tab { position: fixed; right: 12px; top: 12px; z-index: 10; border: 0; border-radius: 16px; padding: 7px 12px; background: #1d1d1f; color: #fff; font: 600 12px system-ui; cursor: pointer; box-shadow: 0 2px 8px #0004; }
+  body[data-drawer=open] .drawer-tab { right: 344px; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  aside > p { margin: 0 0 12px; color: #6e6e73; line-height: 1.4; }
+  fieldset { border: 0; margin: 0 0 14px; padding: 0; }
+  legend { font-weight: 700; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #6e6e73; margin-bottom: 6px; padding: 0; }
+  label { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  label.field { justify-content: space-between; }
+  select, input[type=text], input[type=number] { font: inherit; padding: 4px 6px; border: 1px solid #c9cad0; border-radius: 7px; background: #fff; }
+  select { max-width: 190px; }
+  input[type=number] { width: 64px; }
+  .tiles { list-style: none; margin: 0; padding: 0; }
+  .tiles li { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+  .tiles li label { flex: 1; padding: 0; }
+  .tiles button { border: 1px solid #c9cad0; background: #fff; border-radius: 6px; width: 24px; height: 22px; padding: 0; cursor: pointer; font-size: 11px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row button, .copy { border: 0; border-radius: 8px; padding: 6px 11px; background: #1d1d1f; color: #fff; font: 600 12px system-ui; cursor: pointer; }
+  .readout { font: 12px ui-monospace, monospace; background: #fff; border: 1px solid #d6d7dc; border-radius: 8px; padding: 8px 10px; line-height: 1.55; white-space: pre-wrap; }
+  pre { font: 11.5px/1.45 ui-monospace, monospace; background: #1d1d1f; color: #e9e9ec; border-radius: 8px; padding: 10px 12px; margin: 6px 0 0; overflow: auto; }
+</style>
+<main class="stage">
+  <div class="screen">
+    <div class="toolbar" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+      <span>Home</span><span class="tab">Weather</span><span class="grow"></span>
+      <svg viewBox="0 0 24 24"><path d="M10 4a6 6 0 0 1 4.9 9.5l5 5-1.4 1.4-5-5A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+    </div>
+    <iweather-card></iweather-card>
+  </div>
+</main>
+<button type="button" class="drawer-tab"></button>
+<aside>
+  <h1>The whole screen</h1>
+  <p>The card's page layout as a Home Assistant panel view shows it: the toolbar, then the card filling the screen and scrolling in place. Change what's on it here; the YAML at the bottom sets up the same card.</p>
+  <fieldset>
+    <legend>Screen</legend>
+    <label class="field">Size <select data-option="size"></select></label>
+    <div class="row"><button type="button" data-action="tour">Scroll down and back</button><button type="button" data-action="top">Back to top</button></div>
+    <label><input type="checkbox" data-option="outline"> Outline and name each part</label>
+  </fieldset>
+  <fieldset>
+    <legend>While scrolling</legend>
+    <div class="readout" aria-live="off"></div>
+  </fieldset>
+  <fieldset>
+    <legend>Weather</legend>
+    <label class="field">Sky <select data-option="scene"></select></label>
+    <label class="field">Units <select data-option="units"><option value="auto">The entity's</option><option value="imperial">°F, mph, in</option><option value="metric">°C, km/h, mm</option></select></label>
+  </fieldset>
+  <fieldset>
+    <legend>On the card</legend>
+    <label class="field">Place name <input type="text" data-option="name" placeholder="Forecast Home"></label>
+    <label class="field">Town or city <input type="text" data-option="place" placeholder="St. Louis"></label>
+    <label><input type="checkbox" data-option="show_name"> Place name shown</label>
+    <label><input type="checkbox" data-option="show_high_low"> Today's high and low</label>
+    <label><input type="checkbox" data-option="show_forecast"> Hourly forecast</label>
+    <label class="field">Hours <input type="number" min="2" max="48" data-option="forecast_hours"></label>
+    <label><input type="checkbox" data-option="show_daily"> Daily forecast</label>
+    <label class="field">Days <input type="number" min="1" max="10" data-option="forecast_days"></label>
+    <label><input type="checkbox" data-option="alert"> Severe weather alert</label>
+    <label><input type="checkbox" data-option="nowcast"> Next-hour rain sensor</label>
+    <label><input type="checkbox" data-option="aqi"> Air quality sensor</label>
+    <label class="field">Air quality <select data-option="aqi_value"><option value="35">35 · Good</option><option value="93">93 · Moderate</option><option value="160">160 · Unhealthy</option><option value="240">240 · Very unhealthy</option></select></label>
+    <label><input type="checkbox" data-option="averages"> Averages from Open-Meteo</label>
+    <label class="field">Map <select data-option="map"><option value="rainviewer">Radar (RainViewer)</option><option value="local">Home Assistant data only</option><option value="none">None</option></select></label>
+    <label><input type="checkbox" data-option="weather_scene"> Live sky</label>
+    <label><input type="checkbox" data-option="weather_animation"> Animation</label>
+    <label><input type="checkbox" data-option="stale"> Data last written hours ago</label>
+  </fieldset>
+  <fieldset>
+    <legend>Tiles, in order</legend>
+    <ul class="tiles"></ul>
+  </fieldset>
+  <fieldset>
+    <legend>Dashboard YAML</legend>
+    <button type="button" class="copy" data-action="copy">Copy</button>
+    <pre class="yaml"></pre>
+  </fieldset>
+</aside>
+<script type="module">
+import '/src/iweather-card.ts';
+import { sceneHour, sunTimes, zoneAt } from '../demo/scene-clock.ts';
+const card = document.querySelector('iweather-card'), screen = document.querySelector('.screen'), stage = document.querySelector('.stage');
+const now = Date.now(), HOUR = 3600000, DAY = 24 * HOUR, hour = Math.floor(now / HOUR) * HOUR, iso = t => new Date(t).toISOString();
+const SIZES = { window: ['This window'], desktop: ['Desktop · 1440 × 900', 1440, 900], laptop: ['Laptop · 1280 × 800', 1280, 800], tablet: ['Tablet · 820 × 1180', 820, 1180], 'tablet-wide': ['Tablet sideways · 1180 × 820', 1180, 820], phone: ['Phone · 390 × 844', 390, 844] };
+const TILES = ['air_quality', 'wind', 'moon', 'sun', 'uv', 'map', 'feels_like', 'averages', 'precipitation', 'visibility', 'humidity', 'pressure'];
+const TILE_NAMES = { air_quality: 'Air quality', feels_like: 'Feels like', map: 'Map', wind: 'Wind', sun: 'Sunrise and sunset', moon: 'Moon', uv: 'UV index', averages: 'Averages', precipitation: 'Precipitation', visibility: 'Visibility', humidity: 'Humidity', pressure: 'Pressure' };
+// [name, condition, sun elevation, rising, °F, cloud cover %, rain in/h, other attributes]
+const SCENES = [
+  ['Sunny', 'sunny', 45, true, 74, 5],
+  ['Mostly clear', 'sunny', 40, true, 72, 30],
+  ['Partly cloudy', 'partlycloudy', 40, true, 68, 50],
+  ['Mostly cloudy', 'cloudy', 35, false, 63, 75],
+  ['Cloudy', 'cloudy', 35, false, 60, 98],
+  ['Fog', 'fog', 15, true, 54, 100, 0, { visibility: 0.3 }],
+  ['Haze', 'fog', 25, true, 70, 40, 0, { visibility: 3 }],
+  ['Drizzle', 'rainy', 30, false, 56, 95, 0.01],
+  ['Rain', 'rainy', 30, false, 55, 100, 0.08],
+  ['Sun showers', 'rainy', 35, false, 64, 40, 0.05],
+  ['Heavy rain', 'pouring', 30, false, 54, 100, 0.4],
+  ['Thunderstorms', 'lightning-rainy', 25, false, 71, 90, 0.2],
+  ['Snow', 'snowy', 20, true, 28, 100, 0.04],
+  ['Heavy snow', 'snowy', 20, true, 25, 100, 0.15],
+  ['Sleet', 'snowy-rainy', 20, true, 31, 100, 0.05],
+  ['Hail', 'hail', 30, false, 52, 90, 0.1],
+  ['Windy', 'windy', 40, true, 65, 30, 0, { wind_speed: 28, wind_gust_speed: 41 }],
+  ['Exceptional', 'exceptional', 30, false, 80, 60],
+  ['Sunrise', 'sunny', 2, true, 52, 5],
+  ['Sunset, partly cloudy', 'partlycloudy', 3, false, 61, 45],
+  ['Clear night', 'clear-night', -35, false, 58, 0],
+  ['Partly cloudy night', 'partlycloudy', -30, false, 55, 45],
+  ['Rain at night', 'rainy', -30, false, 50, 100, 0.08],
+  ['Snow at night', 'snowy', -30, false, 24, 100, 0.04],
+  ['Thunderstorms at night', 'lightning-rainy', -30, false, 60, 90, 0.2],
+  ['Cloudy night', 'cloudy', -30, false, 43, 98],
+];
+const WET = /rain|pour|hail|snow|lightning-rainy/;
+const DEFAULTS = { size: 'window', outline: false, scene: '0', units: 'auto', name: '', place: '', show_name: true, show_high_low: true, show_forecast: true, forecast_hours: 24, show_daily: true, forecast_days: 10, alert: true, nowcast: true, aqi: true, averages: true, map: 'rainviewer', weather_scene: true, weather_animation: true, stale: false, aqi_value: '93', tiles: TILES.join(',') };
+// The settings live in the address, so a reload or a shared link shows the same screen.
+const options = { ...DEFAULTS };
+for (const [key, value] of new URLSearchParams(location.hash.slice(1)))
+  if (key in DEFAULTS) options[key] = typeof DEFAULTS[key] === 'boolean' ? value === '1' : typeof DEFAULTS[key] === 'number' ? Number(value) : value;
+const save = () => history.replaceState(null, '', '#' + new URLSearchParams(Object.entries(options).filter(([key, value]) => value !== DEFAULTS[key]).map(([key, value]) => [key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value)])));
+
+// An alert that fits the weather: winter storms in the cold, storms with lightning, else heat; with
+// the message, what to do and how soon, where and from whom, as Meteoalarm passes them on.
+const alertFor = (condition, temp) => ({
+  urgency: 'Expected', onset: iso(Date.now()), senderName: 'NWS St. Louis MO', areaDesc: 'St. Louis, MO; St. Louis City, MO; St. Charles, MO', web: 'https://www.weather.gov/lsx/',
+  ...(temp <= 34 ? { event: 'Winter Storm Warning', headline: 'Heavy snow, with 6 to 10 inches expected through tomorrow morning.', severity: 'Severe', responseType: 'Avoid',
+      description: '* WHAT...Heavy snow. Total snow accumulations of 6 to 10 inches.\n\n* WHERE...St. Louis metro area.\n\n* IMPACTS...Travel could be very difficult.', instruction: 'If you must travel, keep an extra flashlight, food, and water in your vehicle in case of an emergency.' }
+    : /lightning/.test(condition) ? { event: 'Severe Thunderstorm Warning', headline: 'Damaging winds up to 60 mph and quarter-size hail possible.', severity: 'Severe', urgency: 'Immediate', responseType: 'Shelter',
+      description: 'At 3:10 PM CDT, a severe thunderstorm was located near the city,\nmoving east at 30 mph.\n\nHAZARD...60 mph wind gusts and quarter size hail.\n\nIMPACT...Expect damage to roofs, siding, and trees.', instruction: 'For your protection move to an interior room on the lowest floor of a building.' }
+    : { event: 'Heat Advisory', headline: 'Heat index values up to 105 expected this afternoon.', severity: 'Moderate', responseType: 'Prepare',
+      description: '* WHAT...Heat index values up to 105 expected.\n\n* WHERE...St. Louis metro area.\n\n* WHEN...From noon to 7 PM CDT this evening.\n\n* IMPACTS...Hot temperatures and high humidity may cause heat illnesses.', instruction: 'Drink plenty of fluids, stay in an air-conditioned room, stay out of the sun, and check up on relatives and neighbors.' }),
+});
+
+// A Home Assistant stand-in: the weather entity with 48 hours and 10 days of forecast, the
+// sun, an air quality sensor and its device's pollutants, a next-hour rain sensor, a severe
+// weather alert and yesterday's history.
+function hassFor() {
+  const [, condition, elevation, rising, temp, cover, rain = 0, extra = {}] = SCENES[Number(options.scene)] ?? SCENES[0];
+  const local = sceneHour(elevation, rising), night = elevation < 0, wet = WET.test(condition), entity = 'weather.forecast_home';
+  // Wet weather clears after half a day; fair weather follows the clock, clear by night.
+  const hourly = Array.from({ length: 48 }, (_, i) => {
+    const h = (Math.floor(local) + i) % 24, dark = h < 6 || h >= 18, still = wet && i < 12;
+    const c = still ? condition : wet ? (i < 16 ? 'cloudy' : 'partlycloudy') : condition === 'sunny' && dark ? 'clear-night' : condition === 'clear-night' && !dark ? 'sunny' : condition;
+    return { datetime: iso(hour + i * HOUR), condition: c, temperature: Math.round(temp + Math.sin(((h - 9) / 24) * 2 * Math.PI) * 6), precipitation_probability: still ? 60 + (i % 4) * 9 : i % 9 === 4 ? 10 : 0, precipitation: still ? rain * (0.6 + (i % 3) * 0.3) : 0, cloud_coverage: still ? cover : Math.max(0, cover - i), wind_speed: (extra.wind_speed ?? 6) + (i % 4), wind_gust_speed: (extra.wind_gust_speed ?? 12) + (i % 5), wind_bearing: 200 + i * 3, uv_index: dark ? 0 : Math.max(0, 6 - Math.abs(h - 13) * 1.2), humidity: wet ? 88 : 60, pressure: +(30.1 - i * 0.008).toFixed(2), visibility: extra.visibility ?? 10 };
+  });
+  const DAYS = ['sunny', 'partlycloudy', 'cloudy', 'rainy', 'sunny', 'partlycloudy', 'lightning-rainy', 'cloudy', 'snowy', 'sunny'];
+  const daily = Array.from({ length: 10 }, (_, i) => ({ datetime: iso(now + i * DAY), condition: i ? DAYS[i] : condition === 'clear-night' ? 'sunny' : condition, temperature: temp + 6 + (i % 3) * 2 - (i % 5), templow: temp - 10 + (i % 2) * 2 - (i % 4), precipitation_probability: [wet ? 90 : 0, 10, 30, 80, 0, 20, 60, 40, 70, 0][i], precipitation: [wet ? 0.4 : 0, 0, 0, 0.3, 0, 0, 0.5, 0.1, 0.2, 0][i], wind_speed: (extra.wind_speed ?? 6) + [2, 3, 1, 5, 3, 1, 7, 4, 2, 1][i] }));
+  return {
+    states: {
+      [entity]: { entity_id: entity, state: condition, attributes: { temperature: temp, dew_point: temp - 11, temperature_unit: '°F', humidity: wet ? 88 : 60, cloud_coverage: cover, uv_index: night ? 0 : 4.2, pressure: 30.1, pressure_unit: 'inHg', visibility: extra.visibility ?? 10, visibility_unit: 'mi', wind_bearing: 200, wind_speed: extra.wind_speed ?? 6, wind_gust_speed: extra.wind_gust_speed ?? 12, wind_speed_unit: 'mph', precipitation: rain, precipitation_unit: 'in', attribution: 'Weather forecast from met.no, delivered by the Norwegian Meteorological Institute.', friendly_name: 'Forecast Home', supported_features: 3 }, last_updated: iso(options.stale ? now - 4.5 * HOUR : now), last_reported: iso(options.stale ? now - 4.5 * HOUR : now) },
+      'sun.sun': { entity_id: 'sun.sun', state: night ? 'below_horizon' : 'above_horizon', attributes: { elevation, rising, ...sunTimes(local, now) } },
+      'sensor.aqi': { entity_id: 'sensor.aqi', state: options.aqi_value, attributes: { device_class: 'aqi' } },
+      'sensor.pm25': { entity_id: 'sensor.pm25', state: '28.4', attributes: { device_class: 'pm25', unit_of_measurement: 'µg/m³' } },
+      'sensor.ozone': { entity_id: 'sensor.ozone', state: '61', attributes: { device_class: 'ozone', unit_of_measurement: 'µg/m³' } },
+      // Five-minute rain rates: falling now in wet weather, else starting in about 15 minutes.
+      'sensor.nowcast': { entity_id: 'sensor.nowcast', state: '0', attributes: { unit_of_measurement: 'mm/h', forecast: Array.from({ length: 13 }, (_, i) => ({ datetime: iso(now + i * 300000), precipitation: (wet ? [2.4, 2.8, 3.1, 2.6, 2, 1.6, 1.1, 0.8, 0.4, 0.2, 0, 0, 0] : [0, 0, 0, 0.4, 1.2, 2.8, 4.5, 3.1, 1.6, 0.6, 0.2, 0, 0])[i] })) } },
+      'binary_sensor.meteoalarm': { entity_id: 'binary_sensor.meteoalarm', state: 'on', attributes: { ...alertFor(condition, temp), expires: iso(now + 8 * HOUR), friendly_name: 'Meteoalarm' } },
+    },
+    entities: { 'sensor.aqi': { device_id: 'air' }, 'sensor.pm25': { device_id: 'air' }, 'sensor.ozone': { device_id: 'air' } },
+    locale: { language: 'en', time_format: '12' }, config: { location_name: 'Home', time_zone: zoneAt(local, now), latitude: 38.63, longitude: -90.2 },
+    // Yesterday from history: a slightly sunnier, breezier day.
+    // Yesterday's air quality, a little worse than today's.
+    callWS: async message => ({ 'sensor.aqi': [{ s: '112', lu: Date.parse(message.start_time) / 1000 }], [entity]: Array.from({ length: 30 }, (_, i) => { const t = Date.parse(message.start_time) + i * HOUR, h = new Date(t).getHours(); return { s: 'sunny', lu: t / 1000, a: { uv_index: h >= 9 && h <= 16 ? Math.max(0, 5.4 - Math.abs(h - 12.5) * 1.3) : 0, wind_speed: 5 + (i % 4), humidity: 52 + (i % 6), temperature: temp - 4 + Math.round(Math.sin(((h - 9) / 24) * 2 * Math.PI) * 8), temperature_unit: '°F', wind_speed_unit: 'mph' } }; }) }),
+    connection: { subscribeMessage(callback, message) { queueMicrotask(() => callback({ forecast: message.forecast_type === 'hourly' ? hourly : daily })); return Promise.resolve(() => {}); } },
+  };
+}
+
+// The card's settings, leaving out whatever is already its default.
+function cardConfig() {
+  const config = { type: 'custom:iweather-card', entity: 'weather.forecast_home', weather_layout: 'page' };
+  if (options.name.trim()) config.name = options.name.trim();
+  if (options.place.trim()) config.place_name = options.place.trim();
+  for (const flag of ['show_name', 'show_high_low', 'show_forecast', 'show_daily', 'weather_scene', 'weather_animation']) if (!options[flag]) config[flag] = false;
+  if (options.forecast_hours !== 24) config.forecast_hours = options.forecast_hours;
+  if (options.forecast_days !== 10) config.forecast_days = options.forecast_days;
+  if (options.units === 'imperial') Object.assign(config, { temperature_unit: '°F', wind_speed_unit: 'mph', precipitation_unit: 'in', pressure_unit: 'inHg', distance_unit: 'mi' });
+  if (options.units === 'metric') Object.assign(config, { temperature_unit: '°C', wind_speed_unit: 'km/h', precipitation_unit: 'mm', pressure_unit: 'hPa', distance_unit: 'km' });
+  if (options.aqi) config.air_quality_entity = 'sensor.aqi';
+  if (options.nowcast) config.next_hour_entity = 'sensor.nowcast';
+  if (options.alert) config.alert_entities = ['binary_sensor.meteoalarm'];
+  if (options.averages) config.averages = 'open-meteo';
+  if (options.map !== 'none') config.map = options.map;
+  const tiles = options.tiles.split(',').filter(Boolean);
+  if (tiles.join(',') !== TILES.join(',')) config.tiles = tiles;
+  return config;
+}
+const yaml = config => ['views:', '  - title: Weather', '    type: panel', '    cards:', ...Object.entries(config).map(([key, value], i) => `${i ? '        ' : '      - '}${key}: ${Array.isArray(value) ? `[${value.join(', ')}]` : value}`)].join('\n');
+
+// What each part is, drawn over the card: dashed outlines and a name tag on every panel, and
+// on the hero, whose outline's lower edge is the band the panels pass under once scrolled.
+const OUTLINE = `:is(.forecast,.daily,.tile,.alert,.next-hour){outline:1.5px dashed #ffd54a;outline-offset:-1.5px}
+:is(.forecast,.daily,.tile,.alert,.next-hour,.hero)::after{position:absolute;right:8px;bottom:6px;z-index:9;padding:1px 6px;border-radius:6px;background:#ffd54a;color:#1d1d1f;font:600 10px/1.4 system-ui;pointer-events:none}
+.tile::after{content:"tile: " attr(data-tile)}.forecast::after{content:"hourly"}.daily::after{content:"daily"}.alert::after{content:"alert"}.next-hour::after{content:"next hour"}
+.hero{outline:1.5px dashed #7ef0ff;outline-offset:-1.5px}.hero::after{content:"conditions (hero)";top:8px;bottom:auto;background:#7ef0ff}`;
+function outline() {
+  const root = card.shadowRoot;
+  if (!root) return;
+  let style = root.querySelector('style[data-outline]');
+  if (!style) { style = document.createElement('style'); style.dataset.outline = ''; style.textContent = OUTLINE; root.append(style); }
+  style.disabled = !options.outline;
+}
+
+// The screen: the window's whole stage, or a device's size where the stage has room for it.
+function place() {
+  document.body.dataset.size = options.size;
+  const [, width, height] = SIZES[options.size] ?? SIZES.window, room = stage.getBoundingClientRect(), pad = options.size === 'window' ? 0 : 32;
+  const w = Math.min(width ?? room.width, room.width - pad), h = Math.min(height ?? room.height, room.height - pad);
+  screen.style.width = `${w}px`;
+  screen.style.height = `${h}px`;
+  card.style.setProperty('--iweather-height', `${h - 56}px`);
+}
+
+// The scroll as the card sees it: how far, how collapsed the conditions are, where the band ends.
+// Taken from the card's own record of its scroll: asked of the page at each frame, the browser
+// would first work out the style of every part the scroll moves, and this page would scroll worse
+// than the card does anywhere else.
+const readout = document.querySelector('.readout');
+let columns = '';
+function report(measured, tries = 10) {
+  const root = card.shadowRoot, weather = root?.querySelector('.weather'), scroll = card.pageScroll;
+  if (!weather || !scroll || document.body.dataset.drawer !== 'open') return;
+  if (measured) columns = getComputedStyle(weather).getPropertyValue('--cols').trim();
+  const layout = scroll.layout, { top, pin } = scroll.at, fold = layout ? Math.max(0, layout.hero - layout.pinned) : 0;
+  // A page that has just started to scroll is measured on the card's next frame.
+  if (weather.dataset.scroll === 'true' && !layout && tries) { requestAnimationFrame(() => report(measured, tries - 1)); return; }
+  const cut = [...root.querySelectorAll('[data-cut]')].map(node => node.dataset.tile ?? node.className.split(' ')[0]);
+  readout.textContent = weather.dataset.scroll === 'true' && layout
+    ? `Scrolled   ${Math.round(top)} of ${Math.round(layout.range)} px\nConditions ${Math.round((fold ? Math.min(1, top / fold) : 1) * 100)}% collapsed\nBand ends  ${Math.round(pin)} px from the top\nColumns    ${columns}\nUnder band ${cut.length ? cut.join(', ') : 'nothing'}`
+    : 'The page fits the screen, so it does not scroll.';
+}
+let watched;
+function watch() {
+  const scroller = card.shadowRoot?.querySelector('.weather-content');
+  if (scroller && scroller !== watched) { watched = scroller; scroller.addEventListener('scroll', () => requestAnimationFrame(() => report(false)), { passive: true }); }
+  requestAnimationFrame(() => requestAnimationFrame(() => report(true)));
+}
+
+function apply() {
+  const config = cardConfig();
+  card.setConfig(config);
+  card.hass = hassFor();
+  place();
+  outline();
+  watch();
+  document.querySelector('.yaml').textContent = yaml(config);
+  save();
+}
+
+// Controls.
+const sizeSelect = document.querySelector('[data-option=size]'), sceneSelect = document.querySelector('[data-option=scene]');
+for (const [key, [label]] of Object.entries(SIZES)) sizeSelect.append(new Option(label, key));
+SCENES.forEach(([label], index) => sceneSelect.append(new Option(label, String(index))));
+for (const input of document.querySelectorAll('[data-option]')) {
+  const key = input.dataset.option;
+  if (input.type === 'checkbox') input.checked = options[key];
+  else input.value = String(options[key]);
+  input.addEventListener(input.type === 'text' ? 'input' : 'change', () => {
+    options[key] = input.type === 'checkbox' ? input.checked : input.type === 'number' ? Math.round(Math.min(Number(input.max), Math.max(Number(input.min), Number(input.value) || 0))) : input.value;
+    apply();
+  });
+}
+const list = document.querySelector('.tiles');
+function drawTiles() {
+  const on = options.tiles.split(',').filter(Boolean), order = [...on, ...TILES.filter(tile => !on.includes(tile))];
+  list.replaceChildren(...order.map((tile, index) => {
+    const item = document.createElement('li');
+    item.innerHTML = `<label><input type="checkbox"> ${TILE_NAMES[tile]}</label><button type="button" aria-label="Earlier">▲</button><button type="button" aria-label="Later">▼</button>`;
+    const box = item.querySelector('input');
+    box.checked = on.includes(tile);
+    const commit = next => { options.tiles = next.filter(name => name === tile ? box.checked : on.includes(name)).join(','); drawTiles(); apply(); };
+    box.addEventListener('change', () => commit(order));
+    const [up, down] = item.querySelectorAll('button');
+    up.disabled = index === 0;
+    down.disabled = index === order.length - 1;
+    const swap = to => { const next = [...order]; [next[index], next[to]] = [next[to], next[index]]; commit(next); };
+    up.addEventListener('click', () => swap(index - 1));
+    down.addEventListener('click', () => swap(index + 1));
+    return item;
+  }));
+}
+drawTiles();
+
+// Scrolls the card's page to its end and back, eased, to watch the panels pass under the band.
+function tour() {
+  const scroller = card.shadowRoot?.querySelector('.weather-content');
+  if (!scroller) return;
+  const max = scroller.scrollHeight - scroller.clientHeight, start = performance.now(), length = Math.max(4000, max * 6);
+  const step = time => { const t = Math.min(1, (time - start) / length); scroller.scrollTop = max * (0.5 - Math.cos(t * 2 * Math.PI) / 2); if (t < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+document.querySelector('[data-action=tour]').addEventListener('click', tour);
+document.querySelector('[data-action=top]').addEventListener('click', () => card.shadowRoot?.querySelector('.weather-content')?.scrollTo({ top: 0, behavior: 'smooth' }));
+document.querySelector('[data-action=copy]').addEventListener('click', event => { navigator.clipboard?.writeText(document.querySelector('.yaml').textContent); event.target.textContent = 'Copied'; setTimeout(() => (event.target.textContent = 'Copy'), 1200); });
+const tab = document.querySelector('.drawer-tab'), drawer = open => { document.body.dataset.drawer = open ? 'open' : 'closed'; tab.textContent = open ? 'Hide settings' : 'Settings'; requestAnimationFrame(place); watch(); };
+tab.addEventListener('click', () => drawer(document.body.dataset.drawer !== 'open'));
+drawer(true);
+addEventListener('resize', place);
+// Home Assistant tells the card of a panel view where it is.
+card.layout = 'panel';
+apply();
+</script>
+</html>

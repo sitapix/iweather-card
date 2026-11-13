@@ -1,0 +1,27 @@
+{
+  "integration": "zamg",
+  "from": "live",
+  "units": "us",
+  "place": "Vienna, Austria",
+  "latitude": 48.21,
+  "longitude": 16.37,
+  "time_zone": "Europe/Vienna",
+  "now": "2026-11-02T19:55:08+00:00",
+  "state": {
+    "state": "unknown",
+    "attributes": {
+      "temperature": 44,
+      "temperature_unit": "°F",
+      "humidity": 77,
+      "pressure": 29.57,
+      "pressure_unit": "inHg",
+      "wind_bearing": 346.0,
+      "wind_speed": 9.84,
+      "wind_speed_unit": "mph",
+      "visibility_unit": "mi",
+      "precipitation_unit": "in"
+    }
+  },
+  "forecasts": {},
+  "notes": "Recorded from a running Home Assistant 2026.10.4 at 20:55 local time on 2 November 2026 (Europe/Vienna), with its home and time zone set to Vienna, Austria and its unit system US customary. Entry for station 11035 (WIEN/HOHE WARTE); entity weather.wien_hohe_warte. The state is 'unknown': the entity never gives a condition. There is no supported_features attribute and no forecast of any kind. Attributes: temperature, humidity, pressure, wind_bearing (float), wind_speed; no visibility, though visibility_unit is set. pressure is the station's own reading, not reduced to sea level, so it reads low (1001.3 hPa, 29.57 inHg, at 198 m). Units: °F, inHg, mph, mi, in. Home Assistant rounds every converted temperature (temperature, templow, dew_point, apparent_temperature) to a whole degree, so they arrive as integers; other converted values carry up to two decimals. Humidity, cloud_coverage, uv_index, bearings, probabilities and datetimes are the same as in the metric recording made at the same moment."
+}

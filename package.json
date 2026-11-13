@@ -1,0 +1,53 @@
+{
+  "name": "iweather-card",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "A forecast card for Home Assistant, with live scenery, hourly conditions, precipitation and wind, and a 10-day outlook.",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "dev": "vite",
+    "perf": "node scripts/weather-performance.ts",
+    "build": "vite build",
+    "demo": "vite build && vite build -c demo/vite.config.ts",
+    "test": "vitest run",
+    "test:changed": "vitest run --changed origin/main",
+    "e2e": "playwright test",
+    "typecheck": "tsc -p . && tsc -p src",
+    "lint": "biome lint --error-on-warnings && oxlint --deny-warnings --disable-nested-config && ! grep -rnE '(oxlint|eslint)-disable|biome-ignore' src test e2e scripts demo *.ts && node scripts/names.ts",
+    "format": "biome format --write",
+    "check": "pnpm typecheck && pnpm lint && biome format && pnpm test && pnpm build && pnpm compat && pnpm e2e",
+    "check:quick": "pnpm typecheck && pnpm lint && biome format && pnpm test:changed",
+    "prepare": "git rev-parse --git-dir > /dev/null 2>&1 || exit 0; git config core.hooksPath .githooks && git config blame.ignoreRevsFile .git-blame-ignore-revs",
+    "compat": "eslint --flag unstable_native_nodejs_ts_config --max-warnings 0 dist/iweather-card.js && stylelint --max-warnings 0 src/iweather-card.css",
+    "e2e:ha": "playwright test -c e2e/ha",
+    "e2e:look": "playwright test -c e2e/look"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "@vitest/browser-playwright": "^5.0.5",
+    "eslint": "^10.14.0",
+    "eslint-plugin-compat": "^7.0.2",
+    "lefthook": "^2.2.2",
+    "maplibre-gl": "6.16.0",
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "playwright": "^1.64.1",
+    "stylelint": "18.0.0",
+    "stylelint-browser-compat": "1.0.0-beta.200",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5",
+    "yaml": "2.9.1"
+  },
+  "browserslist": [
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 121",
+    "safari >= 16.4",
+    "ios_saf >= 16.4"
+  ]
+}

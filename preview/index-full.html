@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weather full layout</title>
+<style>
+  body { margin: 0; padding: 24px 16px; background: #f2f2f4; font: 14px system-ui, sans-serif; color: #1d1d1f; display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+  figure { margin: 0; } figcaption { margin-bottom: 6px; color: #6e6e73; }
+  iweather-card { display: block; }
+</style>
+<figure><figcaption>Desktop · 900 wide</figcaption><iweather-card id="wide" style="width:900px"></iweather-card></figure>
+<figure><figcaption>Phone · 390 wide</figcaption><iweather-card id="phone" style="width:390px"></iweather-card></figure>
+<figure><figcaption>Panel view · fills the screen and scrolls in place</figcaption><iweather-card id="panel" style="width:1000px"></iweather-card></figure>
+<script type="module">
+import '/src/iweather-card.ts';
+// Sample values shaped like a Met.no entity, plus an AQI sensor. The card shows the entity's name and real forecast in Home Assistant.
+const now = Date.now(), hour = Math.floor(now / 3600000) * 3600000, day = 86400000;
+const local = h => { const d = new Date(now); d.setHours(h, 0, 0, 0); return d.getTime(); };
+const hourly = Array.from({ length: 48 }, (_, i) => { const t = hour + i * 3600000, h = new Date(t).getHours(); return { datetime: new Date(t).toISOString(), temperature: 64 + Math.round(Math.sin((h - 9) / 24 * 2 * Math.PI) * 9), condition: h > 17 || h < 7 ? (i % 5 === 2 ? 'partlycloudy' : 'clear-night') : i % 3 === 0 ? 'partlycloudy' : 'sunny', wind_speed: 3 + (i % 5), wind_bearing: 190, uv_index: h >= 9 && h <= 16 ? Math.max(0, 5 - Math.abs(h - 12.5) * 1.3) : 0, precipitation: i >= 30 && i < 40 ? [.01, .03, .06, .12, .2, .14, .08, .04, .02, .01][i - 30] : 0, humidity: 60, pressure: +(30.33 - i * .012).toFixed(2), visibility: i >= 30 && i < 40 ? 4 : 10, wind_gust_speed: 9 + (i % 7) * 2 }; });
+const daily = Array.from({ length: 10 }, (_, i) => ({ datetime: new Date(local(12) + i * day).toISOString(), condition: ['partlycloudy', 'cloudy', 'sunny', 'sunny', 'cloudy', 'rainy', 'rainy', 'rainy', 'rainy', 'partlycloudy'][i], temperature: [75, 72, 77, 80, 77, 70, 71, 70, 63, 58][i], templow: [52, 53, 55, 56, 58, 59, 60, 61, 51, 45][i], precipitation: [0, 0, 0, 0, 0, .3, .5, .4, .2, 0][i], wind_speed: 3 + [2, 3, 1, 5, 3, 1, 7, 4, 2, 1][i] }));
+const iso = t => new Date(t).toISOString(), next = t => t > now ? t : t + day;
+for (const id of ['wide', 'phone', 'panel']) {
+  const card = document.getElementById(id), entity = 'weather.forecast_home';
+  // Home Assistant tells the card of a panel view where it is.
+  if (id === 'panel') card.layout = 'panel';
+  card.setConfig({ type: 'custom:iweather-card', entity, weather_layout: 'page', forecast_days: 10, weather_animation: false, air_quality_entity: 'sensor.aqi', alert_entities: ['binary_sensor.meteoalarm'], averages: 'open-meteo', map: 'rainviewer', next_hour_entity: 'sensor.nowcast' });
+  card.hass = {
+    states: {
+      [entity]: { entity_id: entity, state: 'partlycloudy', attributes: { temperature: 72, dew_point: 55, temperature_unit: '°F', humidity: 60, cloud_coverage: 70, uv_index: 4.2, pressure: 30.33, pressure_unit: 'inHg', visibility: 10, wind_bearing: 190.9, wind_speed: 4, wind_speed_unit: 'mph', visibility_unit: 'mi', precipitation_unit: 'in', friendly_name: 'Forecast Home', supported_features: 3 } },
+      'sun.sun': { state: 'above_horizon', attributes: { next_rising: iso(next(local(7) + 22 * 60000)), next_setting: iso(next(local(18) + 7 * 60000)), next_noon: iso(next(local(12) + 44 * 60000)), elevation: 30, rising: false } },
+      'sensor.aqi': { entity_id: 'sensor.aqi', state: '93', attributes: { device_class: 'aqi', attribution: 'Air quality data provided by a sample station' } },
+      'sensor.pm25': { entity_id: 'sensor.pm25', state: '28.4', attributes: { device_class: 'pm25', unit_of_measurement: 'µg/m³' } },
+      'sensor.pm10': { entity_id: 'sensor.pm10', state: '49', attributes: { device_class: 'pm10', unit_of_measurement: 'µg/m³' } },
+      'sensor.ozone': { entity_id: 'sensor.ozone', state: '61', attributes: { device_class: 'ozone', unit_of_measurement: 'µg/m³' } },
+      'sensor.no2': { entity_id: 'sensor.no2', state: '19', attributes: { device_class: 'nitrogen_dioxide', unit_of_measurement: 'ppb' } },
+      'sensor.co': { entity_id: 'sensor.co', state: '300', attributes: { device_class: 'carbon_monoxide', unit_of_measurement: 'ppb' } },
+      // Five-minute rain rates, starting in about 15 minutes, like a nowcast sensor lists them.
+      'sensor.nowcast': { entity_id: 'sensor.nowcast', state: '0', attributes: { unit_of_measurement: 'mm/h', forecast: Array.from({ length: 13 }, (_, i) => ({ datetime: iso(now + i * 300000), precipitation: [0, 0, 0, .4, 1.2, 2.8, 4.5, 3.1, 1.6, .6, .2, 0, 0][i] })) } },
+      'binary_sensor.meteoalarm': { entity_id: 'binary_sensor.meteoalarm', state: 'on', attributes: { event: 'Heat Advisory', headline: 'Heat index values up to 105 expected this afternoon.', severity: 'Moderate', expires: iso(now + 8 * 3600000), friendly_name: 'Meteoalarm' } },
+    },
+    entities: Object.fromEntries(['aqi', 'pm25', 'pm10', 'ozone', 'no2', 'co'].map(name => [`sensor.${name}`, { device_id: 'air' }])),
+    locale: { language: 'en', time_format: '12' }, config: { time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone, latitude: 38.63, longitude: -90.2 },
+    // Yesterday from history: a slightly sunnier, breezier day.
+    callWS: async message => ({ 'sensor.aqi': [{ s: '90', lu: Date.parse(message.start_time) / 1000 }], [entity]: Array.from({ length: 30 }, (_, i) => { const t = Date.parse(message.start_time) + i * 3600000, h = new Date(t).getHours(); return { s: 'sunny', lu: t / 1000, a: { uv_index: h >= 9 && h <= 16 ? Math.max(0, 5.4 - Math.abs(h - 12.5) * 1.3) : 0, wind_speed: 5 + (i % 4), humidity: 52 + (i % 6), temperature: 68 + Math.round(Math.sin((h - 9) / 24 * 2 * Math.PI) * 8), temperature_unit: '°F', wind_speed_unit: 'mph' } }; }) }),
+    connection: { subscribeMessage(callback, message) { queueMicrotask(() => callback({ forecast: message.forecast_type === 'hourly' ? hourly : daily })); return Promise.resolve(() => {}); } },
+  };
+}
+</script>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "iWeather Card",
+  "filename": "iweather-card.js",
+  "render_readme": true,
+  "homeassistant": "2023.9.3",
+  "hide_default_branch": true
+}

@@ -1,0 +1,23 @@
+{
+  "integration": "knx",
+  "from": "source",
+  "units": "metric",
+  "now": "2026-11-02T15:10:00+01:00",
+  "notes": "Built by running homeassistant/components/knx/weather.py's weather entity (Home Assistant 2026.10.4) over an xknx 3.20.0 Weather device fed the group telegrams a typical KNX weather station sends, decoded by xknx's own DPTs; core's test_weather.py uses token values (0.4 C, 0.4 %, 0.4 m/s). Values are realistic for a German home on a dull November afternoon. Native units are °C, Pa and m/s, converted by Home Assistant. Current only, no forecasts and no supported_features attribute: temperature (DPT 9.001), humidity (DPT 9.007, rounded to a whole percent), pressure (DPT 9.006, a 2-byte float, so in steps of about 0.8 hPa: 101330 Pa arrives as 101335.04 Pa, 1013.35 hPa), wind_speed (DPT 9.005) and wind_bearing (DPT 5.003, a whole degree in steps of 1.4), each only when its group address is configured, so any can be missing. Never visibility, dew point, apparent temperature, gusts, cloud cover or UV. The condition is worked out by xknx, not measured: wind and rain alarms lightning-rainy, frost and rain snowy-rainy, rain rainy, wind windy; otherwise the brightest facade decides, in summer (21 April to 1 October) cloudy at 2000-20000 lx and sunny above, in winter cloudy at 999-4500 lx and sunny above; otherwise clear-night if the day/night object says night, else 'exceptional'. So a dark winter day under 999 lx, or any night without a day/night object, reads 'exceptional', and an overcast night reads clear-night. Here the brightest facade has 3200 lx in winter: cloudy.",
+  "state": {
+    "state": "cloudy",
+    "attributes": {
+      "humidity": 82,
+      "precipitation_unit": "mm",
+      "pressure": 1013.35,
+      "pressure_unit": "hPa",
+      "temperature": 9.9,
+      "temperature_unit": "°C",
+      "visibility_unit": "km",
+      "wind_bearing": 226,
+      "wind_speed": 11.52,
+      "wind_speed_unit": "km/h"
+    }
+  },
+  "forecasts": {}
+}

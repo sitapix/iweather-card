@@ -1,0 +1,391 @@
+{
+  "integration": "tomorrowio",
+  "from": "snapshot",
+  "units": "metric",
+  "now": "2021-03-07T17:48:00+00:00",
+  "notes": "State built from the test fixture's current values (tests/components/tomorrowio/fixtures/v4.json) run through weather.py. Forecasts are the snapshot's entries, with numbers re-converted below, from the 'Daily' entity (the only one new installs get; legacy ones may keep 'Hourly' and 'Nowcast' entities with the same forecasts). Current conditions carry ozone but never dew_point, apparent_temperature, wind_gust_speed, cloud_coverage or uv_index; each is present only when the API gives it. Forecasts carry humidity and dew_point only when the API gives them (here only the first entry of each). Hourly datetimes fall at :48 past the hour; entries from before today (local) are dropped. At most 14 daily and 24 hourly entries. Daily precipitation is the average hourly intensity times 24. precipitation_probability is null when the API value isn't a number. Changes for realism (test-data artefacts): core's fixture holds imperial numbers (F, inHg, mph, mi, in/h) that the test reads as metric, giving 44.1 C and 30.35 hPa. Every number here is the fixture's raw value fed to Home Assistant 2026.10.4's weather entity as °F/inHg/mph/mi/in and converted to the metric units the attributes claim (now 44.1 -> 6.7 C, 30.35 -> 1027.77 hPa, 33.59 -> 15.02 km/h, 8.15 -> 13.12 km). now was the test's frozen clock, 2021-03-06T23:59:59+00:00, 18 hours before the data begins; it is now 2021-03-07T17:48:00+00:00, the time of the fixture's readings, which are also its first hourly entry. The first hourly and first daily entries gave humidity 58 % beside a dew point of 12.76 F at 44.13 F, which means about 28 %; humidity is 28 % there (the current 23 % already agreed). The hour at 2021-03-08T03:48:00+00:00 has temperature -0.0: Home Assistant rounds 31.91 F (-0.05 C) to one decimal and keeps the sign.",
+  "state": {
+    "state": "sunny",
+    "attributes": {
+      "humidity": 23,
+      "ozone": 46.53,
+      "precipitation_unit": "mm",
+      "pressure": 1027.77,
+      "pressure_unit": "hPa",
+      "supported_features": 3,
+      "temperature": 6.7,
+      "temperature_unit": "°C",
+      "visibility": 13.12,
+      "visibility_unit": "km",
+      "wind_bearing": 315.14,
+      "wind_speed": 15.02,
+      "wind_speed_unit": "km/h"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-07T11:00:00+00:00",
+        "dew_point": -10.7,
+        "humidity": 28,
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 7.7,
+        "templow": -3.3,
+        "wind_bearing": 239.6,
+        "wind_speed": 15.27
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-08T11:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 9.7,
+        "templow": -3.2,
+        "wind_bearing": 262.82,
+        "wind_speed": 11.65
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-09T11:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 19.4,
+        "templow": -0.3,
+        "wind_bearing": 229.3,
+        "wind_speed": 11.35
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-10T11:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 18.5,
+        "templow": 3.0,
+        "wind_bearing": 149.91,
+        "wind_speed": 17.12
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-11T11:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 19.0,
+        "templow": 9.0,
+        "wind_bearing": 210.45,
+        "wind_speed": 25.25
+      },
+      {
+        "condition": "rainy",
+        "datetime": "2021-03-12T11:00:00+00:00",
+        "precipitation": 0.12,
+        "precipitation_probability": 25,
+        "temperature": 19.9,
+        "templow": 12.1,
+        "wind_bearing": 217.98,
+        "wind_speed": 19.79
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-13T11:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 25,
+        "temperature": 12.5,
+        "templow": 6.1,
+        "wind_bearing": 58.79,
+        "wind_speed": 15.64
+      },
+      {
+        "condition": "snowy",
+        "datetime": "2021-03-14T10:00:00+00:00",
+        "precipitation": 23.96,
+        "precipitation_probability": 95,
+        "temperature": 6.1,
+        "templow": 0.8,
+        "wind_bearing": 70.25,
+        "wind_speed": 26.15
+      },
+      {
+        "condition": "snowy",
+        "datetime": "2021-03-15T10:00:00+00:00",
+        "precipitation": 1.46,
+        "precipitation_probability": 55,
+        "temperature": 6.5,
+        "templow": -1.5,
+        "wind_bearing": 84.47,
+        "wind_speed": 25.57
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-16T10:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 6.1,
+        "templow": -1.6,
+        "wind_bearing": 103.85,
+        "wind_speed": 10.8
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-17T10:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 11.3,
+        "templow": 1.3,
+        "wind_bearing": 145.41,
+        "wind_speed": 11.7
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-18T10:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 10,
+        "temperature": 12.3,
+        "templow": 5.2,
+        "wind_bearing": 62.99,
+        "wind_speed": 10.59
+      },
+      {
+        "condition": "rainy",
+        "datetime": "2021-03-19T10:00:00+00:00",
+        "precipitation": 2.93,
+        "precipitation_probability": 55,
+        "temperature": 9.4,
+        "templow": 4.1,
+        "wind_bearing": 68.54,
+        "wind_speed": 22.39
+      },
+      {
+        "condition": "snowy",
+        "datetime": "2021-03-20T10:00:00+00:00",
+        "precipitation": 1.22,
+        "precipitation_probability": 33,
+        "temperature": 4.5,
+        "templow": 1.7,
+        "wind_bearing": 56.98,
+        "wind_speed": 27.92
+      }
+    ],
+    "hourly": [
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-07T17:48:00+00:00",
+        "dew_point": -10.7,
+        "humidity": 28,
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 6.7,
+        "wind_bearing": 315.14,
+        "wind_speed": 15.02
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-07T18:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 7.1,
+        "wind_bearing": 321.71,
+        "wind_speed": 14.23
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-07T19:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 7.6,
+        "wind_bearing": 323.38,
+        "wind_speed": 14.32
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-07T20:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 7.4,
+        "wind_bearing": 318.43,
+        "wind_speed": 15.08
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-07T21:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 7.0,
+        "wind_bearing": 320.9,
+        "wind_speed": 12.96
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-07T22:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 5.5,
+        "wind_bearing": 322.11,
+        "wind_speed": 7.02
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-07T23:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 3.8,
+        "wind_bearing": 295.94,
+        "wind_speed": 7.95
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-08T00:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 2.3,
+        "wind_bearing": 11.94,
+        "wind_speed": 9.0
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2021-03-08T01:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 1.3,
+        "wind_bearing": 13.68,
+        "wind_speed": 8.96
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T02:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 0.5,
+        "wind_bearing": 14.93,
+        "wind_speed": 8.71
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T03:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -0.0,
+        "wind_bearing": 26.07,
+        "wind_speed": 7.42
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T04:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -1.6,
+        "wind_bearing": 51.27,
+        "wind_speed": 4.17
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T05:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -2.6,
+        "wind_bearing": 343.25,
+        "wind_speed": 5.33
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T06:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -2.9,
+        "wind_bearing": 341.46,
+        "wind_speed": 6.87
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T07:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -3.1,
+        "wind_bearing": 322.34,
+        "wind_speed": 5.68
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T08:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -3.3,
+        "wind_bearing": 294.69,
+        "wind_speed": 5.87
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T09:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -1.1,
+        "wind_bearing": 325.32,
+        "wind_speed": 5.15
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T10:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -0.5,
+        "wind_bearing": 322.27,
+        "wind_speed": 4.57
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T11:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -2.6,
+        "wind_bearing": 310.14,
+        "wind_speed": 9.0
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2021-03-08T12:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": -1.5,
+        "wind_bearing": 324.8,
+        "wind_speed": 11.35
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2021-03-08T13:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 0.7,
+        "wind_bearing": 335.16,
+        "wind_speed": 10.4
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-08T14:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 2.8,
+        "wind_bearing": 324.49,
+        "wind_speed": 9.46
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2021-03-08T15:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 4.4,
+        "wind_bearing": 310.68,
+        "wind_speed": 8.93
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2021-03-08T16:48:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "temperature": 5.8,
+        "wind_bearing": 304.18,
+        "wind_speed": 8.79
+      }
+    ]
+  }
+}

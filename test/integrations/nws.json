@@ -1,0 +1,51 @@
+{
+  "integration": "nws",
+  "from": "snapshot",
+  "units": "metric",
+  "now": "2019-08-12T20:00:00-04:00",
+  "notes": "State built from the test's DEFAULT_OBSERVATION (tests/components/nws/const.py) run through weather.py in the metric system; the test asserts state 'sunny' and the mock's values, which are changed below. Forecasts are the snapshot's entries, with the numbers changed below. Current conditions never carry dew_point, apparent_temperature, wind_gust_speed, cloud_coverage or uv_index (the code doesn't set them, though the observation has dewpoint, windGust, heatIndex and windChill). Each attribute is present only when the observation has it. No daily forecast: twice_daily (day/night periods, is_daytime) and hourly only. Forecast temperature, dew_point and wind_speed are null when the API omits them; condition is null without an icon; precipitation_probability, humidity and wind_bearing are passed through and can be null. A weather code outside the integration's table passes through as the raw NWS name, so condition can be a non-standard string. Short and detailed text are only in the separate nws.get_forecasts_extra service, not get_forecasts. Changes for realism (test-data artefacts): the mocks fill every reading with 10 in its own unit, so the file had 10 C and 10 % humidity now beside a thunderstorm forecast of 10 F (-12.2 C), dew point 4 F (-15.6 C) and 75 % on an August evening. Now: temperature 26.1, humidity 70, pressure 1012.5 hPa and visibility 16.09 km (wind 10 km/h from 180 stays); the hour under way 25.0 C (77 F) with dew point 20.3; tonight's low 22.2 C (72 F) with dew point 17.6. Humidity 75, 89 %, lightning-rainy and 16.09 km/h from 180 stay in both.",
+  "state": {
+    "state": "sunny",
+    "attributes": {
+      "humidity": 70,
+      "precipitation_unit": "mm",
+      "pressure": 1012.5,
+      "pressure_unit": "hPa",
+      "supported_features": 6,
+      "temperature": 26.1,
+      "temperature_unit": "°C",
+      "visibility": 16.09,
+      "visibility_unit": "km",
+      "wind_bearing": 180,
+      "wind_speed": 10.0,
+      "wind_speed_unit": "km/h"
+    }
+  },
+  "forecasts": {
+    "hourly": [
+      {
+        "condition": "lightning-rainy",
+        "datetime": "2019-08-12T20:00:00-04:00",
+        "dew_point": 20.3,
+        "humidity": 75,
+        "precipitation_probability": 89,
+        "temperature": 25.0,
+        "wind_bearing": 180,
+        "wind_speed": 16.09
+      }
+    ],
+    "twice_daily": [
+      {
+        "condition": "lightning-rainy",
+        "datetime": "2019-08-12T20:00:00-04:00",
+        "dew_point": 17.6,
+        "humidity": 75,
+        "is_daytime": false,
+        "precipitation_probability": 89,
+        "temperature": 22.2,
+        "wind_bearing": 180,
+        "wind_speed": 16.09
+      }
+    ]
+  }
+}

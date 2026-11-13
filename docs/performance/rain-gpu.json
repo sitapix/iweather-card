@@ -1,0 +1,3048 @@
+{
+  "gpu-before-chrome": {
+    "label": "gpu-before-chrome",
+    "warmup": 1800,
+    "sample": 5000,
+    "phaseBase": 8000,
+    "engine": "chrome",
+    "headed": false,
+    "windowOcclusion": null,
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9812.5,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 5012.300000011921,
+        "backgrounded": false,
+        "drawsPerSecond": 29.926381102416705,
+        "times": {
+          "card": {
+            "count": 150,
+            "mean": 2.1519999990860623,
+            "p95": 2.5,
+            "max": 2.899999976158142
+          },
+          "sky": {
+            "count": 150,
+            "mean": 1.8446666659911473,
+            "p95": 2.199999988079071,
+            "max": 2.5999999940395355
+          },
+          "glass": {
+            "count": 150,
+            "mean": 0.2959999998410543,
+            "p95": 0.4000000059604645,
+            "max": 0.5
+          }
+        },
+        "drawIntervals": {
+          "count": 149,
+          "mean": 33.33624161069825,
+          "p95": 33.900000005960464,
+          "max": 34.20000001788139
+        },
+        "raf": {
+          "count": 300,
+          "mean": 16.665666666666667,
+          "p95": 16.700000000000728,
+          "max": 16.800000000000182
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9974861839850186,
+        "taskMsPerSecond": 82.14270829351024
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9815.699999988079,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 5017.5999999940395,
+        "backgrounded": false,
+        "drawsPerSecond": 30.094068877586768,
+        "times": {
+          "card": {
+            "count": 151,
+            "mean": 2.5245033115740645,
+            "p95": 3.0999999940395355,
+            "max": 3.4000000059604645
+          },
+          "sky": {
+            "count": 151,
+            "mean": 2.2046357628130755,
+            "p95": 2.7000000178813934,
+            "max": 3
+          },
+          "glass": {
+            "count": 151,
+            "mean": 0.29933774727859247,
+            "p95": 0.4000000059604645,
+            "max": 0.4000000059604645
+          }
+        },
+        "drawIntervals": {
+          "count": 150,
+          "mean": 33.333333333333336,
+          "p95": 33.900000005960464,
+          "max": 34.39999997615814
+        },
+        "raf": {
+          "count": 300,
+          "mean": 16.666333333333338,
+          "p95": 16.700000000000728,
+          "max": 16.80000000000109
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9964724170930207,
+        "taskMsPerSecond": 96.78821658049436
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9811.699999988079,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 5017.9000000059605,
+        "backgrounded": false,
+        "drawsPerSecond": 30.092269674529312,
+        "times": {
+          "card": {
+            "count": 151,
+            "mean": 2.4423841046576467,
+            "p95": 3,
+            "max": 3.5
+          },
+          "sky": {
+            "count": 151,
+            "mean": 2.125165560979717,
+            "p95": 2.7000000178813934,
+            "max": 3.2000000178813934
+          },
+          "glass": {
+            "count": 151,
+            "mean": 0.294701987347066,
+            "p95": 0.4000000059604645,
+            "max": 0.4000000059604645
+          }
+        },
+        "drawIntervals": {
+          "count": 150,
+          "mean": 33.33199999988079,
+          "p95": 34.099999994039536,
+          "max": 34.400000005960464
+        },
+        "raf": {
+          "count": 300,
+          "mean": 16.665999999999997,
+          "p95": 16.799999999999272,
+          "max": 16.80000000000291
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9963929133689512,
+        "taskMsPerSecond": 93.28911713336996
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9811.59999999404,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 5017.4000000059605,
+        "backgrounded": false,
+        "drawsPerSecond": 30.095268465703477,
+        "times": {
+          "card": {
+            "count": 151,
+            "mean": 2.169536424196319,
+            "p95": 4.299999982118607,
+            "max": 5.0999999940395355
+          },
+          "sky": {
+            "count": 151,
+            "mean": 1.7490066218849838,
+            "p95": 3.5,
+            "max": 4.300000011920929
+          },
+          "glass": {
+            "count": 151,
+            "mean": 0.4013245042586169,
+            "p95": 0.800000011920929,
+            "max": 1.0999999940395355
+          }
+        },
+        "drawIntervals": {
+          "count": 150,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34.20000001788139
+        },
+        "raf": {
+          "count": 300,
+          "mean": 16.665999999999997,
+          "p95": 16.700000000000728,
+          "max": 16.800000000000182
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9964922071180412,
+        "taskMsPerSecond": 84.08107821096459
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9814.299999982119,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 5007.5,
+        "backgrounded": false,
+        "drawsPerSecond": 29.955067398901647,
+        "times": {
+          "card": {
+            "count": 150,
+            "mean": 3.286000000635783,
+            "p95": 5.199999988079071,
+            "max": 5.9000000059604645
+          },
+          "sky": {
+            "count": 150,
+            "mean": 2.7533333333333334,
+            "p95": 4.300000011920929,
+            "max": 5.200000017881393
+          },
+          "glass": {
+            "count": 150,
+            "mean": 0.5000000007947286,
+            "p95": 0.800000011920929,
+            "max": 1
+          }
+        },
+        "drawIntervals": {
+          "count": 149,
+          "mean": 33.330201342401885,
+          "p95": 34.29999998211861,
+          "max": 34.599999994039536
+        },
+        "raf": {
+          "count": 300,
+          "mean": 16.665999999999997,
+          "p95": 16.700000000000728,
+          "max": 16.80000000000109
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9984623065401895,
+        "taskMsPerSecond": 124.57410103050097
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9807.09999999404,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 5018.199999988079,
+        "backgrounded": false,
+        "drawsPerSecond": 30.09047068677189,
+        "times": {
+          "card": {
+            "count": 151,
+            "mean": 1.999337749370676,
+            "p95": 2.7000000178813934,
+            "max": 3.5999999940395355
+          },
+          "sky": {
+            "count": 151,
+            "mean": 1.6649006620937625,
+            "p95": 2.300000011920929,
+            "max": 3.2999999821186066
+          },
+          "glass": {
+            "count": 151,
+            "mean": 0.3165562922591405,
+            "p95": 0.4000000059604645,
+            "max": 0.5
+          }
+        },
+        "drawIntervals": {
+          "count": 150,
+          "mean": 33.3326666667064,
+          "p95": 34,
+          "max": 34.30000001192093
+        },
+        "raf": {
+          "count": 300,
+          "mean": 16.66600000000001,
+          "p95": 16.700000000000728,
+          "max": 16.80000000000291
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9963333466206767,
+        "taskMsPerSecond": 79.3731046491023
+      }
+    ],
+    "faults": []
+  },
+  "gpu-final-chrome": {
+    "label": "gpu-final-chrome",
+    "warmup": 1800,
+    "sample": 6000,
+    "phaseBase": 8000,
+    "engine": "chrome",
+    "headed": false,
+    "windowOcclusion": null,
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9827,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6011.799999982119,
+        "backgrounded": false,
+        "drawsPerSecond": 60.048571143596554,
+        "times": {
+          "card": {
+            "count": 361,
+            "mean": 2.1795013856524577,
+            "p95": 2.5999999940395355,
+            "max": 3.5
+          },
+          "sky": {
+            "count": 361,
+            "mean": 1.9587257632423305,
+            "p95": 2.4000000059604645,
+            "max": 3.2000000178813934
+          },
+          "glass": {
+            "count": 361,
+            "mean": 0.20609418209900157,
+            "p95": 0.30000001192092896,
+            "max": 0.4000000059604645
+          }
+        },
+        "drawIntervals": {
+          "count": 360,
+          "mean": 16.665277777777778,
+          "p95": 17.5,
+          "max": 17.700000017881393
+        },
+        "raf": {
+          "count": 360,
+          "mean": 16.665833333333335,
+          "p95": 16.799999999999272,
+          "max": 16.800000000000182
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9979872916627044,
+        "taskMsPerSecond": 149.00299599148434
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9846.59999999404,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6015.300000011921,
+        "backgrounded": false,
+        "drawsPerSecond": 60.0136319051892,
+        "times": {
+          "card": {
+            "count": 361,
+            "mean": 2.0656509698262835,
+            "p95": 2.4000000059604645,
+            "max": 2.5
+          },
+          "sky": {
+            "count": 361,
+            "mean": 1.8590027700665914,
+            "p95": 2.199999988079071,
+            "max": 2.300000011920929
+          },
+          "glass": {
+            "count": 361,
+            "mean": 0.1939058176698447,
+            "p95": 0.30000001192092896,
+            "max": 0.4000000059604645
+          }
+        },
+        "drawIntervals": {
+          "count": 360,
+          "mean": 16.666111111144225,
+          "p95": 17.5,
+          "max": 17.80000001192093
+        },
+        "raf": {
+          "count": 360,
+          "mean": 16.66583333333333,
+          "p95": 16.799999999999272,
+          "max": 16.80000000000109
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9974066131345253,
+        "taskMsPerSecond": 139.03141905098113
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9816.399999976158,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6014.600000023842,
+        "backgrounded": false,
+        "drawsPerSecond": 60.020616499612444,
+        "times": {
+          "card": {
+            "count": 361,
+            "mean": 2.6739612184568124,
+            "p95": 3.2999999821186066,
+            "max": 3.800000011920929
+          },
+          "sky": {
+            "count": 361,
+            "mean": 2.4645429374108354,
+            "p95": 3,
+            "max": 3.5999999940395355
+          },
+          "glass": {
+            "count": 361,
+            "mean": 0.19418282456014954,
+            "p95": 0.30000001192092896,
+            "max": 0.30000001192092896
+          }
+        },
+        "drawIntervals": {
+          "count": 360,
+          "mean": 16.663888888888888,
+          "p95": 17.400000005960464,
+          "max": 17.80000001192093
+        },
+        "raf": {
+          "count": 360,
+          "mean": 16.66611111111111,
+          "p95": 16.799999999999272,
+          "max": 16.80000000000291
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9975393209816474,
+        "taskMsPerSecond": 177.90330186627693
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9970.300000011921,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6194.5999999940395,
+        "backgrounded": false,
+        "drawsPerSecond": 57.63083976372058,
+        "times": {
+          "card": {
+            "count": 357,
+            "mean": 2.4291316526276723,
+            "p95": 3.5,
+            "max": 7.200000017881393
+          },
+          "sky": {
+            "count": 357,
+            "mean": 2.126890755501114,
+            "p95": 3.0999999940395355,
+            "max": 6.800000011920929
+          },
+          "glass": {
+            "count": 357,
+            "mean": 0.28515406265980053,
+            "p95": 0.5,
+            "max": 0.5999999940395355
+          }
+        },
+        "drawIntervals": {
+          "count": 356,
+          "mean": 17.36966292133157,
+          "p95": 17.30000001192093,
+          "max": 114.59999999403954
+        },
+        "raf": {
+          "count": 355,
+          "mean": 17.417183098591547,
+          "p95": 16.799999999999727,
+          "max": 100
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9981435443783212,
+        "taskMsPerSecond": 242.1641385856481
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9829.700000017881,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6020,
+        "backgrounded": false,
+        "drawsPerSecond": 59.966777408637874,
+        "times": {
+          "card": {
+            "count": 361,
+            "mean": 2.0919667588871933,
+            "p95": 2.5,
+            "max": 3.800000011920929
+          },
+          "sky": {
+            "count": 361,
+            "mean": 1.8094182821026799,
+            "p95": 2.100000023841858,
+            "max": 3.5
+          },
+          "glass": {
+            "count": 361,
+            "mean": 0.25678670340297627,
+            "p95": 0.3999999761581421,
+            "max": 0.5999999940395355
+          }
+        },
+        "drawIntervals": {
+          "count": 360,
+          "mean": 16.663888888888888,
+          "p95": 17.5,
+          "max": 17.799999982118607
+        },
+        "raf": {
+          "count": 360,
+          "mean": 16.665833333333335,
+          "p95": 16.799999999999272,
+          "max": 16.80000000000109
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9966279069767443,
+        "taskMsPerSecond": 147.01985020490218
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9825.59999999404,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6015,
+        "backgrounded": false,
+        "drawsPerSecond": 60.0166251039069,
+        "times": {
+          "card": {
+            "count": 361,
+            "mean": 2.4983379508980095,
+            "p95": 2.7000000178813934,
+            "max": 3.899999976158142
+          },
+          "sky": {
+            "count": 361,
+            "mean": 2.2157894738658315,
+            "p95": 2.4000000059604645,
+            "max": 3.4000000059604645
+          },
+          "glass": {
+            "count": 361,
+            "mean": 0.2656509697932616,
+            "p95": 0.30000001192092896,
+            "max": 0.5
+          }
+        },
+        "drawIntervals": {
+          "count": 360,
+          "mean": 16.665833333383002,
+          "p95": 17.5,
+          "max": 17.700000017881393
+        },
+        "raf": {
+          "count": 360,
+          "mean": 16.665555555555553,
+          "p95": 16.700000000000728,
+          "max": 16.80000000000291
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9974397339983374,
+        "taskMsPerSecond": 171.3532538002963
+      }
+    ],
+    "faults": []
+  },
+  "gpu-before-firefox": {
+    "label": "gpu-before-firefox",
+    "warmup": 1800,
+    "sample": 6000,
+    "phaseBase": 8000,
+    "engine": "firefox",
+    "headed": true,
+    "windowOcclusion": "0",
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9892,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6083,
+        "backgrounded": false,
+        "drawsPerSecond": 31.727765904981094,
+        "times": {
+          "card": {
+            "count": 193,
+            "mean": 8.746113989637307,
+            "p95": 23,
+            "max": 27
+          },
+          "sky": {
+            "count": 193,
+            "mean": 4.808290155440415,
+            "p95": 6,
+            "max": 7
+          },
+          "glass": {
+            "count": 193,
+            "mean": 3.911917098445596,
+            "p95": 18,
+            "max": 22
+          }
+        },
+        "drawIntervals": {
+          "count": 192,
+          "mean": 31.46875,
+          "p95": 42,
+          "max": 50
+        },
+        "raf": {
+          "count": 199,
+          "mean": 30.359999999999996,
+          "p95": 41.68000000000029,
+          "max": 50
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9932007233273055,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9891,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6032,
+        "backgrounded": false,
+        "drawsPerSecond": 33.98541114058355,
+        "times": {
+          "card": {
+            "count": 205,
+            "mean": 8.834146341463414,
+            "p95": 22,
+            "max": 80
+          },
+          "sky": {
+            "count": 205,
+            "mean": 5.170731707317073,
+            "p95": 6,
+            "max": 14
+          },
+          "glass": {
+            "count": 205,
+            "mean": 3.6390243902439026,
+            "p95": 18,
+            "max": 70
+          }
+        },
+        "drawIntervals": {
+          "count": 204,
+          "mean": 29.45098039215686,
+          "p95": 37,
+          "max": 93
+        },
+        "raf": {
+          "count": 218,
+          "mean": 27.56128440366972,
+          "p95": 41.100000000000364,
+          "max": 108.32000000000153
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9960809018567637,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9895,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6023,
+        "backgrounded": false,
+        "drawsPerSecond": 30.217499584924457,
+        "times": {
+          "card": {
+            "count": 182,
+            "mean": 10.703296703296703,
+            "p95": 25,
+            "max": 32
+          },
+          "sky": {
+            "count": 182,
+            "mean": 5.972527472527473,
+            "p95": 7,
+            "max": 10
+          },
+          "glass": {
+            "count": 182,
+            "mean": 4.708791208791209,
+            "p95": 19,
+            "max": 25
+          }
+        },
+        "drawIntervals": {
+          "count": 181,
+          "mean": 33.110497237569064,
+          "p95": 42,
+          "max": 54
+        },
+        "raf": {
+          "count": 185,
+          "mean": 32.409837837837834,
+          "p95": 41.69999999999709,
+          "max": 58.38000000000102
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9954872986883613,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9828,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6028,
+        "backgrounded": false,
+        "drawsPerSecond": 38.155275381552755,
+        "times": {
+          "card": {
+            "count": 230,
+            "mean": 4.665217391304348,
+            "p95": 7,
+            "max": 136
+          },
+          "sky": {
+            "count": 230,
+            "mean": 2.7,
+            "p95": 4,
+            "max": 5
+          },
+          "glass": {
+            "count": 230,
+            "mean": 1.9130434782608696,
+            "p95": 3,
+            "max": 132
+          }
+        },
+        "drawIntervals": {
+          "count": 229,
+          "mean": 26.27947598253275,
+          "p95": 34,
+          "max": 167
+        },
+        "raf": {
+          "count": 582,
+          "mean": 10.33786941580756,
+          "p95": 16.720000000000255,
+          "max": 166.65999999999985
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1339
+        ],
+        "rafCoverage": 0.9981154611811547,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9952,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6064,
+        "backgrounded": false,
+        "drawsPerSecond": 12.862796833773087,
+        "times": {
+          "card": {
+            "count": 78,
+            "mean": 20.692307692307693,
+            "p95": 74,
+            "max": 100
+          },
+          "sky": {
+            "count": 78,
+            "mean": 7.1923076923076925,
+            "p95": 16,
+            "max": 29
+          },
+          "glass": {
+            "count": 78,
+            "mean": 13.41025641025641,
+            "p95": 62,
+            "max": 94
+          }
+        },
+        "drawIntervals": {
+          "count": 77,
+          "mean": 77.64935064935065,
+          "p95": 140,
+          "max": 228
+        },
+        "raf": {
+          "count": 77,
+          "mean": 77.65168831168832,
+          "p95": 149.40000000000146,
+          "max": 232.40000000000146
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1339
+        ],
+        "rafCoverage": 0.9860125329815304,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9838,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6008,
+        "backgrounded": false,
+        "drawsPerSecond": 40.44607190412783,
+        "times": {
+          "card": {
+            "count": 243,
+            "mean": 5.135802469135802,
+            "p95": 10,
+            "max": 29
+          },
+          "sky": {
+            "count": 243,
+            "mean": 3.6090534979423867,
+            "p95": 5,
+            "max": 8
+          },
+          "glass": {
+            "count": 243,
+            "mean": 1.5020576131687242,
+            "p95": 7,
+            "max": 23
+          }
+        },
+        "drawIntervals": {
+          "count": 242,
+          "mean": 24.710743801652892,
+          "p95": 31,
+          "max": 49
+        },
+        "raf": {
+          "count": 595,
+          "mean": 10.089445378151263,
+          "p95": 25,
+          "max": 50
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1339
+        ],
+        "rafCoverage": 0.9992043941411454,
+        "taskMsPerSecond": null
+      }
+    ],
+    "faults": []
+  },
+  "gpu-staging-firefox-profile": {
+    "label": "gpu-staging-firefox-profile",
+    "warmup": 1800,
+    "sample": 5000,
+    "phaseBase": 8000,
+    "engine": "firefox",
+    "headed": true,
+    "windowOcclusion": "0",
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9911,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 5029,
+        "backgrounded": false,
+        "drawsPerSecond": 48.120898787035195,
+        "times": {
+          "card": {
+            "count": 242,
+            "mean": 17.363636363636363,
+            "p95": 23,
+            "max": 30
+          },
+          "sky": {
+            "count": 242,
+            "mean": 17.10330578512397,
+            "p95": 23,
+            "max": 30
+          },
+          "glass": {
+            "count": 242,
+            "mean": 0.2603305785123967,
+            "p95": 1,
+            "max": 2
+          }
+        },
+        "drawIntervals": {
+          "count": 241,
+          "mean": 20.74688796680498,
+          "p95": 28,
+          "max": 37
+        },
+        "raf": {
+          "count": 243,
+          "mean": 20.5759670781893,
+          "p95": 25.699999999999818,
+          "max": 34.42000000000007
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9942254921455558,
+        "taskMsPerSecond": null
+      }
+    ],
+    "faults": []
+  },
+  "gpu-final-firefox-heavy": {
+    "label": "gpu-final-firefox-heavy",
+    "warmup": 1800,
+    "sample": 6000,
+    "phaseBase": 8000,
+    "engine": "firefox",
+    "headed": true,
+    "windowOcclusion": "0",
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9884,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6074,
+        "backgrounded": false,
+        "drawsPerSecond": 40.99440237076062,
+        "times": {
+          "card": {
+            "count": 249,
+            "mean": 17.096385542168676,
+            "p95": 28,
+            "max": 121
+          },
+          "sky": {
+            "count": 249,
+            "mean": 16.7429718875502,
+            "p95": 26,
+            "max": 120
+          },
+          "glass": {
+            "count": 249,
+            "mean": 0.3333333333333333,
+            "p95": 1,
+            "max": 2
+          }
+        },
+        "drawIntervals": {
+          "count": 248,
+          "mean": 24.362903225806452,
+          "p95": 37,
+          "max": 122
+        },
+        "raf": {
+          "count": 249,
+          "mean": 24.263614457831324,
+          "p95": 41.68000000000029,
+          "max": 125.03999999999996
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.994672374053342,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9826,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 6012,
+        "backgrounded": false,
+        "drawsPerSecond": 60.046573519627415,
+        "times": {
+          "card": {
+            "count": 361,
+            "mean": 5.7368421052631575,
+            "p95": 8,
+            "max": 14
+          },
+          "sky": {
+            "count": 361,
+            "mean": 5.462603878116344,
+            "p95": 8,
+            "max": 13
+          },
+          "glass": {
+            "count": 361,
+            "mean": 0.2520775623268698,
+            "p95": 1,
+            "max": 2
+          }
+        },
+        "drawIntervals": {
+          "count": 360,
+          "mean": 16.666666666666668,
+          "p95": 18,
+          "max": 22
+        },
+        "raf": {
+          "count": 719,
+          "mean": 8.34489568845619,
+          "p95": 9.139999999999418,
+          "max": 16.659999999999854
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          599,
+          1339
+        ],
+        "rafCoverage": 0.9980006653359946,
+        "taskMsPerSecond": null
+      }
+    ],
+    "faults": []
+  },
+  "gpu-before-webkit": {
+    "label": "gpu-before-webkit",
+    "warmup": 1800,
+    "sample": 4000,
+    "phaseBase": 8000,
+    "engine": "webkit",
+    "headed": false,
+    "windowOcclusion": null,
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9868,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4038,
+        "backgrounded": false,
+        "drawsPerSecond": 29.96532937097573,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 3.5702479338842976,
+            "p95": 9,
+            "max": 10
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.5206611570247934,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 2.049586776859504,
+            "p95": 7,
+            "max": 8
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9905894006934127,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9884,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4033,
+        "backgrounded": false,
+        "drawsPerSecond": 30.002479543763947,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 3.5371900826446283,
+            "p95": 9,
+            "max": 10
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.628099173553719,
+            "p95": 2,
+            "max": 3
+          },
+          "glass": {
+            "count": 121,
+            "mean": 1.9008264462809918,
+            "p95": 7,
+            "max": 7
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 36
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 36
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9918175055789736,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9900,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4026,
+        "backgrounded": false,
+        "drawsPerSecond": 30.05464480874317,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 3.7851239669421486,
+            "p95": 9,
+            "max": 10
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.8016528925619835,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 1.9669421487603307,
+            "p95": 7,
+            "max": 8
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 35,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 35,
+          "max": 35
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9935419771485346,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9857,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4113,
+        "backgrounded": false,
+        "drawsPerSecond": 26.2582056892779,
+        "times": {
+          "card": {
+            "count": 108,
+            "mean": 7.351851851851852,
+            "p95": 35,
+            "max": 129
+          },
+          "sky": {
+            "count": 108,
+            "mean": 1.5555555555555556,
+            "p95": 2,
+            "max": 6
+          },
+          "glass": {
+            "count": 108,
+            "mean": 5.722222222222222,
+            "p95": 34,
+            "max": 127
+          }
+        },
+        "drawIntervals": {
+          "count": 107,
+          "mean": 38.00934579439252,
+          "p95": 67,
+          "max": 130
+        },
+        "raf": {
+          "count": 109,
+          "mean": 37.31192660550459,
+          "p95": 67,
+          "max": 130
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9888159494286409,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9899,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4019,
+        "backgrounded": false,
+        "drawsPerSecond": 30.10699178900224,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 2.768595041322314,
+            "p95": 7,
+            "max": 19
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.3305785123966942,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 1.371900826446281,
+            "p95": 5,
+            "max": 17
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 39
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 39
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9952724558347849,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 20.833333333333332,
+        "phaseAtSample": 9871,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4030,
+        "backgrounded": false,
+        "drawsPerSecond": 30.024813895781637,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 2.3884297520661155,
+            "p95": 5,
+            "max": 7
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.28099173553719,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 1.0743801652892562,
+            "p95": 4,
+            "max": 6
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 36
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 36
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9925558312655088,
+        "taskMsPerSecond": null
+      }
+    ],
+    "faults": []
+  },
+  "gpu-final-webkit": {
+    "label": "gpu-final-webkit",
+    "warmup": 1800,
+    "sample": 4000,
+    "phaseBase": 8000,
+    "engine": "webkit",
+    "headed": false,
+    "windowOcclusion": null,
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9883,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4032,
+        "backgrounded": false,
+        "drawsPerSecond": 30.009920634920636,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 14.165289256198347,
+            "p95": 15,
+            "max": 16
+          },
+          "sky": {
+            "count": 121,
+            "mean": 13.958677685950413,
+            "p95": 15,
+            "max": 16
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.2066115702479339,
+            "p95": 1,
+            "max": 1
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9920634920634922,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9907,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4033,
+        "backgrounded": false,
+        "drawsPerSecond": 30.002479543763947,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 14.190082644628099,
+            "p95": 15,
+            "max": 18
+          },
+          "sky": {
+            "count": 121,
+            "mean": 13.925619834710744,
+            "p95": 15,
+            "max": 17
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.2644628099173554,
+            "p95": 1,
+            "max": 1
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9918175055789736,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9897,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4033,
+        "backgrounded": false,
+        "drawsPerSecond": 30.002479543763947,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 14.661157024793388,
+            "p95": 17,
+            "max": 18
+          },
+          "sky": {
+            "count": 121,
+            "mean": 14.380165289256198,
+            "p95": 16,
+            "max": 18
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.256198347107438,
+            "p95": 1,
+            "max": 1
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.325,
+          "p95": 34,
+          "max": 35
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9915695512025788,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9856,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4033,
+        "backgrounded": false,
+        "drawsPerSecond": 30.002479543763947,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 8.074380165289256,
+            "p95": 10,
+            "max": 11
+          },
+          "sky": {
+            "count": 121,
+            "mean": 7.801652892561983,
+            "p95": 9,
+            "max": 11
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.2644628099173554,
+            "p95": 1,
+            "max": 1
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9918175055789736,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9858,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4034,
+        "backgrounded": false,
+        "drawsPerSecond": 29.995042141794745,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 7.603305785123967,
+            "p95": 10,
+            "max": 11
+          },
+          "sky": {
+            "count": 121,
+            "mean": 7.363636363636363,
+            "p95": 9,
+            "max": 11
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.2396694214876033,
+            "p95": 1,
+            "max": 1
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9915716410510661,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9867,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4033,
+        "backgrounded": false,
+        "drawsPerSecond": 30.002479543763947,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 6.661157024793388,
+            "p95": 7,
+            "max": 10
+          },
+          "sky": {
+            "count": 121,
+            "mean": 6.421487603305785,
+            "p95": 7,
+            "max": 9
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.2396694214876033,
+            "p95": 1,
+            "max": 1
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9918175055789736,
+        "taskMsPerSecond": null
+      }
+    ],
+    "faults": []
+  },
+  "gpu-native-webkit": {
+    "label": "gpu-native-webkit",
+    "warmup": 1800,
+    "sample": 4000,
+    "phaseBase": 8000,
+    "engine": "webkit",
+    "headed": false,
+    "windowOcclusion": null,
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9880,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4042,
+        "backgrounded": false,
+        "drawsPerSecond": 29.935675408213754,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 4.264462809917355,
+            "p95": 12,
+            "max": 12
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.5454545454545454,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 2.71900826446281,
+            "p95": 10,
+            "max": 11
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9896091044037606,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9903,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4032,
+        "backgrounded": false,
+        "drawsPerSecond": 30.009920634920636,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 4.12396694214876,
+            "p95": 12,
+            "max": 14
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.8181818181818181,
+            "p95": 2,
+            "max": 3
+          },
+          "glass": {
+            "count": 121,
+            "mean": 2.2975206611570247,
+            "p95": 10,
+            "max": 12
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9920634920634922,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9897,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4040,
+        "backgrounded": false,
+        "drawsPerSecond": 29.702970297029704,
+        "times": {
+          "card": {
+            "count": 120,
+            "mean": 4.541666666666667,
+            "p95": 13,
+            "max": 18
+          },
+          "sky": {
+            "count": 120,
+            "mean": 2.183333333333333,
+            "p95": 3,
+            "max": 5
+          },
+          "glass": {
+            "count": 120,
+            "mean": 2.3583333333333334,
+            "p95": 10,
+            "max": 15
+          }
+        },
+        "drawIntervals": {
+          "count": 119,
+          "mean": 33.61344537815126,
+          "p95": 34,
+          "max": 49
+        },
+        "raf": {
+          "count": 119,
+          "mean": 33.61344537815126,
+          "p95": 34,
+          "max": 49
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9900990099009901,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9944,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4030,
+        "backgrounded": false,
+        "drawsPerSecond": 30.024813895781637,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 2.4710743801652892,
+            "p95": 6,
+            "max": 8
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.1900826446280992,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 1.2727272727272727,
+            "p95": 4,
+            "max": 7
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 35,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 35,
+          "max": 35
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9925558312655088,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9857,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4030,
+        "backgrounded": false,
+        "drawsPerSecond": 30.024813895781637,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 2.0578512396694215,
+            "p95": 4,
+            "max": 5
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.0743801652892562,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.9669421487603306,
+            "p95": 3,
+            "max": 4
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 35,
+          "max": 35
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9925558312655088,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9861,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4030,
+        "backgrounded": false,
+        "drawsPerSecond": 30.024813895781637,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 2.206611570247934,
+            "p95": 5,
+            "max": 5
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.2396694214876034,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.9669421487603306,
+            "p95": 3,
+            "max": 4
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 35,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 35,
+          "max": 35
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9925558312655088,
+        "taskMsPerSecond": null
+      }
+    ],
+    "faults": []
+  },
+  "gpu-native-webkit-final": {
+    "label": "gpu-native-webkit-final",
+    "warmup": 1800,
+    "sample": 4000,
+    "phaseBase": 8000,
+    "engine": "webkit",
+    "headed": false,
+    "windowOcclusion": null,
+    "results": [
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9877,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4039,
+        "backgrounded": false,
+        "drawsPerSecond": 29.957910373854915,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 3.487603305785124,
+            "p95": 9,
+            "max": 10
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.462809917355372,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 2.0165289256198347,
+            "p95": 7,
+            "max": 8
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9903441445902452,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9902,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4033,
+        "backgrounded": false,
+        "drawsPerSecond": 30.002479543763947,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 3.8016528925619837,
+            "p95": 10,
+            "max": 11
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.6942148760330578,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 2.041322314049587,
+            "p95": 8,
+            "max": 9
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 34
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9918175055789736,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "desktop-day",
+        "viewport": {
+          "width": 1280,
+          "height": 900,
+          "dpr": 2
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9911,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4029,
+        "backgrounded": false,
+        "drawsPerSecond": 30.032266070985358,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 3.8925619834710745,
+            "p95": 10,
+            "max": 11
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.834710743801653,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 1.9917355371900827,
+            "p95": 8,
+            "max": 9
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.3,
+          "p95": 34,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.3,
+          "p95": 34,
+          "max": 35
+        },
+        "skyPixels": [
+          1760,
+          1800
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          1248,
+          1250
+        ],
+        "rafCoverage": 0.9918093819806403,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9856,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4033,
+        "backgrounded": false,
+        "drawsPerSecond": 30.002479543763947,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 2.330578512396694,
+            "p95": 5,
+            "max": 7
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.2396694214876034,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 1.0495867768595042,
+            "p95": 4,
+            "max": 6
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9918175055789736,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "heavyRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9878,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4032,
+        "backgrounded": false,
+        "drawsPerSecond": 30.009920634920636,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 2.15702479338843,
+            "p95": 5,
+            "max": 6
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.115702479338843,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 1.0330578512396693,
+            "p95": 4,
+            "max": 5
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.325,
+          "p95": 34,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.325,
+          "p95": 34,
+          "max": 35
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9918154761904763,
+        "taskMsPerSecond": null
+      },
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Safari/605.1.15",
+        "gpu": "integrated laptop GPU",
+        "kind": "freezingRain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9866,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 4032,
+        "backgrounded": false,
+        "drawsPerSecond": 30.009920634920636,
+        "times": {
+          "card": {
+            "count": 121,
+            "mean": 2.2479338842975207,
+            "p95": 5,
+            "max": 6
+          },
+          "sky": {
+            "count": 121,
+            "mean": 1.2314049586776858,
+            "p95": 2,
+            "max": 2
+          },
+          "glass": {
+            "count": 121,
+            "mean": 0.9917355371900827,
+            "p95": 3,
+            "max": 5
+          }
+        },
+        "drawIntervals": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "raf": {
+          "count": 120,
+          "mean": 33.333333333333336,
+          "p95": 34,
+          "max": 35
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": false,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9920634920634922,
+        "taskMsPerSecond": null
+      }
+    ],
+    "faults": []
+  },
+  "gpu-phone-sustained": {
+    "label": "gpu-phone-sustained",
+    "warmup": 1800,
+    "sample": 20000,
+    "phaseBase": 8000,
+    "engine": "chrome",
+    "headed": false,
+    "windowOcclusion": null,
+    "results": [
+      {
+        "profile": "phone-day",
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "dpr": 3
+        },
+        "throttle": 1,
+        "glassRefraction": true,
+        "forced": false,
+        "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+        "gpu": "integrated laptop GPU",
+        "kind": "rain",
+        "interval": 16.666666666666668,
+        "phaseAtSample": 9859.90000000596,
+        "visibility": "visible",
+        "focused": true,
+        "duration": 20014.40000000596,
+        "backgrounded": false,
+        "drawsPerSecond": 59.956831081603376,
+        "times": {
+          "card": {
+            "count": 1200,
+            "mean": 1.822749999637405,
+            "p95": 2.5,
+            "max": 4.699999988079071
+          },
+          "sky": {
+            "count": 1200,
+            "mean": 1.5874166665226221,
+            "p95": 2.2999999821186066,
+            "max": 4.199999988079071
+          },
+          "glass": {
+            "count": 1200,
+            "mean": 0.2214999996125698,
+            "p95": 0.30000001192092896,
+            "max": 0.5999999940395355
+          }
+        },
+        "drawIntervals": {
+          "count": 1199,
+          "mean": 16.679983319417946,
+          "p95": 17.5,
+          "max": 33
+        },
+        "raf": {
+          "count": 1200,
+          "mean": 16.666,
+          "p95": 16.700000000000728,
+          "max": 16.80000000000291
+        },
+        "skyPixels": [
+          780,
+          1940
+        ],
+        "gpuRain": true,
+        "glassPixels": [
+          599,
+          1338
+        ],
+        "rafCoverage": 0.9992405468060019,
+        "taskMsPerSecond": 125.80260558559605
+      }
+    ],
+    "faults": []
+  }
+}

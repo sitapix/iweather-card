@@ -1,0 +1,26 @@
+play:
+  name: Play
+  description: Report one recording from test/integrations, its state, attributes and forecasts.
+  fields:
+    state:
+      name: State
+      description: The condition, or unknown or unavailable.
+      required: true
+      selector:
+        text:
+    attributes:
+      name: Attributes
+      description: The readings and their units, as the recording's state gives them.
+      selector:
+        object:
+    forecasts:
+      name: Forecasts
+      description: Lists of forecast entries, by type (daily, hourly, twice_daily).
+      selector:
+        object:
+hold:
+  name: Hold
+  description: Make every forecast wait until released.
+release:
+  name: Release
+  description: Let held forecasts answer.

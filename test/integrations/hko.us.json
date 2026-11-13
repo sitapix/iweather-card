@@ -1,0 +1,78 @@
+{
+  "integration": "hko",
+  "from": "source",
+  "units": "us",
+  "now": "2023-08-19T17:02:00+08:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: the integration's own entity class, built as for hko.json, run again with hass.config.units set to US_CUSTOMARY_SYSTEM, so Home Assistant converts from the entity's native °C (it sets no other unit). Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. Built by running homeassistant/components/hko's own HKOUpdateCoordinator and HKOEntity (Home Assistant 2026.10.4, hko 0.3.2) over the two API calls it makes. Current readings are core's test fixture rhrread.json (2023-08-19 17:02 HKT); core has no 9-day forecast (fnd) fixture and no weather test, so the forecast is a realistic fnd response for that afternoon in the API's shape. Current conditions carry only temperature (the configured place's, the Hong Kong Observatory by default: 29) and humidity (always the Observatory's), whole numbers as HKO sends them: no pressure, wind, visibility, dew point or UV, though rhrread has UV. The state is not the observation's icon (here 60, cloudy) but the first forecast day's condition, and the 9-day forecast starts tomorrow, so the state is tomorrow's outlook. Daily only (supported_features 1): nine days from tomorrow, each stamped local midnight with +08:00 ('2023-08-20T00:00:00+08:00'), with only condition, temperature and templow in whole degrees: no precipitation, probability, humidity or wind, though the API has PSR, humidity ranges and wind text. The integration sets plain temperature/templow keys rather than native_*, which Home Assistant converts the same way. The condition comes from the ForecastIcon table; an icon outside it (here 90, hot) falls back to keywords in the forecast text, so 'Fine and very hot.' gives sunny.",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "humidity": 74,
+      "precipitation_unit": "in",
+      "pressure_unit": "inHg",
+      "supported_features": 1,
+      "temperature": 84,
+      "temperature_unit": "°F",
+      "visibility_unit": "mi",
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "partlycloudy",
+        "datetime": "2023-08-20T00:00:00+08:00",
+        "temperature": 91,
+        "templow": 82
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2023-08-21T00:00:00+08:00",
+        "temperature": 91,
+        "templow": 82
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2023-08-22T00:00:00+08:00",
+        "temperature": 90,
+        "templow": 82
+      },
+      {
+        "condition": "rainy",
+        "datetime": "2023-08-23T00:00:00+08:00",
+        "temperature": 88,
+        "templow": 81
+      },
+      {
+        "condition": "lightning-rainy",
+        "datetime": "2023-08-24T00:00:00+08:00",
+        "temperature": 86,
+        "templow": 79
+      },
+      {
+        "condition": "rainy",
+        "datetime": "2023-08-25T00:00:00+08:00",
+        "temperature": 88,
+        "templow": 81
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2023-08-26T00:00:00+08:00",
+        "temperature": 90,
+        "templow": 81
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2023-08-27T00:00:00+08:00",
+        "temperature": 93,
+        "templow": 82
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2023-08-28T00:00:00+08:00",
+        "temperature": 95,
+        "templow": 84
+      }
+    ]
+  }
+}

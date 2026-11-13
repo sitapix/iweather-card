@@ -1,0 +1,23 @@
+{
+  "integration": "homematicip_cloud",
+  "from": "source",
+  "units": "us",
+  "now": "2026-09-24T21:40:00+02:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: the integration's own entity class, built as for homematicip_cloud.json, run again with hass.config.units set to US_CUSTOMARY_SYSTEM, so Home Assistant converts from the entity's native °C and km/h. Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. Built by running homeassistant/components/homematicip_cloud/weather.py's own HomematicipHomeWeather (Home Assistant 2026.10.4, homematicip 2.18.0) over the home in core's test fixture homematicip_cloud.json; test_hmip_home_weather asserts these values. This is the 'home weather' entity every access point gets, from the cloud's weather for the home's location (Vienna here); weather sensors (HmIP-SWO-B, -PL, -PR) add entities of their own. No forecasts and no supported_features attribute. Current: temperature, humidity (int), wind_speed (km/h, rounded to one decimal) and wind_bearing (int); never pressure, visibility, dew point, apparent temperature, gusts, cloud cover or UV. The condition maps the cloud's weatherCondition and ignores its weatherDayTime: at night (NIGHT here) LIGHT_CLOUDY still gives partlycloudy and CLEAR gives sunny, never clear-night, and UNKNOWN gives '' (an empty state). The sensor entities differ: the basic and plus sensors send temperature, humidity and wind_speed only, the pro adds wind_bearing, and their condition is rainy (raining), windy (storm) or sunny (sunshine, by day only as measured light) and otherwise '' (core's test plus sensor has state ''); they also carry device attributes such as is_group. The state also carries icon 'mdi:alert': the entity's icon turns to an alert whenever the access point reports any duty cycle (8.0 % in the fixture). The fixture gives the weather no time, so now is a September night in Vienna that suits 16.6 C and 54 %.",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "humidity": 54,
+      "icon": "mdi:alert",
+      "precipitation_unit": "in",
+      "pressure_unit": "inHg",
+      "temperature": 62,
+      "temperature_unit": "°F",
+      "visibility_unit": "mi",
+      "wind_bearing": 294,
+      "wind_speed": 5.34,
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {}
+}

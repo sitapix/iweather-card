@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Weather gallery</title>
+<style>
+  body { margin: 0; padding: 24px 16px; background: #f2f2f4; font: 14px system-ui, sans-serif; color: #1d1d1f; }
+  header, nav, main { max-width: 760px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  header p { margin: 0 0 16px; color: #6e6e73; }
+  /* One sky at a time: only one card animates, however many scenes there are. */
+  .stage { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; }
+  .stage button { width: 44px; height: 44px; border: 0; border-radius: 22px; background: #fff; box-shadow: 0 2px 8px -2px #0003; font-size: 22px; line-height: 1; cursor: pointer; color: #1d1d1f; }
+  .stage button:active { transform: scale(.94); }
+  figure { margin: 0; justify-self: center; width: min(390px, 100%); }
+  /* Two lines of fixed height for every scene, so a long name never moves the card. */
+  figcaption { margin-bottom: 8px; font-weight: 600; font-size: 16px; display: grid; gap: 2px; }
+  figcaption > * { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  figcaption small { font-weight: 400; color: #6e6e73; }
+  iweather-card { display: block; height: min(720px, 80vh); box-shadow: 0 18px 40px -22px #0008; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; justify-content: center; }
+  nav button { border: 0; border-radius: 15px; padding: 6px 11px; background: #fff; color: #1d1d1f; font: inherit; font-size: 13px; cursor: pointer; box-shadow: 0 1px 3px #0001; }
+  nav button[aria-current=true] { background: #1d1d1f; color: #fff; }
+  @media (max-width: 520px) { .stage { grid-template-columns: 1fr 1fr; } .stage figure { grid-column: 1 / -1; grid-row: 1; } }
+</style>
+<header>
+  <h1>Every kind of weather</h1>
+  <p>Each scene is a Home Assistant condition (with sun position, cloud cover or temperature where they change the sky), drawn with the sky preset it maps to. Use ← → or the buttons to step through.</p>
+</header>
+<main class="stage">
+  <button type="button" class="previous" aria-label="Previous scene">‹</button>
+  <figure><figcaption><span class="title"></span><small class="detail"></small></figcaption><div class="slot"></div></figure>
+  <button type="button" class="next" aria-label="Next scene">›</button>
+</main>
+<nav aria-label="Scenes"></nav>
+<script type="module">
+import '/src/iweather-card.ts';
+import { sceneHour, sunTimes, zoneAt } from '../demo/scene-clock.ts';
+// [title, condition, sun elevation, rising, temperature °F, cloud cover %, rain this hour (in), other attributes]
+const SCENES = [
+  ['Sunny', 'sunny', 45, true, 74, 5],
+  ['Mostly clear', 'sunny', 40, true, 72, 30],
+  ['Partly cloudy', 'partlycloudy', 40, true, 68],
+  ['Mostly cloudy', 'cloudy', 35, false, 63, 75],
+  ['Cloudy', 'cloudy', 35, false, 60, 98],
+  ['Fog', 'fog', 15, true, 54],
+  ['Drizzle', 'rainy', 30, false, 56, undefined, .01],
+  ['Rain', 'rainy', 30, false, 55],
+  ['Heavy rain', 'pouring', 30, false, 54],
+  ['Thunderstorms', 'lightning-rainy', 25, false, 71],
+  ['Lightning', 'lightning', 25, false, 73],
+  ['Snow', 'snowy', 20, true, 28],
+  ['Sleet / wintry mix', 'snowy-rainy', 20, true, 31],
+  ['Hail', 'hail', 30, false, 52],
+  // Finer conditions, from what the entity reports alongside its condition.
+  ['Flurries', 'snowy', 15, true, 30, undefined, .01],
+  ['Blowing snow', 'snowy', 20, true, 25, undefined, .08, { wind_speed: 30 }],
+  ['Freezing drizzle', 'rainy', 20, true, 30, undefined, .01],
+  ['Sun showers', 'rainy', 35, false, 64, 40],
+  ['Scattered thunderstorms', 'lightning-rainy', 30, false, 78, 45],
+  ['Haze', 'fog', 25, true, 70, undefined, undefined, { visibility: 3, visibility_unit: 'mi' }],
+  ['Windy', 'windy', 40, true, 65],
+  ['Windy and cloudy', 'windy-variant', 35, false, 60],
+  ['Exceptional', 'exceptional', 30, false, 80],
+  ['Clear night', 'clear-night', -35, false, 58],
+  ['Partly cloudy night', 'partlycloudy', -30, false, 55],
+  ['Rain at night', 'rainy', -30, false, 50],
+  ['Snow at night', 'snowy', -30, false, 24],
+  ['Hail at night', 'hail', -30, false, 50],
+  ['Thunderstorms at night', 'lightning-rainy', -30, false, 68],
+  ['Fog at night', 'fog', -30, false, 50],
+  ['Sleet at night', 'snowy-rainy', -30, false, 31],
+  ['Sunrise', 'sunny', 2, true, 52, 5],
+  ['Sunset, partly cloudy', 'partlycloudy', 3, false, 61],
+  ['Frigid clear day', 'sunny', 20, true, 8, 5],
+];
+const now = Date.now(), hour = Math.floor(now / 3600000) * 3600000;
+const slot = document.querySelector('.slot'), nav = document.querySelector('nav');
+function hassFor([title, condition, elevation, rising, temp, cover, amount, extra], index) {
+  const entity = `weather.scene_${index}`, night = elevation < 0, wet = /rain|pour|hail|snow/.test(condition), local = sceneHour(elevation, rising);
+  const hourly = Array.from({ length: 24 }, (_, i) => ({ datetime: new Date(hour + i * 3600000).toISOString(), temperature: temp + Math.round(Math.sin(i / 5) * 4), condition: condition === 'sunny' && night ? 'clear-night' : condition,
+    precipitation_probability: wet ? 60 + (i % 4) * 8 : 0, precipitation: wet ? amount ?? .08 : 0, wind_speed: 5 + i % 4, wind_bearing: 200 }));
+  const daily = Array.from({ length: 10 }, (_, i) => ({ datetime: new Date(now + i * 86400000).toISOString(), condition: i ? ['sunny', 'partlycloudy', 'cloudy', 'rainy'][i % 4] : condition, temperature: temp + 6 + (i % 3), templow: temp - 8 + (i % 2), precipitation_probability: [0, 20, 40, 70][i % 4], wind_speed: 5 + [2, 3, 1, 5, 3, 1, 7, 4, 2, 1][i] }));
+  return { entity, hass: {
+    states: {
+      [entity]: { entity_id: entity, state: condition, attributes: { temperature: temp, temperature_unit: '°F', wind_speed: condition.startsWith('windy') ? 24 : 7, wind_speed_unit: 'mph', precipitation_unit: 'in', humidity: 70,
+        ...(cover !== undefined ? { cloud_coverage: cover } : {}), ...extra, friendly_name: title, supported_features: 3 } },
+      'sun.sun': { state: night ? 'below_horizon' : 'above_horizon', attributes: { elevation, rising, ...sunTimes(local, now) } },
+    },
+    locale: { language: 'en', time_format: '12' }, config: { time_zone: zoneAt(local, now), latitude: 41.9, longitude: -87.6 },
+    connection: { subscribeMessage(callback, message) { queueMicrotask(() => callback({ forecast: message.forecast_type === 'hourly' ? hourly : daily })); return Promise.resolve(() => {}); } },
+  } };
+}
+// A fresh card per scene, so each starts from its own sky rather than easing from the last.
+function show(index) {
+  index = (index + SCENES.length) % SCENES.length;
+  const scene = SCENES[index], [title, condition, elevation, , , cover, amount] = scene, { entity, hass } = hassFor(scene, index);
+  const card = document.createElement('iweather-card');
+  card.setConfig({ type: 'custom:iweather-card', entity, name: title, forecast_days: 3 });card.hass = hass;
+  slot.replaceChildren(card);
+  document.querySelector('.title').textContent = `${title}  ·  ${index + 1}/${SCENES.length}`;
+  document.querySelector('.detail').textContent = `${condition}${cover !== undefined ? ` · ${cover}% cloud` : ''}${amount !== undefined ? ` · ${amount}″/h` : ''} · sun ${elevation}°`;
+  for (const [i, button] of [...nav.children].entries()) button.setAttribute('aria-current', String(i === index));
+  history.replaceState(null, '', `#${index + 1}`);
+  show.index = index;
+}
+SCENES.forEach(([title], i) => { const button = document.createElement('button');button.type = 'button';button.textContent = title;button.onclick = () => show(i);nav.append(button); });
+document.querySelector('.previous').onclick = () => show(show.index - 1);
+document.querySelector('.next').onclick = () => show(show.index + 1);
+addEventListener('keydown', event => { if (event.key === 'ArrowLeft') show(show.index - 1);if (event.key === 'ArrowRight') show(show.index + 1); });
+const fromHash = () => (parseInt(location.hash.slice(1), 10) || 1) - 1;
+addEventListener('hashchange', () => { if (fromHash() !== show.index) show(fromHash()); });
+show(fromHash());
+</script>
+</html>

@@ -1,0 +1,5 @@
+# Layout-only commits, skipped by git blame (GitHub reads this file; locally `pnpm install` sets
+# blame.ignoreRevsFile).
+
+# Format with Biome
+0f9be37ec028c756e9e2972ef42d8790c22aab35

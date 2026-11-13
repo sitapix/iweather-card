@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question
+    url: https://github.com/sitapix/iweather-card/discussions/new?category=q-a
+    about: Ask how to do something with the card.
+  - name: Idea
+    url: https://github.com/sitapix/iweather-card/discussions/new?category=ideas
+    about: Suggest something the card could do, or vote for an idea already there.
+  - name: All options
+    url: https://github.com/sitapix/iweather-card/blob/main/docs/configuration.md
+    about: Units, sensors for each reading, the map, sizing and how each panel behaves.
+  - name: Security problem
+    url: https://github.com/sitapix/iweather-card/security/advisories/new
+    about: Report it privately, so it can be fixed before it is public.

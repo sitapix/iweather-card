@@ -1,0 +1,6 @@
+#!/bin/sh
+# Any global pre-push, hidden by this repository's own hooks path, still runs here.
+global=$(git config --global --type=path --get core.hooksPath)
+if [ -n "$global" ] && [ -x "$global/pre-push" ]; then
+  exec "$global/pre-push" "$@"
+fi

@@ -1,0 +1,23 @@
+{
+  "integration": "meteoclimatic",
+  "from": "source",
+  "units": "metric",
+  "now": "2026-10-30T13:20:00+01:00",
+  "notes": "Built by running homeassistant/components/meteoclimatic/weather.py's own MeteoclimaticWeather (Home Assistant 2026.10.4) over an Observation that pymeteoclimatic 0.1.1 parsed from a station's RSS item; core tests only the config flow. Values are realistic for a station in Barcelona at midday in late October. Native units are °C, hPa and km/h. Current only, no forecasts and no supported_features attribute: temperature, humidity (rounded to a whole percent), pressure, wind_speed and wind_bearing, all floats parsed from the feed's comma decimals, each missing when its feed field is empty; never visibility, dew point, apparent temperature, gusts, cloud cover or UV. The condition is the feed's one-word code mapped by CONDITION_MAP: sun sunny, suncloud and hazesun partlycloudy, moon and hazemoon clear-night, mooncloud cloudy, rain rainy, fog and mist fog, storm lightning. A code the library knows but the map lacks passes through as its own name ('lightning'), and one the library does not know as the raw text, including '' when the feed leaves it empty.",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "humidity": 62,
+      "precipitation_unit": "mm",
+      "pressure": 1018.3,
+      "pressure_unit": "hPa",
+      "temperature": 19.4,
+      "temperature_unit": "°C",
+      "visibility_unit": "km",
+      "wind_bearing": 225.0,
+      "wind_speed": 9.0,
+      "wind_speed_unit": "km/h"
+    }
+  },
+  "forecasts": {}
+}

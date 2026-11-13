@@ -1,0 +1,7 @@
+node_modules/
+/.pnpm-store/
+dist/
+_site/
+.vitest/
+test-results/
+perf-results/

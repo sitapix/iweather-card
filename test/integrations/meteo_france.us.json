@@ -1,0 +1,52 @@
+{
+  "integration": "meteo_france",
+  "from": "snapshot",
+  "units": "us",
+  "now": "2025-01-27T15:00:00+00:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: meteo_france.json's values fed to Home Assistant's WeatherEntity as native values in the units its attributes state (°C, hPa, km/h, km, mm), state and forecasts read back through the weather component with hass.config.units set to US_CUSTOMARY_SYSTEM. Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. State is the core snapshot. Forecasts were built from source (weather.py) run over the test fixture raw_forecast.json, which holds a single daily and a single hourly entry (the real API gives up to 14 days and a few days of hours). The test does not freeze the clock, so now is the first hourly entry's time, which is also the hour the library takes as current. Hourly drops entries before now (the API can send past hours); its uv_index comes as the API's integer while the state's uv_index is a float. Hourly wind_bearing is null when the API sends -1; wind_gust_speed, apparent_temperature (wind chill) and precipitation only when the API sends them. Daily carries only condition, humidity (the day's max), temperature, templow and precipitation (24 h total): no wind, uv or precipitation_probability; datetime is 00:00 UTC; the list stops at the first day without a 12 h condition. A condition description the integration's map lacks is passed through unchanged, so the state or a forecast condition can be raw French text rather than a standard condition. Daily maps clear-night to sunny. No changes were needed for realism.",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "apparent_temperature": 42,
+      "humidity": 75,
+      "precipitation_unit": "in",
+      "pressure": 29.2,
+      "pressure_unit": "inHg",
+      "supported_features": 3,
+      "temperature": 48,
+      "temperature_unit": "°F",
+      "uv_index": 1.0,
+      "visibility_unit": "mi",
+      "wind_bearing": 200,
+      "wind_gust_speed": 40.26,
+      "wind_speed": 17.9,
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-01-27T00:00:00+00:00",
+        "humidity": 90,
+        "precipitation": 0.05,
+        "temperature": 51,
+        "templow": 44
+      }
+    ],
+    "hourly": [
+      {
+        "apparent_temperature": 42,
+        "condition": "partlycloudy",
+        "datetime": "2025-01-27T15:00:00+00:00",
+        "humidity": 75,
+        "precipitation": 0.0,
+        "temperature": 48,
+        "uv_index": 1,
+        "wind_bearing": 200,
+        "wind_gust_speed": 40.26,
+        "wind_speed": 17.9
+      }
+    ]
+  }
+}

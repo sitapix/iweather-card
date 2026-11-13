@@ -1,0 +1,204 @@
+{
+  "integration": "meteo_lt",
+  "from": "snapshot",
+  "units": "us",
+  "now": "2025-09-25T10:00:00+00:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: meteo_lt.json's values fed to Home Assistant's WeatherEntity as native values in the units its attributes state (°C, hPa, km/h, km, mm), state and forecasts read back through the weather component with hass.config.units set to US_CUSTOMARY_SYSTEM. Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. State is the core snapshot, apart from the condition (below). Forecasts were built from source (weather.py and the meteo-lt-pkg library) run over the test fixture forecast.json, at the test's frozen clock. The API sends one list of timestamps; the library drops every timestamp up to and including the current hour (that hour becomes the current conditions), so hourly starts an hour after now. The fixture has hourly steps only for the first day, then one timestamp a day at 10:00 UTC, so hourly jumps a day at a time after the third entry. Daily is built from those same timestamps grouped by UTC date: datetime is the day's first remaining timestamp (not midnight), temperature/templow are the max/min over the day, and apparent_temperature, condition, wind_speed, wind_bearing and cloud_coverage come from the timestamp nearest 12:00. precipitation is the day's sum, absent only if every timestamp lacks it. precipitation_probability is always null (the API has none). Forecasts carry no humidity, pressure or gust although the current conditions do. A 'clear' code becomes sunny or clear-night by the sun at the configured home location at that timestamp; an unknown or missing code becomes 'exceptional'. Changes for realism (test-data artefacts): the snapshot's state 'clear-night' came from the test's home location being in California (03:00 there), while the data is Vilnius at 13:00; it is 'sunny' here, as the code gives for a clear code with the sun up. From the second day on the fixture has one timestamp a day, so each day's templow equalled its temperature; those lows are now 7.0, 8.5, 9.0, 10.5, 11.0 and 12.5. The hourly list still jumps a day at a time after its second entry, as the trimmed fixture does; the real API sends every hour for the first days.",
+  "state": {
+    "state": "sunny",
+    "attributes": {
+      "apparent_temperature": 52,
+      "cloud_coverage": 1,
+      "humidity": 71,
+      "precipitation_unit": "in",
+      "pressure": 30.5,
+      "pressure_unit": "inHg",
+      "supported_features": 3,
+      "temperature": 52,
+      "temperature_unit": "°F",
+      "visibility_unit": "mi",
+      "wind_bearing": 20,
+      "wind_gust_speed": 13.42,
+      "wind_speed": 4.47,
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "apparent_temperature": 56,
+        "cloud_coverage": 25,
+        "condition": "cloudy",
+        "datetime": "2025-09-25T11:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": null,
+        "temperature": 56,
+        "templow": 54,
+        "wind_bearing": 30,
+        "wind_speed": 6.71
+      },
+      {
+        "apparent_temperature": 59,
+        "cloud_coverage": 30,
+        "condition": "cloudy",
+        "datetime": "2025-09-26T10:00:00+00:00",
+        "precipitation": 0.01,
+        "precipitation_probability": null,
+        "temperature": 59,
+        "templow": 45,
+        "wind_bearing": 35,
+        "wind_speed": 6.71
+      },
+      {
+        "apparent_temperature": 61,
+        "cloud_coverage": 35,
+        "condition": "rainy",
+        "datetime": "2025-09-27T10:00:00+00:00",
+        "precipitation": 0.01,
+        "precipitation_probability": null,
+        "temperature": 61,
+        "templow": 47,
+        "wind_bearing": 40,
+        "wind_speed": 8.95
+      },
+      {
+        "apparent_temperature": 63,
+        "cloud_coverage": 40,
+        "condition": "rainy",
+        "datetime": "2025-09-28T10:00:00+00:00",
+        "precipitation": 0.02,
+        "precipitation_probability": null,
+        "temperature": 63,
+        "templow": 48,
+        "wind_bearing": 45,
+        "wind_speed": 11.18
+      },
+      {
+        "apparent_temperature": 64,
+        "cloud_coverage": 45,
+        "condition": "rainy",
+        "datetime": "2025-09-29T10:00:00+00:00",
+        "precipitation": 0.02,
+        "precipitation_probability": null,
+        "temperature": 64,
+        "templow": 51,
+        "wind_bearing": 50,
+        "wind_speed": 13.42
+      },
+      {
+        "apparent_temperature": 66,
+        "cloud_coverage": 50,
+        "condition": "rainy",
+        "datetime": "2025-09-30T10:00:00+00:00",
+        "precipitation": 0.02,
+        "precipitation_probability": null,
+        "temperature": 66,
+        "templow": 52,
+        "wind_bearing": 55,
+        "wind_speed": 15.66
+      },
+      {
+        "apparent_temperature": 68,
+        "cloud_coverage": 55,
+        "condition": "rainy",
+        "datetime": "2025-10-01T10:00:00+00:00",
+        "precipitation": 0.03,
+        "precipitation_probability": null,
+        "temperature": 68,
+        "templow": 54,
+        "wind_bearing": 60,
+        "wind_speed": 17.9
+      }
+    ],
+    "hourly": [
+      {
+        "apparent_temperature": 54,
+        "cloud_coverage": 15,
+        "condition": "partlycloudy",
+        "datetime": "2025-09-25T11:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": null,
+        "temperature": 54,
+        "wind_bearing": 25,
+        "wind_speed": 4.47
+      },
+      {
+        "apparent_temperature": 56,
+        "cloud_coverage": 25,
+        "condition": "cloudy",
+        "datetime": "2025-09-25T12:00:00+00:00",
+        "precipitation": 0.0,
+        "precipitation_probability": null,
+        "temperature": 56,
+        "wind_bearing": 30,
+        "wind_speed": 6.71
+      },
+      {
+        "apparent_temperature": 59,
+        "cloud_coverage": 30,
+        "condition": "cloudy",
+        "datetime": "2025-09-26T10:00:00+00:00",
+        "precipitation": 0.01,
+        "precipitation_probability": null,
+        "temperature": 59,
+        "wind_bearing": 35,
+        "wind_speed": 6.71
+      },
+      {
+        "apparent_temperature": 61,
+        "cloud_coverage": 35,
+        "condition": "rainy",
+        "datetime": "2025-09-27T10:00:00+00:00",
+        "precipitation": 0.01,
+        "precipitation_probability": null,
+        "temperature": 61,
+        "wind_bearing": 40,
+        "wind_speed": 8.95
+      },
+      {
+        "apparent_temperature": 63,
+        "cloud_coverage": 40,
+        "condition": "rainy",
+        "datetime": "2025-09-28T10:00:00+00:00",
+        "precipitation": 0.02,
+        "precipitation_probability": null,
+        "temperature": 63,
+        "wind_bearing": 45,
+        "wind_speed": 11.18
+      },
+      {
+        "apparent_temperature": 64,
+        "cloud_coverage": 45,
+        "condition": "rainy",
+        "datetime": "2025-09-29T10:00:00+00:00",
+        "precipitation": 0.02,
+        "precipitation_probability": null,
+        "temperature": 64,
+        "wind_bearing": 50,
+        "wind_speed": 13.42
+      },
+      {
+        "apparent_temperature": 66,
+        "cloud_coverage": 50,
+        "condition": "rainy",
+        "datetime": "2025-09-30T10:00:00+00:00",
+        "precipitation": 0.02,
+        "precipitation_probability": null,
+        "temperature": 66,
+        "wind_bearing": 55,
+        "wind_speed": 15.66
+      },
+      {
+        "apparent_temperature": 68,
+        "cloud_coverage": 55,
+        "condition": "rainy",
+        "datetime": "2025-10-01T10:00:00+00:00",
+        "precipitation": 0.03,
+        "precipitation_probability": null,
+        "temperature": 68,
+        "wind_bearing": 60,
+        "wind_speed": 17.9
+      }
+    ]
+  }
+}

@@ -1,0 +1,498 @@
+/* The demo's pages. Light and dark follow the Dashboard choice, which the card is told as Home
+   Assistant's theme; the setup page follows the visitor's own. */
+:root {
+  color-scheme: light;
+  --bg: #f4f5f7;
+  --text: #15171c;
+  --muted: #5b616d;
+  --panel: #fff;
+  --line: #e1e4e9;
+  --chip: #eceef2;
+  --accent: #1f5fd6;
+  --on-accent: #fff;
+  --dashboard: #e6e8ec;
+  --shadow: 0 1px 2px #0000000f, 0 8px 24px -12px #0000002e;
+  font: 15px/1.5 system-ui, sans-serif;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0d0f12;
+  --text: #eceef2;
+  --muted: #9ba2ae;
+  --panel: #171a1f;
+  --line: #2a2e36;
+  --chip: #23272e;
+  --accent: #6f9bff;
+  --on-accent: #0d0f12;
+  --dashboard: #08090b;
+  --shadow: 0 1px 2px #0006, 0 8px 24px -12px #000c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #0d0f12;
+    --text: #eceef2;
+    --muted: #9ba2ae;
+    --panel: #171a1f;
+    --line: #2a2e36;
+    --chip: #23272e;
+    --accent: #6f9bff;
+    --on-accent: #0d0f12;
+    --dashboard: #08090b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+a {
+  color: var(--accent);
+}
+code,
+pre {
+  font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The bar across the top. */
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 16px 24px;
+}
+.brand {
+  color: var(--text);
+  font-weight: 650;
+  text-decoration: none;
+}
+.top nav {
+  display: flex;
+  gap: 18px;
+}
+.top nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.top nav a:hover {
+  color: var(--text);
+}
+
+main,
+footer {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.intro {
+  margin: 12px 0 24px;
+}
+.intro h1 {
+  margin: 0 0 6px;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.intro p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+/* The card on the left, the controls on the right; one above the other on a narrow screen. */
+.bench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .bench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The dashboard the card stands on. The page layout scrolls inside a screen's height; the
+   others take the height they take on a dashboard, at a column's width. */
+.stage {
+  --frame-height: min(900px, calc(100dvh - 48px));
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  min-height: 420px;
+  padding: 24px;
+  border-radius: 24px;
+  background: var(--dashboard);
+}
+.frame {
+  width: 100%;
+  max-width: 100%;
+}
+.stage[data-layout='page'][data-screen='phone'] {
+  --frame-height: 780px;
+}
+.stage[data-layout='page'][data-screen='phone'] .frame {
+  width: 390px;
+}
+.stage[data-layout='page'][data-screen='tablet'] .frame {
+  width: 820px;
+}
+.stage:not([data-layout='page'])[data-screen='phone'] .frame {
+  width: 360px;
+}
+.stage:not([data-layout='page'])[data-screen='tablet'] .frame {
+  width: 480px;
+}
+.stage:not([data-layout='page'])[data-screen='desktop'] .frame {
+  width: 640px;
+}
+.stage:not([data-layout='page']) {
+  padding-top: 56px;
+}
+.frame iweather-card {
+  display: block;
+  box-shadow: var(--shadow);
+}
+.stage[data-layout='page'] iweather-card {
+  --iweather-height: var(--frame-height);
+}
+@media (max-width: 600px) {
+  .stage,
+  .stage:not([data-layout='page']) {
+    margin: 0 -24px;
+    padding: 12px;
+    border-radius: 0;
+  }
+  /* A phone shows the card at its own width. */
+  .controls .screen {
+    display: none;
+  }
+}
+
+/* The controls. */
+.controls {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 20px;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 20px;
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+@media (max-width: 980px) {
+  .controls {
+    position: static;
+    max-height: none;
+  }
+}
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+fieldset:disabled {
+  opacity: 0.45;
+}
+legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Choices drawn as chips and segments, over radio buttons. */
+.chips,
+.segments {
+  position: relative;
+}
+.chips input,
+.segments input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chips span {
+  display: block;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--chip);
+  font-size: 14px;
+  cursor: pointer;
+}
+.chips input:checked + span {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.segments {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--chip);
+}
+.segments span {
+  display: block;
+  padding: 5px 4px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  text-align: center;
+  cursor: pointer;
+}
+.segments input:checked + span {
+  background: var(--panel);
+  box-shadow: 0 1px 3px #00000026;
+  font-weight: 600;
+}
+.chips input:focus-visible + span,
+.segments input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+fieldset:disabled span {
+  cursor: default;
+}
+
+.hour {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  align-items: center;
+  gap: 10px;
+}
+.hour input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.hour output {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+.marks {
+  display: flex;
+  justify-content: space-between;
+  margin-right: 62px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+select,
+input[type='search'] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+button {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--chip);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+button:hover {
+  filter: brightness(0.96);
+}
+.search {
+  display: flex;
+  gap: 6px;
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+}
+.search button {
+  white-space: nowrap;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.real {
+  display: grid;
+  gap: 8px;
+}
+.here {
+  justify-self: start;
+}
+.places {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.places button {
+  width: 100%;
+  text-align: left;
+}
+.real-status:empty {
+  display: none;
+}
+.real-status,
+.note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.back {
+  justify-self: start;
+}
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+.check input {
+  accent-color: var(--accent);
+}
+.check:has(input:disabled) {
+  opacity: 0.45;
+}
+
+/* The settings as YAML. */
+.settings {
+  max-width: 760px;
+  margin: 32px 0 0;
+}
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.copy-feedback {
+  margin-inline: auto 0.5rem;
+  color: var(--muted);
+}
+.settings h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.settings pre {
+  margin: 12px 0;
+  padding: 16px 18px;
+  overflow: auto;
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.settings p {
+  color: var(--muted);
+}
+.settings p code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--chip);
+}
+
+footer {
+  padding-top: 24px;
+  padding-bottom: 40px;
+  color: var(--muted);
+  font-size: 13px;
+}
+footer p {
+  max-width: 80ch;
+}
+
+/* The setup page. */
+.doc {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+.doc h1 {
+  margin: 12px 0 8px;
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.doc h2 {
+  margin: 36px 0 8px;
+  font-size: 22px;
+}
+.doc h3 {
+  margin: 24px 0 6px;
+  font-size: 17px;
+}
+.doc li + li {
+  margin-top: 4px;
+}
+.doc pre {
+  padding: 14px 16px;
+  overflow: auto;
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.doc :not(pre) > code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--chip);
+}
+.doc table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.doc th,
+.doc td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.doc .add {
+  display: inline-block;
+  padding: 9px 18px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+.doc .callout {
+  padding: 12px 16px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  background: var(--panel);
+}

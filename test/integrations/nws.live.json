@@ -1,0 +1,640 @@
+{
+  "integration": "nws",
+  "from": "live",
+  "units": "metric",
+  "place": "Chicago, United States",
+  "latitude": 41.88,
+  "longitude": -87.63,
+  "time_zone": "America/Chicago",
+  "now": "2026-11-02T19:54:21+00:00",
+  "state": {
+    "state": "cloudy",
+    "attributes": {
+      "temperature": 14.0,
+      "temperature_unit": "°C",
+      "humidity": 94,
+      "pressure": 1018.7,
+      "pressure_unit": "hPa",
+      "wind_bearing": 170.0,
+      "wind_speed": 16.67,
+      "wind_speed_unit": "km/h",
+      "visibility": 14.48,
+      "visibility_unit": "km",
+      "precipitation_unit": "mm",
+      "supported_features": 6
+    }
+  },
+  "forecasts": {
+    "hourly": [
+      {
+        "datetime": "2026-11-02T13:00:00-06:00",
+        "precipitation_probability": 7,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 15.6,
+        "dew_point": 13.3,
+        "wind_speed": 24.14,
+        "humidity": 87
+      },
+      {
+        "datetime": "2026-11-02T14:00:00-06:00",
+        "precipitation_probability": 7,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 15.6,
+        "dew_point": 13.3,
+        "wind_speed": 24.14,
+        "humidity": 87
+      },
+      {
+        "datetime": "2026-11-02T15:00:00-06:00",
+        "precipitation_probability": 7,
+        "condition": "cloudy",
+        "wind_bearing": 157.5,
+        "temperature": 15.6,
+        "dew_point": 13.3,
+        "wind_speed": 24.14,
+        "humidity": 88
+      },
+      {
+        "datetime": "2026-11-02T16:00:00-06:00",
+        "precipitation_probability": 7,
+        "condition": "cloudy",
+        "wind_bearing": 157.5,
+        "temperature": 15.6,
+        "dew_point": 13.3,
+        "wind_speed": 24.14,
+        "humidity": 89
+      },
+      {
+        "datetime": "2026-11-02T17:00:00-06:00",
+        "precipitation_probability": 12,
+        "condition": "rainy",
+        "wind_bearing": 157.5,
+        "temperature": 15.6,
+        "dew_point": 13.9,
+        "wind_speed": 24.14,
+        "humidity": 90
+      },
+      {
+        "datetime": "2026-11-02T18:00:00-06:00",
+        "precipitation_probability": 18,
+        "condition": "rainy",
+        "wind_bearing": 157.5,
+        "temperature": 15.0,
+        "dew_point": 13.9,
+        "wind_speed": 24.14,
+        "humidity": 92
+      },
+      {
+        "datetime": "2026-11-02T19:00:00-06:00",
+        "precipitation_probability": 15,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 15.6,
+        "dew_point": 14.4,
+        "wind_speed": 24.14,
+        "humidity": 92
+      },
+      {
+        "datetime": "2026-11-02T20:00:00-06:00",
+        "precipitation_probability": 13,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 15.6,
+        "dew_point": 14.4,
+        "wind_speed": 32.19,
+        "humidity": 93
+      },
+      {
+        "datetime": "2026-11-02T21:00:00-06:00",
+        "precipitation_probability": 12,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 14.4,
+        "wind_speed": 32.19,
+        "humidity": 92
+      },
+      {
+        "datetime": "2026-11-02T22:00:00-06:00",
+        "precipitation_probability": 11,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 15.0,
+        "wind_speed": 32.19,
+        "humidity": 93
+      },
+      {
+        "datetime": "2026-11-02T23:00:00-06:00",
+        "precipitation_probability": 11,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 15.0,
+        "wind_speed": 32.19,
+        "humidity": 92
+      },
+      {
+        "datetime": "2026-11-03T00:00:00-06:00",
+        "precipitation_probability": 9,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.7,
+        "dew_point": 15.0,
+        "wind_speed": 24.14,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-03T01:00:00-06:00",
+        "precipitation_probability": 8,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 14.4,
+        "wind_speed": 32.19,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-03T02:00:00-06:00",
+        "precipitation_probability": 10,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 14.4,
+        "wind_speed": 32.19,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-03T03:00:00-06:00",
+        "precipitation_probability": 10,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 14.4,
+        "wind_speed": 32.19,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-03T04:00:00-06:00",
+        "precipitation_probability": 9,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 15.0,
+        "wind_speed": 32.19,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-03T05:00:00-06:00",
+        "precipitation_probability": 8,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 14.4,
+        "wind_speed": 24.14,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-03T06:00:00-06:00",
+        "precipitation_probability": 7,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 14.4,
+        "wind_speed": 24.14,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-03T07:00:00-06:00",
+        "precipitation_probability": 6,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 15.0,
+        "wind_speed": 32.19,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-03T08:00:00-06:00",
+        "precipitation_probability": 6,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 16.7,
+        "dew_point": 15.0,
+        "wind_speed": 32.19,
+        "humidity": 89
+      },
+      {
+        "datetime": "2026-11-03T09:00:00-06:00",
+        "precipitation_probability": 7,
+        "condition": "windy-variant",
+        "wind_bearing": 180.0,
+        "temperature": 18.3,
+        "dew_point": 15.0,
+        "wind_speed": 40.23,
+        "humidity": 83
+      },
+      {
+        "datetime": "2026-11-03T10:00:00-06:00",
+        "precipitation_probability": 9,
+        "condition": "windy-variant",
+        "wind_bearing": 180.0,
+        "temperature": 18.9,
+        "dew_point": 15.6,
+        "wind_speed": 40.23,
+        "humidity": 82
+      },
+      {
+        "datetime": "2026-11-03T11:00:00-06:00",
+        "precipitation_probability": 11,
+        "condition": "windy-variant",
+        "wind_bearing": 180.0,
+        "temperature": 18.9,
+        "dew_point": 15.6,
+        "wind_speed": 40.23,
+        "humidity": 79
+      },
+      {
+        "datetime": "2026-11-03T12:00:00-06:00",
+        "precipitation_probability": 11,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 19.4,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 78
+      },
+      {
+        "datetime": "2026-11-03T13:00:00-06:00",
+        "precipitation_probability": 12,
+        "condition": "cloudy",
+        "wind_bearing": 180.0,
+        "temperature": 20.0,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 76
+      },
+      {
+        "datetime": "2026-11-03T14:00:00-06:00",
+        "precipitation_probability": 16,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 20.0,
+        "dew_point": 16.1,
+        "wind_speed": 32.19,
+        "humidity": 77
+      },
+      {
+        "datetime": "2026-11-03T15:00:00-06:00",
+        "precipitation_probability": 18,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 20.0,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 77
+      },
+      {
+        "datetime": "2026-11-03T16:00:00-06:00",
+        "precipitation_probability": 23,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 20.0,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 78
+      },
+      {
+        "datetime": "2026-11-03T17:00:00-06:00",
+        "precipitation_probability": 30,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 19.4,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 80
+      },
+      {
+        "datetime": "2026-11-03T18:00:00-06:00",
+        "precipitation_probability": 25,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 18.9,
+        "dew_point": 15.6,
+        "wind_speed": 24.14,
+        "humidity": 82
+      },
+      {
+        "datetime": "2026-11-03T19:00:00-06:00",
+        "precipitation_probability": 19,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 18.9,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 83
+      },
+      {
+        "datetime": "2026-11-03T20:00:00-06:00",
+        "precipitation_probability": 28,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 18.3,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 84
+      },
+      {
+        "datetime": "2026-11-03T21:00:00-06:00",
+        "precipitation_probability": 40,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 18.3,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 86
+      },
+      {
+        "datetime": "2026-11-03T22:00:00-06:00",
+        "precipitation_probability": 45,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 17.8,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 88
+      },
+      {
+        "datetime": "2026-11-03T23:00:00-06:00",
+        "precipitation_probability": 51,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 17.8,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 89
+      },
+      {
+        "datetime": "2026-11-04T00:00:00-06:00",
+        "precipitation_probability": 92,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 17.2,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 90
+      },
+      {
+        "datetime": "2026-11-04T01:00:00-06:00",
+        "precipitation_probability": 79,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 17.2,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 90
+      },
+      {
+        "datetime": "2026-11-04T02:00:00-06:00",
+        "precipitation_probability": 87,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 17.2,
+        "dew_point": 15.6,
+        "wind_speed": 32.19,
+        "humidity": 91
+      },
+      {
+        "datetime": "2026-11-04T03:00:00-06:00",
+        "precipitation_probability": 50,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 16.7,
+        "dew_point": 15.6,
+        "wind_speed": 24.14,
+        "humidity": 92
+      },
+      {
+        "datetime": "2026-11-04T04:00:00-06:00",
+        "precipitation_probability": 19,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 15.6,
+        "wind_speed": 24.14,
+        "humidity": 94
+      },
+      {
+        "datetime": "2026-11-04T05:00:00-06:00",
+        "precipitation_probability": 50,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 15.0,
+        "wind_speed": 24.14,
+        "humidity": 95
+      },
+      {
+        "datetime": "2026-11-04T06:00:00-06:00",
+        "precipitation_probability": 80,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 15.6,
+        "dew_point": 15.0,
+        "wind_speed": 24.14,
+        "humidity": 96
+      },
+      {
+        "datetime": "2026-11-04T07:00:00-06:00",
+        "precipitation_probability": 80,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 15.0,
+        "wind_speed": 24.14,
+        "humidity": 93
+      },
+      {
+        "datetime": "2026-11-04T08:00:00-06:00",
+        "precipitation_probability": 80,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 16.1,
+        "dew_point": 15.6,
+        "wind_speed": 24.14,
+        "humidity": 94
+      },
+      {
+        "datetime": "2026-11-04T09:00:00-06:00",
+        "precipitation_probability": 80,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 16.7,
+        "dew_point": 15.6,
+        "wind_speed": 24.14,
+        "humidity": 90
+      },
+      {
+        "datetime": "2026-11-04T10:00:00-06:00",
+        "precipitation_probability": 80,
+        "condition": "rainy",
+        "wind_bearing": 202.5,
+        "temperature": 17.2,
+        "dew_point": 15.0,
+        "wind_speed": 24.14,
+        "humidity": 86
+      },
+      {
+        "datetime": "2026-11-04T11:00:00-06:00",
+        "precipitation_probability": 80,
+        "condition": "rainy",
+        "wind_bearing": 202.5,
+        "temperature": 17.2,
+        "dew_point": 14.4,
+        "wind_speed": 24.14,
+        "humidity": 84
+      },
+      {
+        "datetime": "2026-11-04T12:00:00-06:00",
+        "precipitation_probability": 27,
+        "condition": "rainy",
+        "wind_bearing": 202.5,
+        "temperature": 17.2,
+        "dew_point": 13.9,
+        "wind_speed": 24.14,
+        "humidity": 82
+      }
+    ],
+    "twice_daily": [
+      {
+        "datetime": "2026-11-02T13:00:00-06:00",
+        "precipitation_probability": 12,
+        "is_daytime": true,
+        "condition": "rainy",
+        "wind_bearing": 157.5,
+        "temperature": 15.6,
+        "wind_speed": 24.14
+      },
+      {
+        "datetime": "2026-11-02T18:00:00-06:00",
+        "precipitation_probability": 18,
+        "is_daytime": false,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 15.6,
+        "wind_speed": 28.16
+      },
+      {
+        "datetime": "2026-11-03T06:00:00-06:00",
+        "precipitation_probability": 30,
+        "is_daytime": true,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 20.0,
+        "wind_speed": 32.19
+      },
+      {
+        "datetime": "2026-11-03T18:00:00-06:00",
+        "precipitation_probability": 92,
+        "is_daytime": false,
+        "condition": "rainy",
+        "wind_bearing": 180.0,
+        "temperature": 15.6,
+        "wind_speed": 28.16
+      },
+      {
+        "datetime": "2026-11-04T06:00:00-06:00",
+        "precipitation_probability": 80,
+        "is_daytime": true,
+        "condition": "rainy",
+        "wind_bearing": 202.5,
+        "temperature": 17.2,
+        "wind_speed": 24.14
+      },
+      {
+        "datetime": "2026-11-04T18:00:00-06:00",
+        "precipitation_probability": 13,
+        "is_daytime": false,
+        "condition": "cloudy",
+        "wind_bearing": 225.0,
+        "temperature": 10.6,
+        "wind_speed": 24.14
+      },
+      {
+        "datetime": "2026-11-05T06:00:00-06:00",
+        "precipitation_probability": 30,
+        "is_daytime": true,
+        "condition": "rainy",
+        "wind_bearing": 225.0,
+        "temperature": 13.3,
+        "wind_speed": 20.12
+      },
+      {
+        "datetime": "2026-11-05T18:00:00-06:00",
+        "precipitation_probability": 39,
+        "is_daytime": false,
+        "condition": "rainy",
+        "wind_bearing": 292.5,
+        "temperature": 9.4,
+        "wind_speed": 16.09
+      },
+      {
+        "datetime": "2026-11-06T06:00:00-06:00",
+        "precipitation_probability": 42,
+        "is_daytime": true,
+        "condition": "rainy",
+        "wind_bearing": 337.5,
+        "temperature": 12.2,
+        "wind_speed": 20.12
+      },
+      {
+        "datetime": "2026-11-06T18:00:00-06:00",
+        "precipitation_probability": 14,
+        "is_daytime": false,
+        "condition": "cloudy",
+        "wind_bearing": 337.5,
+        "temperature": 7.2,
+        "wind_speed": 16.09
+      },
+      {
+        "datetime": "2026-11-07T06:00:00-06:00",
+        "precipitation_probability": 11,
+        "is_daytime": true,
+        "condition": "cloudy",
+        "wind_bearing": 292.5,
+        "temperature": 11.7,
+        "wind_speed": 8.05
+      },
+      {
+        "datetime": "2026-11-07T18:00:00-06:00",
+        "precipitation_probability": 15,
+        "is_daytime": false,
+        "condition": "rainy",
+        "wind_bearing": 247.5,
+        "temperature": 6.7,
+        "wind_speed": 8.05
+      },
+      {
+        "datetime": "2026-11-08T06:00:00-06:00",
+        "precipitation_probability": 18,
+        "is_daytime": true,
+        "condition": "rainy",
+        "wind_bearing": 292.5,
+        "temperature": 12.8,
+        "wind_speed": 12.07
+      },
+      {
+        "datetime": "2026-11-08T18:00:00-06:00",
+        "precipitation_probability": 19,
+        "is_daytime": false,
+        "condition": "rainy",
+        "wind_bearing": 315.0,
+        "temperature": 7.2,
+        "wind_speed": 12.07
+      }
+    ]
+  },
+  "notes": "Recorded from a running Home Assistant 2026.10.4 at 13:54 local time on 2 November 2026 (America/Chicago), with its home and time zone set to Chicago, United States and its unit system metric. Entry for 41.8781, -87.6298 with station KMDW (Chicago Midway), contact string test@example.com; entity weather.nws_41_8781_87_6298_kmdw; supported_features 6: hourly and twice_daily, no daily. Current, from the station's latest observation: condition, temperature, humidity, pressure, visibility, wind_bearing (float), wind_speed; no dew_point, apparent_temperature, wind_gust_speed, cloud_coverage or uv_index. The observed temperature (14.0 °C, 57 °F) is below the forecast for the same hour (15.6 °C, 60 °F). Forecast datetimes carry the local offset (-06:00). Hourly: 156 entries returned, the first 48 kept; the first is the hour already under way (13:00 local, 54 minutes before now); fields condition, temperature, dew_point, humidity, precipitation_probability (int), wind_bearing (float), wind_speed; no precipitation amount, pressure, cloud_coverage or gusts; windy-variant appears. Twice daily: 14 periods with is_daytime; the first (this afternoon) starts at 13:00 and lasts 5 hours, then days start at 06:00 and nights at 18:00; each period has one temperature (the day's high or the night's low) and no templow. The forecasts come from the service in whole °F and mph, so metric values are conversions (60 °F becomes 15.6 °C, 15 mph 24.14 km/h); the observation is in SI units. Units: °C, hPa, km/h, km, mm. Values Home Assistant converts from another unit carry up to two decimals (temperatures one)."
+}

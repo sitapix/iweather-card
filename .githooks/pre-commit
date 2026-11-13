@@ -1,0 +1,10 @@
+#!/bin/sh
+# This repository keeps its hooks here (core.hooksPath, set by `pnpm install`), which
+# hides any global hooks: the global pre-commit runs first, then the checks in lefthook.yml beside this
+# on the staged files.
+global=$(git config --global --type=path --get core.hooksPath)
+if [ -n "$global" ] && [ -x "$global/pre-commit" ]; then
+  "$global/pre-commit" || exit $?
+fi
+export LEFTHOOK_CONFIG=.githooks/lefthook.yml
+exec pnpm exec lefthook run pre-commit --no-auto-install

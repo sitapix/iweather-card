@@ -1,0 +1,8 @@
+#!/bin/sh
+# Any global commit-msg, hidden by this repository's own hooks path, runs first; then the message is
+# held to the same rule as the files: it names no other product (scripts/names.ts).
+global=$(git config --global --type=path --get core.hooksPath)
+if [ -n "$global" ] && [ -x "$global/commit-msg" ]; then
+  "$global/commit-msg" "$@" || exit $?
+fi
+exec node scripts/names.ts --message "$1"

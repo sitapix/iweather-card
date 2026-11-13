@@ -1,0 +1,497 @@
+{
+  "integration": "ipma",
+  "from": "live",
+  "units": "us",
+  "place": "Lisbon, Portugal",
+  "latitude": 38.72,
+  "longitude": -9.14,
+  "time_zone": "Europe/Lisbon",
+  "now": "2026-11-02T19:54:35+00:00",
+  "state": {
+    "state": "clear-night",
+    "attributes": {
+      "temperature": 68,
+      "temperature_unit": "°F",
+      "humidity": 32,
+      "pressure": 30.04,
+      "pressure_unit": "inHg",
+      "wind_bearing": "NW",
+      "wind_speed": 8.26,
+      "wind_speed_unit": "mph",
+      "visibility_unit": "mi",
+      "precipitation_unit": "in",
+      "supported_features": 3
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "datetime": "2026-11-02T00:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NW",
+        "temperature": 79,
+        "templow": 59
+      },
+      {
+        "datetime": "2026-11-03T00:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 72,
+        "templow": 55
+      },
+      {
+        "datetime": "2026-11-04T00:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 69,
+        "templow": 52
+      },
+      {
+        "datetime": "2026-11-05T00:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NW",
+        "temperature": 66,
+        "templow": 50
+      },
+      {
+        "datetime": "2026-11-06T00:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 35.0,
+        "wind_bearing": "S",
+        "temperature": 67,
+        "templow": 51
+      },
+      {
+        "datetime": "2026-11-07T00:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 76.0,
+        "wind_bearing": "S",
+        "temperature": 68,
+        "templow": 58
+      },
+      {
+        "datetime": "2026-11-08T00:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 82.0,
+        "wind_bearing": "SE",
+        "temperature": 70,
+        "templow": 61
+      },
+      {
+        "datetime": "2026-11-09T00:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 100.0,
+        "wind_bearing": "S",
+        "temperature": 68,
+        "templow": 62
+      },
+      {
+        "datetime": "2026-11-10T00:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 100.0,
+        "wind_bearing": "SW",
+        "temperature": 67,
+        "templow": 60
+      },
+      {
+        "datetime": "2026-11-11T00:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 80.0,
+        "wind_bearing": "S",
+        "temperature": 66,
+        "templow": 59
+      }
+    ],
+    "hourly": [
+      {
+        "datetime": "2026-11-02T19:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NW",
+        "temperature": 67,
+        "wind_speed": 5.59
+      },
+      {
+        "datetime": "2026-11-02T20:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NW",
+        "temperature": 65,
+        "wind_speed": 5.84
+      },
+      {
+        "datetime": "2026-11-02T21:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NW",
+        "temperature": 64,
+        "wind_speed": 5.34
+      },
+      {
+        "datetime": "2026-11-02T22:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NW",
+        "temperature": 63,
+        "wind_speed": 5.34
+      },
+      {
+        "datetime": "2026-11-02T23:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 62,
+        "wind_speed": 4.72
+      },
+      {
+        "datetime": "2026-11-03T00:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "N",
+        "temperature": 60,
+        "wind_speed": 3.6
+      },
+      {
+        "datetime": "2026-11-03T01:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 58,
+        "wind_speed": 2.92
+      },
+      {
+        "datetime": "2026-11-03T02:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 57,
+        "wind_speed": 3.11
+      },
+      {
+        "datetime": "2026-11-03T03:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "N",
+        "temperature": 56,
+        "wind_speed": 2.67
+      },
+      {
+        "datetime": "2026-11-03T04:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 56,
+        "wind_speed": 2.67
+      },
+      {
+        "datetime": "2026-11-03T05:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 56,
+        "wind_speed": 1.8
+      },
+      {
+        "datetime": "2026-11-03T06:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "N",
+        "temperature": 55,
+        "wind_speed": 1.55
+      },
+      {
+        "datetime": "2026-11-03T07:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 56,
+        "wind_speed": 2.67
+      },
+      {
+        "datetime": "2026-11-03T08:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 56,
+        "wind_speed": 3.6
+      },
+      {
+        "datetime": "2026-11-03T09:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 60,
+        "wind_speed": 3.79
+      },
+      {
+        "datetime": "2026-11-03T10:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "E",
+        "temperature": 63,
+        "wind_speed": 5.59
+      },
+      {
+        "datetime": "2026-11-03T11:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 64,
+        "wind_speed": 6.28
+      },
+      {
+        "datetime": "2026-11-03T12:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 67,
+        "wind_speed": 5.59
+      },
+      {
+        "datetime": "2026-11-03T13:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "E",
+        "temperature": 70,
+        "wind_speed": 5.16
+      },
+      {
+        "datetime": "2026-11-03T14:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "E",
+        "temperature": 71,
+        "wind_speed": 5.16
+      },
+      {
+        "datetime": "2026-11-03T15:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "E",
+        "temperature": 72,
+        "wind_speed": 4.91
+      },
+      {
+        "datetime": "2026-11-03T16:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 72,
+        "wind_speed": 4.47
+      },
+      {
+        "datetime": "2026-11-03T17:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 70,
+        "wind_speed": 3.6
+      },
+      {
+        "datetime": "2026-11-03T18:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "N",
+        "temperature": 67,
+        "wind_speed": 3.79
+      },
+      {
+        "datetime": "2026-11-03T19:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 65,
+        "wind_speed": 6.46
+      },
+      {
+        "datetime": "2026-11-03T20:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 63,
+        "wind_speed": 7.15
+      },
+      {
+        "datetime": "2026-11-03T21:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 62,
+        "wind_speed": 7.83
+      },
+      {
+        "datetime": "2026-11-03T22:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 62,
+        "wind_speed": 8.51
+      },
+      {
+        "datetime": "2026-11-03T23:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 59,
+        "wind_speed": 8.08
+      },
+      {
+        "datetime": "2026-11-04T00:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 57,
+        "wind_speed": 7.15
+      },
+      {
+        "datetime": "2026-11-04T01:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 56,
+        "wind_speed": 6.46
+      },
+      {
+        "datetime": "2026-11-04T02:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 55,
+        "wind_speed": 6.28
+      },
+      {
+        "datetime": "2026-11-04T03:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 54,
+        "wind_speed": 5.84
+      },
+      {
+        "datetime": "2026-11-04T04:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 53,
+        "wind_speed": 5.84
+      },
+      {
+        "datetime": "2026-11-04T05:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 53,
+        "wind_speed": 6.03
+      },
+      {
+        "datetime": "2026-11-04T06:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 52,
+        "wind_speed": 6.46
+      },
+      {
+        "datetime": "2026-11-04T07:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 52,
+        "wind_speed": 6.96
+      },
+      {
+        "datetime": "2026-11-04T08:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 52,
+        "wind_speed": 7.39
+      },
+      {
+        "datetime": "2026-11-04T09:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 55,
+        "wind_speed": 7.15
+      },
+      {
+        "datetime": "2026-11-04T10:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 57,
+        "wind_speed": 6.96
+      },
+      {
+        "datetime": "2026-11-04T11:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 60,
+        "wind_speed": 6.71
+      },
+      {
+        "datetime": "2026-11-04T12:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NE",
+        "temperature": 62,
+        "wind_speed": 5.34
+      },
+      {
+        "datetime": "2026-11-04T13:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "E",
+        "temperature": 65,
+        "wind_speed": 4.72
+      },
+      {
+        "datetime": "2026-11-04T14:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "E",
+        "temperature": 66,
+        "wind_speed": 3.79
+      },
+      {
+        "datetime": "2026-11-04T15:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "E",
+        "temperature": 67,
+        "wind_speed": 3.11
+      },
+      {
+        "datetime": "2026-11-04T16:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "NE",
+        "temperature": 69,
+        "wind_speed": 2.92
+      },
+      {
+        "datetime": "2026-11-04T17:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": -99.0,
+        "wind_bearing": "N",
+        "temperature": 65,
+        "wind_speed": 4.23
+      },
+      {
+        "datetime": "2026-11-04T18:00:00+00:00",
+        "condition": "clear-night",
+        "precipitation_probability": 0.0,
+        "wind_bearing": "NW",
+        "temperature": 61,
+        "wind_speed": 6.28
+      }
+    ]
+  },
+  "notes": "Recorded from a running Home Assistant 2026.10.4 at 19:54 local time on 2 November 2026 (Europe/Lisbon), with its home and time zone set to Lisbon, Portugal and its unit system US customary. Entry for 38.7223, -9.1393, matched to the station Lisboa - Jardim Botânico; entity weather.lisboa_jardim_botanico; supported_features 3 (daily, hourly). wind_bearing is a compass string ('N', 'NE', 'E', 'SE', 'S', 'SW', 'NW' here) in the state and in both forecasts, never degrees. Current: condition, temperature, humidity, pressure, wind_bearing, wind_speed; no visibility (though visibility_unit is set), dew_point, cloud_coverage, gusts or uv_index. Daily: 10 entries stamped 00:00 UTC (local midnight), today first; condition, temperature, templow, precipitation_probability (float) and wind_bearing; no wind_speed or humidity. A clear-sky day comes as clear-night in daily, because the sun is checked at the entry's own time, midnight: today and 4 November here. Hourly: 54 entries returned, the first 48 kept; the first is the hour already under way (55 minutes before now); precipitation_probability is -99.0, meaning no value, in two of every three hours, as the service gives it only every third hour; no humidity. Units: °F, inHg, mph, mi, in. Home Assistant rounds every converted temperature (temperature, templow, dew_point, apparent_temperature) to a whole degree, so they arrive as integers; other converted values carry up to two decimals. Humidity, cloud_coverage, uv_index, bearings, probabilities and datetimes are the same as in the metric recording made at the same moment."
+}

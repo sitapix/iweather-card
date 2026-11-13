@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Set up · iWeather Card</title>
+  <meta name="description" content="Install the iWeather Card in Home Assistant, add it to a dashboard, and choose what it shows.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="../demo.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="../">iWeather</a>
+    <nav aria-label="Site">
+      <a href="../">Try it</a>
+      <a href="https://github.com/sitapix/iweather-card">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="doc">
+    <h1>Set up the card</h1>
+    <p>The card needs Home Assistant 2023.9 or newer and any weather integration. It asks for no account or key.</p>
+
+    <h2 id="install">Install</h2>
+    <h3 id="hacs">With HACS</h3>
+    <p><a class="add" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=sitapix&amp;repository=iweather-card&amp;category=plugin">Open in HACS</a></p>
+    <p>The button opens the card in HACS on your own Home Assistant. Install <strong>iWeather Card</strong>, then reload your browser. To add it by hand instead:</p>
+    <ol>
+      <li>In HACS, open the ⋮ menu and choose <strong>Custom repositories</strong>.</li>
+      <li>Add <code>https://github.com/sitapix/iweather-card</code> with the type <strong>Dashboard</strong>.</li>
+      <li>Install <strong>iWeather Card</strong>, then reload your browser.</li>
+    </ol>
+
+    <h3 id="by-hand">By hand</h3>
+    <ol>
+      <li>Download every file from the latest release, or build them with Node 22.18 or newer and pnpm:
+        <pre><code>pnpm install --frozen-lockfile
+pnpm build   # writes them to dist/</code></pre>
+      </li>
+      <li>Copy them all to one folder, such as <code>/config/www/iweather/</code>. The card loads its clouds, moon, map and editor languages from beside its own file.</li>
+      <li>Go to <strong>Settings → Dashboards → ⋮ → Resources</strong> and add <code>/local/iweather/iweather-card.js</code> as a <strong>JavaScript module</strong>.</li>
+    </ol>
+    <p>Browsers keep the old file after an update. Change the resource's address to load the new one, for example <code>/local/iweather/iweather-card.js?v=2</code>.</p>
+
+    <h2 id="add">Add it to a dashboard</h2>
+    <p>Choose <strong>iWeather</strong> in the card picker. It starts on the page layout, with one of your weather entities, and every option is in its editor. In YAML, the entity is all it needs:</p>
+    <pre><code>type: custom:iweather-card
+entity: weather.home</code></pre>
+    <p>The page layout shows everything once it has a few more settings:</p>
+    <pre><code>type: custom:iweather-card
+entity: weather.home
+weather_layout: page
+place_name: St. Louis
+averages: open-meteo
+map: rainviewer</code></pre>
+    <p>A tile with nothing to show hides itself, so you can start small. The editor's <strong>Data sources</strong> section marks the readings your weather entity leaves out, and a sensor of your own can stand in for any of them.</p>
+    <p>Put the page layout in a panel view and it fills the screen. As you scroll, the conditions shrink into a band at the top and the panels pass under it.</p>
+
+    <h2 id="layouts">Layouts</h2>
+    <table>
+      <thead><tr><th><code>weather_layout</code></th><th>Shows</th></tr></thead>
+      <tbody>
+        <tr><td><code>auto</code></td><td>Whatever fits the space the dashboard gives it. The default.</td></tr>
+        <tr><td><code>compact</code></td><td>A short tile: the place and temperature over the conditions and the day's high and low.</td></tr>
+        <tr><td><code>strip</code></td><td>One line: the place, the temperature and the conditions.</td></tr>
+        <tr><td><code>expanded</code></td><td>The conditions, the hourly forecast and the daily list.</td></tr>
+        <tr><td><code>page</code></td><td>Everything: alerts, forecasts, a map and detail tiles, in two to six columns.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="online">What it asks of the internet</h2>
+    <p>The <code>auto</code>, <code>compact</code>, <code>strip</code> and <code>expanded</code> layouts talk to Home Assistant alone. The page layout can fill what your weather entity leaves out from Open-Meteo, show radar from RainViewer, and in the United States show the National Weather Service's alerts. Your browser asks each one itself. Set <code>local_only: true</code> and the card asks none of them.</p>
+
+    <h2 id="more">More</h2>
+    <ul>
+      <li><a href="https://github.com/sitapix/iweather-card/blob/main/docs/configuration.md">Every option</a>, with sensors for each reading, the map's tiles, sizes and alerts.</li>
+      <li><a href="https://github.com/sitapix/iweather-card#detail-tiles">The detail tiles</a> and what each one needs.</li>
+      <li><a href="https://github.com/sitapix/iweather-card/issues">Report a fault</a>, saying which weather integration you use.</li>
+    </ul>
+  </main>
+</body>
+</html>

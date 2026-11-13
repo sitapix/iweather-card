@@ -1,0 +1,84 @@
+{
+  "integration": "buienradar",
+  "from": "live",
+  "units": "us",
+  "place": "Amsterdam, Netherlands",
+  "latitude": 52.37,
+  "longitude": 4.9,
+  "time_zone": "Europe/Amsterdam",
+  "now": "2026-11-02T19:54:44+00:00",
+  "state": {
+    "state": "cloudy",
+    "attributes": {
+      "temperature": 51,
+      "apparent_temperature": 48,
+      "temperature_unit": "°F",
+      "humidity": 88,
+      "pressure": 30.49,
+      "pressure_unit": "inHg",
+      "wind_bearing": 16,
+      "wind_gust_speed": 14.09,
+      "wind_speed": 8.28,
+      "wind_speed_unit": "mph",
+      "visibility": 57.85,
+      "visibility_unit": "mi",
+      "precipitation_unit": "in",
+      "supported_features": 1
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "datetime": "2026-11-03T00:00:00+01:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 10,
+        "wind_bearing": 45,
+        "temperature": 54,
+        "templow": 45,
+        "wind_speed": 0.56,
+        "precipitation": 0.0
+      },
+      {
+        "datetime": "2026-11-04T00:00:00+01:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 10,
+        "wind_bearing": 90,
+        "temperature": 50,
+        "templow": 37,
+        "wind_speed": 0.56,
+        "precipitation": 0.0
+      },
+      {
+        "datetime": "2026-11-05T00:00:00+01:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 10,
+        "wind_bearing": 45,
+        "temperature": 50,
+        "templow": 36,
+        "wind_speed": 0.56,
+        "precipitation": 0.0
+      },
+      {
+        "datetime": "2026-11-06T00:00:00+01:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 10,
+        "wind_bearing": 90,
+        "temperature": 50,
+        "templow": 34,
+        "wind_speed": 0.56,
+        "precipitation": 0.0
+      },
+      {
+        "datetime": "2026-11-07T00:00:00+01:00",
+        "condition": "cloudy",
+        "precipitation_probability": 30,
+        "wind_bearing": 180,
+        "temperature": 46,
+        "templow": 34,
+        "wind_speed": 0.56,
+        "precipitation": 0.0
+      }
+    ]
+  },
+  "notes": "Recorded from a running Home Assistant 2026.10.4 at 20:54 local time on 2 November 2026 (Europe/Amsterdam), with its home and time zone set to Amsterdam, Netherlands and its unit system US customary. Entry at 52.3676, 4.9041; entity weather.buienradar; supported_features 1, daily only. Current: condition, temperature, apparent_temperature, humidity, pressure, visibility (93.1 km, 57.85 mi), wind_bearing (int), wind_speed, wind_gust_speed; no dew_point, cloud_coverage or uv_index. Daily: 5 entries stamped local midnight with the offset (+01:00), starting tomorrow, so there is none for today; the service gives forecast temperatures in whole °C; precipitation_probability int; precipitation 0.0 throughout. Forecast wind_speed is estimated from a Beaufort force, so it can only take fixed steps: here every day is 0.25 m/s (force 0; 0.9 km/h, 0.56 mph), while wind_bearing, estimated from a compass point, varies (45, 90, 180). Units: °F, inHg, mph, mi, in. Home Assistant rounds every converted temperature (temperature, templow, dew_point, apparent_temperature) to a whole degree, so they arrive as integers; other converted values carry up to two decimals. Humidity, cloud_coverage, uv_index, bearings, probabilities and datetimes are the same as in the metric recording made at the same moment."
+}

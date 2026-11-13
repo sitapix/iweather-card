@@ -1,0 +1,52 @@
+{
+  "integration": "meteo_france",
+  "from": "snapshot",
+  "units": "metric",
+  "now": "2025-01-27T15:00:00+00:00",
+  "notes": "State is the core snapshot. Forecasts were built from source (weather.py) run over the test fixture raw_forecast.json, which holds a single daily and a single hourly entry (the real API gives up to 14 days and a few days of hours). The test does not freeze the clock, so now is the first hourly entry's time, which is also the hour the library takes as current. Hourly drops entries before now (the API can send past hours); its uv_index comes as the API's integer while the state's uv_index is a float. Hourly wind_bearing is null when the API sends -1; wind_gust_speed, apparent_temperature (wind chill) and precipitation only when the API sends them. Daily carries only condition, humidity (the day's max), temperature, templow and precipitation (24 h total): no wind, uv or precipitation_probability; datetime is 00:00 UTC; the list stops at the first day without a 12 h condition. A condition description the integration's map lacks is passed through unchanged, so the state or a forecast condition can be raw French text rather than a standard condition. Daily maps clear-night to sunny. No changes were needed for realism.",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "apparent_temperature": 5.4,
+      "humidity": 75,
+      "precipitation_unit": "mm",
+      "pressure": 988.7,
+      "pressure_unit": "hPa",
+      "supported_features": 3,
+      "temperature": 9.1,
+      "temperature_unit": "°C",
+      "uv_index": 1.0,
+      "visibility_unit": "km",
+      "wind_bearing": 200,
+      "wind_gust_speed": 64.8,
+      "wind_speed": 28.8,
+      "wind_speed_unit": "km/h"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "partlycloudy",
+        "datetime": "2025-01-27T00:00:00+00:00",
+        "humidity": 90,
+        "precipitation": 1.3,
+        "temperature": 10.4,
+        "templow": 6.9
+      }
+    ],
+    "hourly": [
+      {
+        "apparent_temperature": 5.4,
+        "condition": "partlycloudy",
+        "datetime": "2025-01-27T15:00:00+00:00",
+        "humidity": 75,
+        "precipitation": 0.0,
+        "temperature": 9.1,
+        "uv_index": 1,
+        "wind_bearing": 200,
+        "wind_gust_speed": 64.8,
+        "wind_speed": 28.8
+      }
+    ]
+  }
+}

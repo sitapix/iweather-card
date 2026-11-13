@@ -1,0 +1,24 @@
+body:
+  - type: markdown
+    attributes:
+      value: "[All options](https://github.com/sitapix/iweather-card/blob/main/docs/configuration.md) covers every setting. A tile with no data hides itself, and the editor's **Data sources** section marks the readings your entity lacks."
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do?
+      description: If it looks wrong, add a screenshot.
+    validations:
+      required: true
+  - type: input
+    id: integration
+    attributes:
+      label: Weather integration
+      description: The one behind your `weather.*` entity. What the card can show depends on what it sends.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Card configuration
+      description: Paste it from the card's code editor. Take out anything you'd rather not post.
+      render: yaml

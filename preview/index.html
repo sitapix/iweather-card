@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iWeather Card</title>
+<style>
+  body { margin: 0; padding: 32px 16px 64px; background: #f2f2f4; font: 15px system-ui, sans-serif; color: #1d1d1f; }
+  header, section, nav { max-width: 1240px; margin: 0 auto; }
+  h1 { margin: 0 0 6px; font-size: 28px; }
+  header p { margin: 0 0 14px; color: #6e6e73; }
+  header a { color: #0066cc; }
+  nav { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0; background: #f2f2f4e6; backdrop-filter: blur(12px); }
+  nav a { border-radius: 15px; padding: 5px 11px; background: #fff; color: #1d1d1f; font-size: 13px; text-decoration: none; box-shadow: 0 1px 3px #0001; }
+  h2 { margin: 36px 0 4px; font-size: 21px; scroll-margin-top: 60px; }
+  section > p { margin: 0 0 16px; color: #6e6e73; }
+  .grid { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+  figure { margin: 0; width: var(--w, 340px); max-width: 100%; }
+  figcaption { margin-bottom: 7px; font-weight: 600; font-size: 14px; }
+  figcaption small { display: block; font-weight: 400; color: #6e6e73; font-size: 12.5px; margin-top: 1px; }
+  .slot { height: var(--h, 540px); border-radius: 22px; background: #d9dde4; }
+  .slot[data-page] { height: auto; min-height: 900px; }
+  iweather-card { display: block; height: 100%; box-shadow: 0 14px 34px -20px #0008; }
+  .slot[data-page] iweather-card { height: auto; }
+</style>
+<header>
+  <h1>iWeather Card</h1>
+  <p>Sample data in every kind of weather, size and setting. In Home Assistant the card reads your own weather integration and sensors.
+    See also <a href="index-gallery.html">one scene at a time</a>, <a href="index-full.html">the full layout</a> and <a href="index-panel.html">the whole screen</a>, where it scrolls in place.</p>
+</header>
+<nav aria-label="Sections"></nav>
+<main></main>
+<script type="module">
+import '/src/iweather-card.ts';
+import { sceneHour, sunTimes, zoneAt } from '../demo/scene-clock.ts';
+const now = Date.now(), hour = Math.floor(now / 3600000) * 3600000, day = 86400000;
+const iso = t => new Date(t).toISOString();
+const WET = /rain|pour|hail|snow|lightning-rainy/;
+const DAYS = ['sunny', 'partlycloudy', 'cloudy', 'rainy', 'sunny', 'partlycloudy', 'lightning-rainy', 'cloudy', 'snowy', 'sunny'];
+
+// A Home Assistant stand-in for one card: a weather entity with hourly and daily
+// forecasts, the sun, and any extra sensors. Values are °F, mph, in, inHg and mi, or
+// °C, km/h, mm, hPa and km when `metric`.
+function sample(s) {
+  const { condition, temp = 68, elevation = 40, rising = true, metric = false, language = 'en', wind = 7, states = {} } = s;
+  const local = sceneHour(elevation, rising), zone = zoneAt(local, now);
+  const night = elevation < 0, wet = WET.test(condition), entity = s.entity ?? 'weather.home';
+  const swing = metric ? 3 : 5, rain = s.rain ?? (wet ? (metric ? 2 : .08) : 0);
+  const hourly = Array.from({ length: 24 }, (_, i) => {
+    const c = typeof s.hours === 'function' ? s.hours(i) : condition === 'sunny' && night ? 'clear-night' : condition;
+    return { datetime: iso(hour + i * 3600000), condition: c, temperature: Math.round(temp + Math.sin((i + (night ? 12 : 0)) / 24 * 2 * Math.PI) * swing),
+      precipitation_probability: WET.test(c) ? 55 + (i % 4) * 10 : i % 7 === 3 ? 10 : 0, precipitation: WET.test(c) ? rain * (.6 + (i % 3) * .3) : 0,
+      wind_speed: wind + (i % 4), wind_bearing: 200 + i * 4, wind_gust_speed: wind * 1.6 + (i % 5), cloud_coverage: s.cover, uv_index: night ? 0 : Math.max(0, 6 - Math.abs(i - 2) * 1.2), humidity: s.humidity ?? 65 };
+  });
+  const daily = Array.from({ length: 10 }, (_, i) => ({ datetime: iso(now + i * day), condition: i ? (s.days ?? DAYS)[i % 10] : condition === 'clear-night' ? 'sunny' : condition,
+    temperature: Math.round(temp + swing + (i % 3) * 2 - (i % 5)), templow: Math.round(temp - swing * 2 + (i % 2) * 2 - (i % 4)), precipitation_probability: [0, 10, 30, 80, 0, 20, 60, 40, 70, 0][i], wind_speed: wind + [2, 3, 1, 5, 3, 1, 7, 4, 2, 1][i] }));
+  const attributes = { temperature: temp, temperature_unit: metric ? '°C' : '°F', wind_speed: wind, wind_speed_unit: metric ? 'km/h' : 'mph', wind_bearing: 210,
+    precipitation_unit: metric ? 'mm' : 'in', pressure: metric ? 1014 : 29.95, pressure_unit: metric ? 'hPa' : 'inHg', visibility: metric ? 16 : 10, visibility_unit: metric ? 'km' : 'mi',
+    humidity: s.humidity ?? 65, dew_point: Math.round(temp - (metric ? 6 : 11)), uv_index: night ? 0 : 5, ...(s.cover !== undefined ? { cloud_coverage: s.cover } : {}),
+    friendly_name: s.place ?? 'Home', supported_features: 3, ...s.attributes };
+  const forecasts = { [entity]: { hourly, daily }, ...s.forecasts };
+  return {
+    states: { [entity]: { entity_id: entity, state: condition, attributes }, 'sun.sun': { state: night ? 'below_horizon' : 'above_horizon', attributes: { elevation, rising, ...sunTimes(local, now) } }, ...states },
+    language, locale: { language, time_format: language === 'en' ? '12' : '24' }, config: { time_zone: zone, latitude: s.latitude ?? 41.9, longitude: s.longitude ?? -87.6 },
+    connection: { subscribeMessage(callback, message) { const f = forecasts[message.entity_id];if (f) queueMicrotask(() => callback({ forecast: f[message.forecast_type] ?? [] }));return Promise.resolve(() => {}); } },
+  };
+}
+
+// [title, note, sample, card options, size [width, height]]
+const SECTIONS = [
+  ['Through the day', 'The sky follows the sun: its height, and whether it is rising or setting.', [
+    ['Before dawn', 'Sun 8° below the horizon, rising', { condition: 'clear-night', elevation: -8, temp: 49 }],
+    ['Sunrise', 'Sun just up', { condition: 'sunny', elevation: 2, temp: 52, cover: 5 }],
+    ['Morning', 'Partly cloudy, sun climbing', { condition: 'partlycloudy', elevation: 22, temp: 61 }],
+    ['Midday', 'Sun high, clear', { condition: 'sunny', elevation: 68, temp: 79, cover: 0 }],
+    ['Golden hour', 'Sun low in the west', { condition: 'sunny', elevation: 6, rising: false, temp: 71, cover: 10 }],
+    ['Sunset with clouds', 'Partly cloudy at sundown', { condition: 'partlycloudy', elevation: 2, rising: false, temp: 66 }],
+    ['Dusk', 'Sun just below the horizon', { condition: 'clear-night', elevation: -4, rising: false, temp: 62 }],
+    ['Midnight', 'Clear and dark', { condition: 'clear-night', elevation: -45, rising: false, temp: 55 }],
+  ]],
+  ['Clouds and sky', 'Cloud cover and visibility, where the entity reports them, refine each condition.', [
+    ['Sunny', 'Clear sky', { condition: 'sunny', cover: 3, temp: 75 }],
+    ['Mostly clear', '30% cloud', { condition: 'sunny', cover: 30, temp: 73 }],
+    ['Partly cloudy', 'Condition alone', { condition: 'partlycloudy', temp: 69 }],
+    ['Mostly cloudy', '75% cloud', { condition: 'cloudy', cover: 75, temp: 64, elevation: 30 }],
+    ['Overcast', '98% cloud', { condition: 'cloudy', cover: 98, temp: 58, elevation: 30 }],
+    ['Fog', 'Visibility under a kilometre', { condition: 'fog', temp: 52, elevation: 12, attributes: { visibility: .3 } }],
+    ['Haze', 'Fog condition, but 3 miles of visibility', { condition: 'fog', temp: 78, elevation: 25, attributes: { visibility: 3 } }],
+    ['Windy', '28 mph', { condition: 'windy', temp: 63, wind: 28 }],
+    ['Windy and cloudy', 'Wind with an overcast sky', { condition: 'windy-variant', temp: 57, wind: 24, elevation: 30 }],
+    ['Partly cloudy night', 'Moon behind thin cloud', { condition: 'partlycloudy', temp: 56, elevation: -30, rising: false }],
+  ]],
+  ['Rain and storms', 'Rain rate sets drizzle, rain or a downpour, and the drops on the glass follow.', [
+    ['Drizzle', '0.01 in an hour', { condition: 'rainy', rain: .01, temp: 55, elevation: 30 }],
+    ['Rain', 'Steady rain', { condition: 'rainy', temp: 54, elevation: 30 }],
+    ['Sun showers', 'Rain with 40% cloud', { condition: 'rainy', cover: 40, temp: 64, elevation: 35 }],
+    ['Heavy rain', 'Pouring', { condition: 'pouring', temp: 56, elevation: 30, rain: .5 }],
+    ['Scattered thunderstorms', 'Storms with breaks of sun', { condition: 'lightning-rainy', cover: 45, temp: 81, elevation: 35 }],
+    ['Thunderstorms', 'Lightning and rain', { condition: 'lightning-rainy', temp: 74, elevation: 25 }],
+    ['Dry lightning', 'Lightning without rain', { condition: 'lightning', temp: 86, elevation: 25 }],
+    ['Hail', 'Hail', { condition: 'hail', temp: 52, elevation: 30 }],
+    ['Rain at night', 'Rain after dark', { condition: 'rainy', temp: 50, elevation: -30, rising: false }],
+    ['Storm at night', 'Thunderstorms after dark', { condition: 'lightning-rainy', temp: 68, elevation: -30, rising: false }],
+    ['Clearing later', 'Rain now, sun this afternoon', { condition: 'rainy', temp: 58, elevation: 20, hours: i => i < 4 ? 'rainy' : i < 7 ? 'cloudy' : i < 10 ? 'partlycloudy' : i < 13 ? 'sunny' : 'clear-night' }],
+  ]],
+  ['Winter', 'Snow, ice and frost.', [
+    ['Flurries', 'Light snow, 0.01 in an hour', { condition: 'snowy', rain: .01, temp: 30, elevation: 15 }],
+    ['Snow', 'Steady snow', { condition: 'snowy', temp: 28, elevation: 20 }],
+    ['Heavy snow', 'Snowing hard', { condition: 'snowy', rain: .25, temp: 26, elevation: 20 }],
+    ['Blowing snow', 'Snow in 30 mph wind', { condition: 'snowy', rain: .08, temp: 22, wind: 30, elevation: 20 }],
+    ['Sleet', 'Snow and rain', { condition: 'snowy-rainy', temp: 33, elevation: 20 }],
+    ['Freezing drizzle', 'Drizzle below freezing', { condition: 'rainy', rain: .01, temp: 30, elevation: 20 }],
+    ['Frigid clear day', '8 °F and sunny', { condition: 'sunny', cover: 5, temp: 8, elevation: 18 }],
+    ['Snow at night', 'Snow after dark', { condition: 'snowy', temp: 25, elevation: -30, rising: false }],
+  ]],
+  ['Extremes', 'The ends of the range.', [
+    ['Heat wave', '104 °F, clear', { condition: 'sunny', cover: 0, temp: 104, elevation: 60, humidity: 20 }],
+    ['Muggy', '91 °F at 80% humidity', { condition: 'partlycloudy', temp: 91, humidity: 80, elevation: 50 }],
+    ['Arctic night', '−22 °F, clear', { condition: 'clear-night', temp: -22, elevation: -40 }],
+    ['Gale', '45 mph wind, cloudy', { condition: 'windy-variant', temp: 49, wind: 45, elevation: 20 }],
+    ['Exceptional', 'A condition the card has no picture for', { condition: 'exceptional', temp: 80, elevation: 30 }],
+  ]],
+  ['Sizes', 'The card rearranges itself for the space a dashboard gives it.', [
+    ['Smallest', '340 × 280, the least height the card takes', { condition: 'rainy', temp: 54, elevation: 30 }, {}, [340, 280]],
+    ['Short', '340 × 300', { condition: 'sunny', temp: 77, cover: 5 }, {}, [340, 300]],
+    ['Wide', '720 × 300', { condition: 'snowy', temp: 27, elevation: 20 }, {}, [720, 300]],
+    ['Wide and tall', '720 × 420', { condition: 'partlycloudy', temp: 70, elevation: 12, rising: false }, {}, [720, 420]],
+    ['Narrow', '260 × 540', { condition: 'clear-night', temp: 58, elevation: -30 }, {}, [260, 540]],
+    ['Expanded', 'weather_layout: expanded, with the daily list', { condition: 'cloudy', cover: 70, temp: 61, elevation: 30 }, { weather_layout: 'expanded', forecast_days: 10 }, [390, 760]],
+  ]],
+  ['Forecast views', 'The hourly strip shows conditions, rain or wind; auto picks what matters most.', [
+    ['Auto', 'Picks rain when it is wet', { condition: 'rainy', temp: 55, elevation: 30 }],
+    ['Conditions', 'weather_mode: conditions', { condition: 'partlycloudy', temp: 70 }, { weather_mode: 'conditions' }],
+    ['Rain', 'weather_mode: rain', { condition: 'rainy', temp: 52, elevation: 30 }, { weather_mode: 'rain' }],
+    ['Wind', 'weather_mode: wind', { condition: 'windy', temp: 61, wind: 22 }, { weather_mode: 'wind' }],
+    ['Twelve hours', 'forecast_hours: 12', { condition: 'sunny', temp: 74 }, { forecast_hours: 12 }],
+    ['Five days', 'forecast_days: 5', { condition: 'partlycloudy', temp: 68 }, { forecast_days: 5, weather_layout: 'expanded' }, [340, 700]],
+  ]],
+  ['Options', 'Turn parts of the card off.', [
+    ['No scene', 'weather_scene: false', { condition: 'rainy', temp: 54, elevation: 30 }, { weather_scene: false }],
+    ['Still', 'weather_animation: false', { condition: 'snowy', temp: 28, elevation: 20 }, { weather_animation: false }],
+    ['No name', 'show_name: false', { condition: 'sunny', temp: 76 }, { show_name: false }],
+    ['No high and low', 'show_high_low: false', { condition: 'cloudy', temp: 59, elevation: 30 }, { show_high_low: false }],
+    ['Custom name', 'name: Cabin', { condition: 'snowy', temp: 19, elevation: 10 }, { name: 'Cabin' }],
+  ]],
+  ['Units and languages', 'Text follows Home Assistant\'s language; units follow the entity unless set.', [
+    ['Berlin', 'German, °C, km/h', { condition: 'snowy', temp: -2, metric: true, language: 'de', place: 'Berlin', elevation: 12, wind: 14 }],
+    ['Paris', 'French, °C', { condition: 'rainy', temp: 11, metric: true, language: 'fr', place: 'Paris', elevation: 20, wind: 18 }],
+    ['Madrid', 'Spanish, °C', { condition: 'sunny', temp: 38, metric: true, language: 'es', place: 'Madrid', cover: 0, elevation: 55, wind: 9 }],
+    ['Rome', 'Italian, night', { condition: 'clear-night', temp: 17, metric: true, language: 'it', place: 'Roma', elevation: -30, wind: 6 }],
+    ['Amsterdam', 'Dutch, windy', { condition: 'windy-variant', temp: 9, metric: true, language: 'nl', place: 'Amsterdam', elevation: 15, wind: 48 }],
+    ['Lisbon', 'Portuguese', { condition: 'partlycloudy', temp: 21, metric: true, language: 'pt', place: 'Lisboa', elevation: 35, wind: 12 }],
+    ['Stockholm', 'Swedish, fog', { condition: 'fog', temp: 4, metric: true, language: 'sv', place: 'Stockholm', elevation: 5, wind: 4, attributes: { visibility: .4 } }],
+    ['Copenhagen', 'Danish, drizzle', { condition: 'rainy', rain: .2, temp: 8, metric: true, language: 'da', place: 'København', elevation: 10, wind: 20 }],
+    ['Oslo', 'Norwegian, snow', { condition: 'snowy', temp: -6, metric: true, language: 'nb', place: 'Oslo', elevation: 4, wind: 10 }],
+    ['Helsinki', 'Finnish, arctic night', { condition: 'clear-night', temp: -19, metric: true, language: 'fi', place: 'Helsinki', elevation: -40, wind: 8 }],
+    ['Warsaw', 'Polish, cloudy', { condition: 'cloudy', cover: 90, temp: 6, metric: true, language: 'pl', place: 'Warszawa', elevation: 18, wind: 15 }],
+    ['Prague', 'Czech, sleet', { condition: 'snowy-rainy', temp: 1, metric: true, language: 'cs', place: 'Praha', elevation: 14, wind: 16 }],
+    ['Tokyo', 'Japanese, night rain', { condition: 'rainy', temp: 16, metric: true, language: 'ja', place: '東京', elevation: -25, rising: false, wind: 11 }],
+    ['Seoul', 'Korean, clear', { condition: 'sunny', temp: 24, metric: true, language: 'ko', place: '서울', cover: 5, elevation: 45, wind: 7 }],
+    ['Mixed units', 'Celsius entity shown in °F and mph', { condition: 'partlycloudy', temp: 22, metric: true, place: 'Toronto', wind: 20 }, { temperature_unit: '°F', wind_speed_unit: 'mph' }],
+    ['Knots and Beaufort', 'wind_speed_unit: kn', { condition: 'windy', temp: 59, wind: 30, place: 'Harbor' }, { wind_speed_unit: 'kn', weather_mode: 'wind' }],
+  ]],
+  ['Data from anywhere', 'Fill in or override the entity with your own sensors and other integrations.', [
+    ['Backyard station', 'temperature_entity and humidity_entity from local sensors', { condition: 'partlycloudy', temp: 64, place: 'Home', states: {
+      'sensor.backyard_temperature': { entity_id: 'sensor.backyard_temperature', state: '71.6', attributes: { unit_of_measurement: '°F', device_class: 'temperature' } },
+      'sensor.backyard_humidity': { entity_id: 'sensor.backyard_humidity', state: '48', attributes: { unit_of_measurement: '%', device_class: 'humidity' } } } },
+      { temperature_entity: 'sensor.backyard_temperature', humidity_entity: 'sensor.backyard_humidity' }],
+    ['Rain sensor', 'condition_entity: a rain detector says it is raining', { condition: 'cloudy', temp: 57, elevation: 30, hours: i => i < 5 ? 'rainy' : 'cloudy', states: {
+      'sensor.rain_detector': { entity_id: 'sensor.rain_detector', state: 'rainy', attributes: {} } } }, { condition_entity: 'sensor.rain_detector' }],
+    ['Borrowed forecast', 'forecast_entity: the hourly and daily forecast from another integration', { condition: 'sunny', temp: 70, entity: 'weather.station', attributes: { supported_features: 0 },
+      states: { 'weather.open_meteo': { entity_id: 'weather.open_meteo', state: 'sunny', attributes: { temperature: 69, temperature_unit: '°F', supported_features: 3 } } }, forecasts: {
+      'weather.open_meteo': { hourly: Array.from({ length: 24 }, (_, i) => ({ datetime: iso(hour + i * 3600000), condition: i < 5 ? 'sunny' : i < 9 ? 'lightning-rainy' : 'partlycloudy', temperature: 70 + (i % 5), precipitation_probability: i >= 5 && i < 9 ? 80 : 5 })),
+        daily: Array.from({ length: 10 }, (_, i) => ({ datetime: iso(now + i * day), condition: ['sunny', 'lightning-rainy', 'rainy', 'cloudy', 'sunny', 'sunny', 'partlycloudy', 'rainy', 'cloudy', 'sunny'][i], temperature: 78 - i, templow: 60 - i })) } } },
+      { entity: 'weather.station', forecast_entity: 'weather.open_meteo' }],
+  ]],
+  ['Full page', 'weather_layout: page adds alerts, next-hour rain and detail tiles. Each alert shows what it warns of; the header shows the highest level.', [
+    ['Severe weather', 'Several alerts from an alerts integration', { condition: 'lightning-rainy', temp: 84, elevation: 30, wind: 18, humidity: 74, states: {
+      'sensor.alerts': { entity_id: 'sensor.alerts', state: '4', attributes: { Alerts: [
+        { Event: 'Tornado Warning', Headline: 'Rotation detected near the county line. Take shelter now.', Severity: 'Extreme', Ends: iso(now + 45 * 60000) },
+        { Event: 'Severe Thunderstorm Warning', Headline: 'Hail up to golf ball size and 70 mph gusts.', Severity: 'Severe', Ends: iso(now + 2 * 3600000) },
+        { Event: 'Flash Flood Warning', Headline: '2 to 3 inches of rain have fallen.', Severity: 'Severe', Ends: iso(now + 5 * 3600000) },
+        { Event: 'Heat Advisory', Headline: 'Heat index up to 105 tomorrow.', Severity: 'Moderate', Ends: iso(now + 30 * 3600000) },
+      ] } } } }, { weather_layout: 'page', alert_entities: ['sensor.alerts'], forecast_days: 10 }, [390, 0]],
+    ['Winter warning', 'Meteoalarm-style alerts in German', { condition: 'snowy', temp: -4, metric: true, language: 'de', place: 'München', elevation: 12, wind: 30, states: {
+      'binary_sensor.meteoalarm': { entity_id: 'binary_sensor.meteoalarm', state: 'on', attributes: { event: 'Schneeverwehungen', headline: 'Starker Schneefall und Verwehungen bis Mitternacht.', awareness_type: '2; snow-ice', awareness_level: '3; orange; Severe', expires: iso(now + 9 * 3600000) } },
+      'binary_sensor.meteoalarm_wind': { entity_id: 'binary_sensor.meteoalarm_wind', state: 'on', attributes: { event: 'Sturmböen', awareness_type: '1; Wind', awareness_level: '2; yellow; Moderate', expires: iso(now + 6 * 3600000) } } } },
+      { weather_layout: 'page', alert_entities: ['binary_sensor.meteoalarm', 'binary_sensor.meteoalarm_wind'], forecast_days: 10 }, [390, 0]],
+    ['Coast and fire', 'Hurricane, surf, fire weather, cold and UV', { condition: 'windy-variant', temp: 88, elevation: 40, wind: 35, states: {
+      'sensor.alerts': { entity_id: 'sensor.alerts', state: '5', attributes: { Alerts: [
+        { Event: 'Hurricane Watch', Headline: 'Hurricane conditions possible within 48 hours.', Severity: 'Severe' },
+        { Event: 'High Surf Advisory', Severity: 'Moderate' }, { Event: 'Red Flag Warning', Severity: 'Severe' },
+        { Event: 'Frost Advisory', Severity: 'Minor' }, { Event: 'UV Alert', Severity: 'Minor' },
+      ] } } } }, { weather_layout: 'page', alert_entities: ['sensor.alerts'], forecast_days: 7 }, [390, 0]],
+  ]],
+];
+
+const nav = document.querySelector('nav'), main = document.querySelector('main');
+const pending = new Map();
+const lazy = new IntersectionObserver(entries => {
+  for (const entry of entries) if (entry.isIntersecting) { pending.get(entry.target)?.();pending.delete(entry.target);lazy.unobserve(entry.target); }
+}, { rootMargin: '600px 0px' });
+SECTIONS.forEach(([title, note, examples], s) => {
+  const id = title.toLowerCase().replaceAll(/\W+/g, '-'), section = document.createElement('section');
+  section.innerHTML = `<h2 id="${id}">${title}</h2><p>${note}</p><div class="grid"></div>`;
+  const link = document.createElement('a');link.href = `#${id}`;link.textContent = title;nav.append(link);
+  examples.forEach(([name, detail, data, options = {}, [width, height] = [340, 540]], i) => {
+    const figure = document.createElement('figure'), slot = document.createElement('div');
+    figure.style.setProperty('--w', `${width}px`);
+    if (height) slot.style.setProperty('--h', `${height}px`);else slot.dataset.page = '';
+    slot.className = 'slot';
+    figure.innerHTML = `<figcaption>${name}<small>${detail}</small></figcaption>`;figure.append(slot);
+    section.querySelector('.grid').append(figure);
+    pending.set(slot, () => {
+      const card = document.createElement('iweather-card');
+      card.setConfig({ type: 'custom:iweather-card', entity: data.entity ?? 'weather.home', name: data.place ? undefined : name, forecast_days: 3, ...options });
+      card.hass = sample(data);
+      slot.replaceChildren(card);
+    });
+    lazy.observe(slot);
+  });
+  main.append(section);
+});
+</script>
+</html>

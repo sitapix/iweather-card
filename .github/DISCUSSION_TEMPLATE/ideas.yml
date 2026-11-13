@@ -1,0 +1,15 @@
+body:
+  - type: markdown
+    attributes:
+      value: "Votes help decide what gets built. If [an idea here](https://github.com/sitapix/iweather-card/discussions/categories/ideas) already covers yours, vote for it and add what's different for you in a comment."
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: What you were trying to do, and what got in the way. The fix can wait for the next box.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?

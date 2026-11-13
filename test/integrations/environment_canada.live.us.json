@@ -1,0 +1,220 @@
+{
+  "integration": "environment_canada",
+  "from": "live",
+  "units": "us",
+  "place": "Toronto, Canada",
+  "latitude": 43.65,
+  "longitude": -79.38,
+  "time_zone": "America/Toronto",
+  "now": "2026-11-02T19:54:25+00:00",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "temperature": 64,
+      "temperature_unit": "°F",
+      "humidity": 52,
+      "pressure": 30.21,
+      "pressure_unit": "inHg",
+      "wind_bearing": 264.0,
+      "wind_speed": 3.73,
+      "wind_speed_unit": "mph",
+      "visibility": 14.98,
+      "visibility_unit": "mi",
+      "precipitation_unit": "in",
+      "supported_features": 3
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "datetime": "2026-11-02T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "condition": "partlycloudy",
+        "temperature": 64,
+        "templow": 54
+      },
+      {
+        "datetime": "2026-11-03T16:00:00+00:00",
+        "precipitation_probability": 40,
+        "condition": "rainy",
+        "temperature": 68,
+        "templow": 57
+      },
+      {
+        "datetime": "2026-11-04T16:00:00+00:00",
+        "precipitation_probability": 0,
+        "condition": "partlycloudy",
+        "temperature": 70,
+        "templow": 57
+      },
+      {
+        "datetime": "2026-11-05T16:00:00+00:00",
+        "precipitation_probability": 40,
+        "condition": "rainy",
+        "temperature": 61,
+        "templow": 48
+      },
+      {
+        "datetime": "2026-11-06T16:00:00+00:00",
+        "precipitation_probability": 40,
+        "condition": "rainy",
+        "temperature": 59,
+        "templow": 43
+      },
+      {
+        "datetime": "2026-11-07T16:00:00+00:00",
+        "precipitation_probability": 40,
+        "condition": "rainy",
+        "temperature": 46,
+        "templow": 37
+      }
+    ],
+    "hourly": [
+      {
+        "datetime": "2026-11-02T20:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 20,
+        "temperature": 64
+      },
+      {
+        "datetime": "2026-11-02T21:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": 20,
+        "temperature": 64
+      },
+      {
+        "datetime": "2026-11-02T22:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": 20,
+        "temperature": 63
+      },
+      {
+        "datetime": "2026-11-02T23:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": 20,
+        "temperature": 63
+      },
+      {
+        "datetime": "2026-11-03T00:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": 20,
+        "temperature": 61
+      },
+      {
+        "datetime": "2026-11-03T01:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": 20,
+        "temperature": 59
+      },
+      {
+        "datetime": "2026-11-03T02:00:00+00:00",
+        "condition": "cloudy",
+        "precipitation_probability": 20,
+        "temperature": 59
+      },
+      {
+        "datetime": "2026-11-03T03:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 57
+      },
+      {
+        "datetime": "2026-11-03T04:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 57
+      },
+      {
+        "datetime": "2026-11-03T05:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 55
+      },
+      {
+        "datetime": "2026-11-03T06:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 55
+      },
+      {
+        "datetime": "2026-11-03T07:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 55
+      },
+      {
+        "datetime": "2026-11-03T08:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 54
+      },
+      {
+        "datetime": "2026-11-03T09:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 54
+      },
+      {
+        "datetime": "2026-11-03T10:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 54
+      },
+      {
+        "datetime": "2026-11-03T11:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 54
+      },
+      {
+        "datetime": "2026-11-03T12:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 54
+      },
+      {
+        "datetime": "2026-11-03T13:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 57
+      },
+      {
+        "datetime": "2026-11-03T14:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 59
+      },
+      {
+        "datetime": "2026-11-03T15:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 63
+      },
+      {
+        "datetime": "2026-11-03T16:00:00+00:00",
+        "condition": "rainy",
+        "precipitation_probability": 40,
+        "temperature": 64
+      },
+      {
+        "datetime": "2026-11-03T17:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 20,
+        "temperature": 66
+      },
+      {
+        "datetime": "2026-11-03T18:00:00+00:00",
+        "condition": "partlycloudy",
+        "precipitation_probability": 20,
+        "temperature": 68
+      },
+      {
+        "datetime": "2026-11-03T19:00:00+00:00",
+        "condition": "sunny",
+        "precipitation_probability": 20,
+        "temperature": 68
+      }
+    ]
+  },
+  "notes": "Recorded from a running Home Assistant 2026.10.4 at 14:54 local time on 2 November 2026 (America/Toronto), with its home and time zone set to Toronto, Canada and its unit system US customary. Entry for 43.6532, -79.3832 (the integration picks the nearest forecast site, Toronto), language English; entity weather.toronto_forecast; supported_features 3 (daily, hourly). Current: condition, temperature, humidity, pressure, visibility, wind_bearing (float), wind_speed; no dew_point, apparent_temperature, wind_gust_speed, cloud_coverage or uv_index. Daily: 6 entries stamped 16:00 UTC (11:00 local), today first; only condition, temperature, templow and precipitation_probability (int); no wind, humidity or precipitation amount. Hourly: 24 entries, all it gives, from the next whole hour: condition, temperature and precipitation_probability only. The service gives forecast temperatures in whole °C. Units: °F, inHg, mph, mi, in. Home Assistant rounds every converted temperature (temperature, templow, dew_point, apparent_temperature) to a whole degree, so they arrive as integers; other converted values carry up to two decimals. Humidity, cloud_coverage, uv_index, bearings, probabilities and datetimes are the same as in the metric recording made at the same moment."
+}

@@ -1,0 +1,23 @@
+{
+  "integration": "zamg",
+  "from": "source",
+  "units": "us",
+  "now": "2026-11-02T08:50:00+01:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: the integration's own entity class, built as for zamg.json, run again with hass.config.units set to US_CUSTOMARY_SYSTEM, so Home Assistant converts from the entity's native °C, hPa, m/s and mm. Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. Built by running homeassistant/components/zamg/weather.py's own ZamgWeather (Home Assistant 2026.10.4) over coordinator data in the shape zamg 0.4.1 returns for GeoSphere Austria's 10-minute station data; core tests only setup and the config flow. Values are realistic for Graz/Flughafen (station 11240, 340 m) on a foggy November morning. Native units are °C, hPa, m/s and mm. Current only, no forecasts and no supported_features attribute, and no condition at all: the entity never sets one, so its state is always 'unknown'. temperature is TLAM (10-minute mean), else TL; humidity RFAM; wind_speed FFAM (mean), else FFX (the gust); wind_bearing DD, else DDX; all floats. pressure is P, the pressure at the station's height (981.6 hPa here), not the sea-level PRED (1024.1) that the integration's sensors show separately, so it reads some 40 hPa below a sea-level figure. Never visibility, dew point (TP is only a sensor), apparent temperature, gusts, cloud cover or UV.",
+  "state": {
+    "state": "unknown",
+    "attributes": {
+      "humidity": 93,
+      "precipitation_unit": "in",
+      "pressure": 28.99,
+      "pressure_unit": "inHg",
+      "temperature": 41,
+      "temperature_unit": "°F",
+      "visibility_unit": "mi",
+      "wind_bearing": 158.0,
+      "wind_speed": 3.13,
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {}
+}

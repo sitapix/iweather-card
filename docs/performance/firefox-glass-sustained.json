@@ -1,0 +1,108 @@
+{
+  "label": "glass-stall-sustained-freezing",
+  "warmup": 2500,
+  "sample": 40000,
+  "phaseBase": 8000,
+  "engine": "firefox",
+  "headed": true,
+  "windowOcclusion": "0",
+  "results": [
+    {
+      "profile": "desktop-day",
+      "viewport": {
+        "width": 1280,
+        "height": 900,
+        "dpr": 2
+      },
+      "throttle": 1,
+      "forced": false,
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:157.0) Gecko/20100101 Firefox/157.0",
+      "gpu": "integrated laptop GPU",
+      "kind": "freezingRain",
+      "interval": 20.833333333333332,
+      "phaseAtSample": 10614,
+      "visibility": "visible",
+      "focused": true,
+      "duration": 40017,
+      "backgrounded": false,
+      "drawsPerSecond": 40.332858535122575,
+      "times": {
+        "card": {
+          "count": 1614,
+          "mean": 6.010532837670384,
+          "p95": 14,
+          "max": 26
+        },
+        "sky": {
+          "count": 1614,
+          "mean": 4.254646840148699,
+          "p95": 5,
+          "max": 6
+        },
+        "glass": {
+          "count": 1614,
+          "mean": 1.738537794299876,
+          "p95": 10,
+          "max": 20
+        },
+        "skyCopy": {
+          "count": 594,
+          "mean": 0.006734006734006734,
+          "p95": 0,
+          "max": 1
+        },
+        "glCopy": {
+          "count": 1614,
+          "mean": 0.022304832713754646,
+          "p95": 0,
+          "max": 1
+        },
+        "panelCopy": {
+          "count": 14526,
+          "mean": 0.00034421038138510255,
+          "p95": 0,
+          "max": 1
+        },
+        "textureUpload": {
+          "count": 594,
+          "mean": 3.9865319865319866,
+          "p95": 10,
+          "max": 16
+        }
+      },
+      "drawIntervals": {
+        "count": 1613,
+        "mean": 24.802851828890265,
+        "p95": 27,
+        "max": 36
+      },
+      "raf": {
+        "count": 3358,
+        "mean": 11.914282310899344,
+        "p95": 25,
+        "max": 34.220000000001164
+      },
+      "skyPixels": [
+        1760,
+        1800
+      ],
+      "glassPixels": [
+        1248,
+        1250
+      ],
+      "rafCoverage": 0.9997790938850988,
+      "taskMsPerSecond": null
+    }
+  ],
+  "faults": [],
+  "nativeControl": {
+    "duration": 20009,
+    "frames": 1113,
+    "firstFrame": 0,
+    "lastFrame": 17401,
+    "coverage": 0.8696586536058774,
+    "maxGap": 4005,
+    "visible": "visible",
+    "focused": true
+  }
+}

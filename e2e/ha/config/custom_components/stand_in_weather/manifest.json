@@ -1,0 +1,9 @@
+{
+  "domain": "stand_in_weather",
+  "name": "Stand-in weather",
+  "version": "1.0.0",
+  "codeowners": [],
+  "dependencies": ["weather"],
+  "documentation": "https://github.com/sitapix/iweather-card",
+  "iot_class": "local_push"
+}

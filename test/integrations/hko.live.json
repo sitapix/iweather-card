@@ -1,0 +1,82 @@
+{
+  "integration": "hko",
+  "from": "live",
+  "units": "metric",
+  "place": "Hong Kong, China",
+  "latitude": 22.3,
+  "longitude": 114.17,
+  "time_zone": "Asia/Hong_Kong",
+  "now": "2026-11-02T19:55:17+00:00",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "temperature": 27.0,
+      "temperature_unit": "°C",
+      "humidity": 78,
+      "pressure_unit": "hPa",
+      "wind_speed_unit": "km/h",
+      "visibility_unit": "km",
+      "precipitation_unit": "mm",
+      "supported_features": 1
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "partlycloudy",
+        "temperature": 29.0,
+        "templow": 26.0,
+        "datetime": "2026-11-03T00:00:00+08:00"
+      },
+      {
+        "condition": "partlycloudy",
+        "temperature": 29.0,
+        "templow": 26.0,
+        "datetime": "2026-11-04T00:00:00+08:00"
+      },
+      {
+        "condition": "partlycloudy",
+        "temperature": 30.0,
+        "templow": 26.0,
+        "datetime": "2026-11-05T00:00:00+08:00"
+      },
+      {
+        "condition": "partlycloudy",
+        "temperature": 29.0,
+        "templow": 26.0,
+        "datetime": "2026-11-06T00:00:00+08:00"
+      },
+      {
+        "condition": "partlycloudy",
+        "temperature": 28.0,
+        "templow": 25.0,
+        "datetime": "2026-11-07T00:00:00+08:00"
+      },
+      {
+        "condition": "partlycloudy",
+        "temperature": 29.0,
+        "templow": 25.0,
+        "datetime": "2026-11-08T00:00:00+08:00"
+      },
+      {
+        "condition": "partlycloudy",
+        "temperature": 28.0,
+        "templow": 24.0,
+        "datetime": "2026-11-09T00:00:00+08:00"
+      },
+      {
+        "condition": "sunny",
+        "temperature": 27.0,
+        "templow": 22.0,
+        "datetime": "2026-11-10T00:00:00+08:00"
+      },
+      {
+        "condition": "sunny",
+        "temperature": 28.0,
+        "templow": 22.0,
+        "datetime": "2026-11-11T00:00:00+08:00"
+      }
+    ]
+  },
+  "notes": "Recorded from a running Home Assistant 2026.10.4 at 03:55 local time on 3 November 2026 (Asia/Hong_Kong), with its home and time zone set to Hong Kong, China and its unit system metric. Entry for the location 'Hong Kong Observatory'; entity weather.hong_kong_observatory; supported_features 1, daily only. Current: only condition, temperature and humidity; no pressure, wind or anything else, though every unit attribute is set. Recorded at 03:55 local on 3 November, so the local date is a day ahead of the UTC date of now. Daily: 9 entries stamped local midnight with the offset (+08:00), the first being today local (3 November); only condition, temperature and templow, which the service gives in whole °C. Units: °C, hPa, km/h, km, mm. Values Home Assistant converts from another unit carry up to two decimals (temperatures one)."
+}

@@ -1,0 +1,80 @@
+{
+  "integration": "buienradar",
+  "from": "source",
+  "units": "metric",
+  "now": "2019-02-04T20:00:00+00:00",
+  "notes": "Built from homeassistant/components/buienradar/weather.py and util.py with python-buienradar 1.0.9's JSON parser, fed that library's own recorded buienradar.nl feed (tests/json/buienradar.json, station De Bilt, nearest to Utrecht); core has no buienradar snapshot or fixture. 'now' is the station's measurement time; there is no hourly forecast. Current: readings come from the nearest station, picked by distance alone, with no check that it measures everything: the library turns a null reading into 0, so a station with no barometer or visibility sensor reports pressure 0.0 and visibility 0.0 (e.g. Arcen in this same feed); humidity is an int, wind_bearing an int. Native units are m/s and metres, converted by HA to km/h and km. apparent_temperature is the station's feeltemperature. No dew_point, cloud_coverage, uv_index or ozone are ever set. The condition is the station's icon letter mapped by CONDITION_MAP, which ignores the night variant, so a clear night reports 'sunny'; an unknown letter gives a null state ('unknown'). Daily: the five-day forecast, starting tomorrow, each stamped local midnight with the +01:00/+02:00 Amsterdam offset (not UTC). Every entry carries the same keys: templow and temperature are the lowest and highest of buienradar's ranges, precipitation the mean of mmRainMin and mmRainMax, precipitation_probability an int (rainChance), wind_speed estimated from the Beaufort force, and wind_bearing estimated from the compass text (22.5-degree steps, a float or int; the library maps NNW to 237.5, a bug, and an unknown or empty direction gives null). condition is null for an unmapped icon. Never humidity, cloud_coverage, uv_index, wind_gust_speed or apparent_temperature. No changes were needed for realism: De Bilt measures pressure and visibility, so this file has real readings (1022.14 hPa, 4.32 km); the 0.0 described above is genuine integration behaviour, but only for stations without those sensors.",
+  "state": {
+    "state": "pouring",
+    "attributes": {
+      "apparent_temperature": -2.0,
+      "humidity": 96,
+      "precipitation_unit": "mm",
+      "pressure": 1022.14,
+      "pressure_unit": "hPa",
+      "supported_features": 1,
+      "temperature": 2.9,
+      "temperature_unit": "°C",
+      "visibility": 4.32,
+      "visibility_unit": "km",
+      "wind_bearing": 207,
+      "wind_gust_speed": 39.42,
+      "wind_speed": 23.65,
+      "wind_speed_unit": "km/h"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "cloudy",
+        "datetime": "2019-02-05T00:00:00+01:00",
+        "precipitation": 0.0,
+        "precipitation_probability": 20,
+        "temperature": 6.0,
+        "templow": 2.0,
+        "wind_bearing": 180,
+        "wind_speed": 12.96
+      },
+      {
+        "condition": "pouring",
+        "datetime": "2019-02-06T00:00:00+01:00",
+        "precipitation": 8.0,
+        "precipitation_probability": 90,
+        "temperature": 10.0,
+        "templow": 3.0,
+        "wind_bearing": 225,
+        "wind_speed": 20.38
+      },
+      {
+        "condition": "pouring",
+        "datetime": "2019-02-07T00:00:00+01:00",
+        "precipitation": 5.5,
+        "precipitation_probability": 90,
+        "temperature": 10.0,
+        "templow": 6.0,
+        "wind_bearing": 225,
+        "wind_speed": 20.38
+      },
+      {
+        "condition": "pouring",
+        "datetime": "2019-02-08T00:00:00+01:00",
+        "precipitation": 3.0,
+        "precipitation_probability": 70,
+        "temperature": 9.0,
+        "templow": 3.0,
+        "wind_bearing": 225,
+        "wind_speed": 20.38
+      },
+      {
+        "condition": "pouring",
+        "datetime": "2019-02-09T00:00:00+01:00",
+        "precipitation": 5.0,
+        "precipitation_probability": 80,
+        "temperature": 10.0,
+        "templow": 3.0,
+        "wind_bearing": 225,
+        "wind_speed": 29.63
+      }
+    ]
+  }
+}

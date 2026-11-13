@@ -1,0 +1,52 @@
+# A pull request gets what is quick: types, lint, format, the Node tests and the build. The browser
+# and end-to-end tests take a quarter of an hour here and two minutes on a Mac, where WebKit runs too,
+# so they run there (`pnpm check`), or here by hand: Actions, CI, Run workflow.
+name: CI
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  quick:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm exec biome format
+      - run: pnpm exec vitest run --project 'node*'
+      - run: pnpm build
+      - run: pnpm compat
+  full:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium-headless-shell firefox
+      - run: pnpm check
+      # What the end-to-end tests saw, to open with `pnpm exec playwright show-trace`.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: traces
+          path: test-results
+          retention-days: 7

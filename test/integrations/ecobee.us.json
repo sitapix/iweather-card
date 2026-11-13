@@ -1,0 +1,68 @@
+{
+  "integration": "ecobee",
+  "from": "source",
+  "units": "us",
+  "now": "2026-11-02T14:07:00+00:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: the integration's own entity class, built as for ecobee.json, run again with hass.config.units set to US_CUSTOMARY_SYSTEM, so Home Assistant converts from the entity's native °F, hPa, m and mph. Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. Built by running homeassistant/components/ecobee/weather.py's own EcobeeWeather (Home Assistant 2026.10.4, python-ecobee-api 0.4.1's constants) over a thermostat's weather block in the API's shape (thermostat.weather.forecasts; temperatures in tenths of °F, pressure in mbar, visibility in metres, wind in mph, -5002 for unknown). Core has no ecobee weather test or snapshot, and its test thermostats carry no weather block. Values are realistic for Chicago on an early-November morning (08:05 local). Native units are °F, hPa, m and mph, converted by Home Assistant. Current conditions are forecasts[0], the API's current period: condition (weatherSymbol), temperature, pressure (rounded to a whole hPa), humidity, visibility, wind_speed and wind_bearing (ints); never apparent_temperature, dew_point, wind_gust_speed, cloud_coverage, uv_index or ozone, though the API sends dewpoint, windGust and sky. Daily only (supported_features 1): five entries from forecasts[0..4], so the first is today's and shares the current period. Each carries condition, temperature (tempHigh), templow (tempLow), wind_bearing and wind_speed, any of the last four dropped when the API sends -5002. datetime is the moment of the update, not midnight: utcnow().isoformat(), with microseconds, for the first entry and one day more for each next one, so it changes with every update (at most every 3 minutes); a day that fails to parse is skipped without advancing the date, so the days after it are stamped a day early. now is two minutes after that update. weatherSymbol -2 gives condition null (state 'unknown'); 13 gives 'snowy-heavy', 17 'tornado' and 19-21 'hazy', which are not Home Assistant conditions. The API documents windSpeed as mph x 1000, but the code reads it as plain mph and the API sends small integers.",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "humidity": 76,
+      "precipitation_unit": "in",
+      "pressure": 30.09,
+      "pressure_unit": "inHg",
+      "supported_features": 1,
+      "temperature": 45,
+      "temperature_unit": "°F",
+      "visibility": 10.0,
+      "visibility_unit": "mi",
+      "wind_bearing": 225,
+      "wind_speed": 9.0,
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-11-02T14:05:12.483920+00:00",
+        "temperature": 54,
+        "templow": 40,
+        "wind_bearing": 225,
+        "wind_speed": 9.0
+      },
+      {
+        "condition": "rainy",
+        "datetime": "2026-11-03T14:05:12.483920+00:00",
+        "temperature": 50,
+        "templow": 41,
+        "wind_bearing": 180,
+        "wind_speed": 14.0
+      },
+      {
+        "condition": "cloudy",
+        "datetime": "2026-11-04T14:05:12.483920+00:00",
+        "temperature": 46,
+        "templow": 36,
+        "wind_bearing": 315,
+        "wind_speed": 12.0
+      },
+      {
+        "condition": "sunny",
+        "datetime": "2026-11-05T14:05:12.483920+00:00",
+        "temperature": 49,
+        "templow": 33,
+        "wind_bearing": 270,
+        "wind_speed": 6.0
+      },
+      {
+        "condition": "partlycloudy",
+        "datetime": "2026-11-06T14:05:12.483920+00:00",
+        "temperature": 56,
+        "templow": 38,
+        "wind_bearing": 202,
+        "wind_speed": 8.0
+      }
+    ]
+  }
+}

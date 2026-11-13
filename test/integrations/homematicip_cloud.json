@@ -1,0 +1,23 @@
+{
+  "integration": "homematicip_cloud",
+  "from": "source",
+  "units": "metric",
+  "now": "2026-09-24T21:40:00+02:00",
+  "notes": "Built by running homeassistant/components/homematicip_cloud/weather.py's own HomematicipHomeWeather (Home Assistant 2026.10.4, homematicip 2.18.0) over the home in core's test fixture homematicip_cloud.json; test_hmip_home_weather asserts these values. This is the 'home weather' entity every access point gets, from the cloud's weather for the home's location (Vienna here); weather sensors (HmIP-SWO-B, -PL, -PR) add entities of their own. No forecasts and no supported_features attribute. Current: temperature, humidity (int), wind_speed (km/h, rounded to one decimal) and wind_bearing (int); never pressure, visibility, dew point, apparent temperature, gusts, cloud cover or UV. The condition maps the cloud's weatherCondition and ignores its weatherDayTime: at night (NIGHT here) LIGHT_CLOUDY still gives partlycloudy and CLEAR gives sunny, never clear-night, and UNKNOWN gives '' (an empty state). The sensor entities differ: the basic and plus sensors send temperature, humidity and wind_speed only, the pro adds wind_bearing, and their condition is rainy (raining), windy (storm) or sunny (sunshine, by day only as measured light) and otherwise '' (core's test plus sensor has state ''); they also carry device attributes such as is_group. The state also carries icon 'mdi:alert': the entity's icon turns to an alert whenever the access point reports any duty cycle (8.0 % in the fixture). The fixture gives the weather no time, so now is a September night in Vienna that suits 16.6 C and 54 %.",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "humidity": 54,
+      "icon": "mdi:alert",
+      "precipitation_unit": "mm",
+      "pressure_unit": "hPa",
+      "temperature": 16.6,
+      "temperature_unit": "°C",
+      "visibility_unit": "km",
+      "wind_bearing": 294,
+      "wind_speed": 8.6,
+      "wind_speed_unit": "km/h"
+    }
+  },
+  "forecasts": {}
+}

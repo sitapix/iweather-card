@@ -1,0 +1,21 @@
+# Run by .githooks/pre-commit on the staged files only, so other work in progress
+# never blocks a commit. Biome formats and lints, applying its safe fixes and staging
+# them (unstaged changes in the same files are left as they were); Oxlint then checks
+# types; no rule may be switched off inline; and no file names another product (scripts/names.ts).
+# `pnpm check` covers the rest.
+no_auto_install: true
+pre-commit:
+  piped: true
+  commands:
+    1_biome:
+      glob: "*.{ts,json,jsonc}"
+      run: pnpm exec biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+    2_oxlint:
+      glob: "*.ts"
+      run: pnpm exec oxlint --deny-warnings {staged_files}
+    3_suppressions:
+      glob: "*.ts"
+      run: "! grep -nE '(oxlint|eslint)-disable|biome-ignore' {staged_files}"
+    4_names:
+      run: node scripts/names.ts {staged_files}

@@ -1,0 +1,14 @@
+# What the HACS catalog checks, which it asks for a passing run of. By hand, as Actions minutes cost
+# money: Actions, Validate, Run workflow.
+name: Validate
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  hacs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: hacs/action@main
+        with:
+          category: plugin

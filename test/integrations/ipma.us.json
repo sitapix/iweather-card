@@ -1,0 +1,54 @@
+{
+  "integration": "ipma",
+  "from": "snapshot",
+  "units": "us",
+  "now": "2020-01-15T01:00:00+00:00",
+  "notes": "The same entity as Home Assistant 2026.10.4 sends it with unit_system us_customary: ipma.json's values fed to Home Assistant's WeatherEntity as native values in the units its attributes state (°C, hPa, km/h, km, mm), state and forecasts read back through the weather component with hass.config.units set to US_CUSTOMARY_SYSTEM. Temperatures come back as whole °F (ints: outside °C the weather entity rounds to whole degrees), pressure in inHg, wind in mph, visibility in mi and precipitation in in, each to 2 decimals; humidity, bearings, conditions, datetimes and every other field are as in the metric file. The metric file's notes follow; their numbers are metric. State built from the test's MockLocation observation (tests/components/ipma/__init__.py) run through weather.py; test_setup_config_flow asserts the mock's values (some changed below). Forecasts are the snapshot's, changed only as below (get_forecasts returns datetime objects; shown here as the ISO strings the websocket sends). wind_bearing is a compass string ('NW', 'S'), never degrees, both now and in forecasts. The daily datetime has no UTC offset ('2020-01-16T00:00:00'); hourly ones do. The current condition is read from the first hourly forecast entry (null if there is none), and current conditions never carry dew_point, apparent_temperature, wind_gust_speed, cloud_coverage, uv_index or visibility. Forecast templow is dropped when the API has no minimum (the test's hourly entries have none); precipitation_probability is a float. Hourly 'sunny' becomes 'clear-night' when the sun is down at that time. Changes for realism (test-data artefacts): the daily mock starts tomorrow, but IPMA's daily list starts today, so it is moved back one day (still a bare local datetime). The current mock was 18.0 C with a 3.94 km/h NW wind at 01:00 on a January night in Lisbon, beside a forecast of 12.0 C and 32.7 km/h from the south; it is now 12.3 C and 24.1 km/h from 'S' (humidity 71 and pressure 1000 stay). The 02:00 hour is clear-night, so its rain chance is 5.0 rather than the rainy hour's 80.0.",
+  "state": {
+    "state": "rainy",
+    "attributes": {
+      "humidity": 71,
+      "precipitation_unit": "in",
+      "pressure": 29.53,
+      "pressure_unit": "inHg",
+      "supported_features": 3,
+      "temperature": 54,
+      "temperature_unit": "°F",
+      "visibility_unit": "mi",
+      "wind_bearing": "S",
+      "wind_speed": 14.98,
+      "wind_speed_unit": "mph"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "condition": "rainy",
+        "datetime": "2020-01-15T00:00:00",
+        "precipitation_probability": 100.0,
+        "temperature": 61,
+        "templow": 51,
+        "wind_bearing": "S",
+        "wind_speed": 6.21
+      }
+    ],
+    "hourly": [
+      {
+        "condition": "rainy",
+        "datetime": "2020-01-15T01:00:00+00:00",
+        "precipitation_probability": 80.0,
+        "temperature": 54,
+        "wind_bearing": "S",
+        "wind_speed": 20.32
+      },
+      {
+        "condition": "clear-night",
+        "datetime": "2020-01-15T02:00:00+00:00",
+        "precipitation_probability": 5.0,
+        "temperature": 54,
+        "wind_bearing": "S",
+        "wind_speed": 20.32
+      }
+    ]
+  }
+}

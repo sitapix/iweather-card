@@ -1,0 +1,27 @@
+{
+  "integration": "meteoclimatic",
+  "from": "live",
+  "units": "metric",
+  "place": "Reus, Spain",
+  "latitude": 41.16,
+  "longitude": 1.11,
+  "time_zone": "Europe/Madrid",
+  "now": "2026-11-02T19:55:20+00:00",
+  "state": {
+    "state": "clear-night",
+    "attributes": {
+      "temperature": 14.3,
+      "temperature_unit": "°C",
+      "humidity": 85,
+      "pressure": 1016.9,
+      "pressure_unit": "hPa",
+      "wind_bearing": 286.0,
+      "wind_speed": 2.0,
+      "wind_speed_unit": "km/h",
+      "visibility_unit": "km",
+      "precipitation_unit": "mm"
+    }
+  },
+  "forecasts": {},
+  "notes": "Recorded from a running Home Assistant 2026.10.4 at 20:55 local time on 2 November 2026 (Europe/Madrid), with its home and time zone set to Reus, Spain and its unit system metric. Entry for station ESCAT4300000043206B (Reus - Nord, Tarragona), an amateur station network; entity weather.meteoclimatic_weather_for_reus_nord_tarragona_escat4300000043206b_reus_nord_tarragona. No forecast of any kind and no supported_features attribute. Attributes: condition (clear-night), temperature, humidity, pressure, wind_bearing (float), wind_speed; no visibility, though visibility_unit is set. Units: °C, hPa, km/h, km, mm. Values Home Assistant converts from another unit carry up to two decimals (temperatures one)."
+}

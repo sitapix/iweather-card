@@ -1,0 +1,77 @@
+{
+  "integration": "template",
+  "from": "source",
+  "units": "metric",
+  "now": "2026-11-02T18:00:00+00:00",
+  "state": {
+    "state": "partlycloudy",
+    "attributes": {
+      "temperature": 17.3,
+      "temperature_unit": "°C",
+      "humidity": 72,
+      "pressure": 1016.2,
+      "pressure_unit": "hPa",
+      "wind_bearing": 230,
+      "wind_speed": 11.2,
+      "wind_speed_unit": "km/h",
+      "visibility_unit": "km",
+      "precipitation_unit": "mm",
+      "supported_features": 1
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "datetime": "2026-11-02T11:00:00+00:00",
+        "condition": "partlycloudy",
+        "temperature": 18.1,
+        "templow": 9.4,
+        "precipitation_probability": 10,
+        "precipitation": 0.0,
+        "wind_bearing": 230,
+        "wind_speed": 12.6
+      },
+      {
+        "datetime": "2026-11-03T11:00:00+00:00",
+        "condition": "rainy",
+        "temperature": 15.2,
+        "templow": 10.1,
+        "precipitation_probability": 80,
+        "precipitation": 6.3,
+        "wind_bearing": 200,
+        "wind_speed": 22.3
+      },
+      {
+        "datetime": "2026-11-04T11:00:00+00:00",
+        "condition": "cloudy",
+        "temperature": 13.0,
+        "templow": 7.8,
+        "precipitation_probability": 30,
+        "precipitation": 0.4,
+        "wind_bearing": 250,
+        "wind_speed": 15.1
+      },
+      {
+        "datetime": "2026-11-05T11:00:00+00:00",
+        "condition": "sunny",
+        "temperature": 14.6,
+        "templow": 5.2,
+        "precipitation_probability": 0,
+        "precipitation": 0.0,
+        "wind_bearing": 300,
+        "wind_speed": 9.0
+      },
+      {
+        "datetime": "2026-11-06T11:00:00+00:00",
+        "condition": "partlycloudy",
+        "temperature": 16.3,
+        "templow": 6.9,
+        "precipitation_probability": 10,
+        "precipitation": 0.0,
+        "wind_bearing": 220,
+        "wind_speed": 10.8
+      }
+    ]
+  },
+  "notes": "Built from homeassistant/components/template/weather.py: a weather entity made from a station's own sensors (temperature, humidity, pressure, wind speed and bearing) with a condition template, and a daily forecast template copying another integration's days. It sets no dew point, feels-like, UV, cloud cover, gusts or visibility, and every unit attribute follows Home Assistant's unit system."
+}

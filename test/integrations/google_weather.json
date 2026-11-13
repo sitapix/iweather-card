@@ -1,0 +1,99 @@
+{
+  "integration": "google_weather",
+  "from": "snapshot",
+  "units": "metric",
+  "now": "2025-02-05T23:00:00Z",
+  "notes": "The test does not freeze the clock, so now is the first hourly entry. Core's fixtures are trimmed to one daily, one hourly and two twice-daily entries. Changes for realism (test-data artefacts): the daily and twice-daily fixtures start five days after the hourly one, so both are moved back five days to start today (the day half began at 07:00 local, 15:00Z, before now at 15:00 local); today's high (daily and the day half) is raised from 13.3 to 14.4, and its feels-like from 13.3 to 14.0, so it is not below the 13.7 C now.",
+  "state": {
+    "state": "sunny",
+    "attributes": {
+      "apparent_temperature": 13.1,
+      "cloud_coverage": 0.0,
+      "dew_point": 1.1,
+      "humidity": 42,
+      "precipitation_unit": "mm",
+      "pressure": 1019.16,
+      "pressure_unit": "hPa",
+      "supported_features": 7,
+      "temperature": 13.7,
+      "temperature_unit": "°C",
+      "uv_index": 1.0,
+      "visibility": 16.0,
+      "visibility_unit": "km",
+      "wind_bearing": 335,
+      "wind_gust_speed": 18.0,
+      "wind_speed": 8.0,
+      "wind_speed_unit": "km/h"
+    }
+  },
+  "forecasts": {
+    "daily": [
+      {
+        "apparent_temperature": 14.0,
+        "cloud_coverage": 53,
+        "condition": "partlycloudy",
+        "datetime": "2025-02-05T15:00:00Z",
+        "humidity": 54,
+        "precipitation": 0.0,
+        "precipitation_probability": 10,
+        "temperature": 14.4,
+        "templow": 1.5,
+        "uv_index": 3,
+        "wind_bearing": 280,
+        "wind_gust_speed": 14.0,
+        "wind_speed": 6.0
+      }
+    ],
+    "hourly": [
+      {
+        "apparent_temperature": 12.0,
+        "cloud_coverage": 0,
+        "condition": "sunny",
+        "datetime": "2025-02-05T23:00:00Z",
+        "dew_point": 2.7,
+        "humidity": 51,
+        "is_daytime": true,
+        "precipitation": 0.0,
+        "precipitation_probability": 0,
+        "pressure": 1019.13,
+        "temperature": 12.7,
+        "uv_index": 1,
+        "wind_bearing": 335,
+        "wind_gust_speed": 19.0,
+        "wind_speed": 10.0
+      }
+    ],
+    "twice_daily": [
+      {
+        "apparent_temperature": 14.0,
+        "cloud_coverage": 53,
+        "condition": "partlycloudy",
+        "datetime": "2025-02-05T15:00:00Z",
+        "humidity": 54,
+        "is_daytime": true,
+        "precipitation": 0.0,
+        "precipitation_probability": 5,
+        "temperature": 14.4,
+        "uv_index": 3,
+        "wind_bearing": 280,
+        "wind_gust_speed": 14.0,
+        "wind_speed": 6.0
+      },
+      {
+        "apparent_temperature": 1.5,
+        "cloud_coverage": 70,
+        "condition": "partlycloudy",
+        "datetime": "2025-02-06T03:00:00Z",
+        "humidity": 85,
+        "is_daytime": false,
+        "precipitation": 0.0,
+        "precipitation_probability": 10,
+        "temperature": 1.5,
+        "uv_index": 0,
+        "wind_bearing": 201,
+        "wind_gust_speed": 14.0,
+        "wind_speed": 6.0
+      }
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+name: Bug report
+description: Something on the card is broken or wrong.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: A tile with no data hides itself, so a missing tile may not be a bug. The editor's **Data sources** section marks the readings your entity lacks.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+      description: A sentence each is enough. If it looks wrong, add a screenshot or short video.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: input
+    id: card-version
+    attributes:
+      label: Card version
+      description: The release HACS shows, or the commit if you built it yourself. "latest" moves, so it can't be traced.
+    validations:
+      required: true
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.10.1"
+    validations:
+      required: true
+  - type: input
+    id: integration
+    attributes:
+      label: Weather integration
+      description: The one behind your `weather.*` entity. What the card can show depends on what it sends.
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      description: Say so if it's the Home Assistant app rather than a browser.
+      placeholder: Firefox 150 on Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Card configuration
+      description: Paste it from the card's code editor. Take out anything you'd rather not post.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console output
+      description: Any errors the browser's developer tools show when this happens.
+      render: text

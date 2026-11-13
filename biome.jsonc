@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    // The sources, tests, scripts, the demo and configs. Generated icons and the measured preset
+    // data stay as written; pnpm owns its own files' layout. A worktree inside .claude has
+    // a root config of its own, so Biome doesn't look in there at all.
+    "includes": [
+      "src/**/*.ts",
+      "test/**/*.ts",
+      "e2e/**/*.ts",
+      "scripts/**/*.ts",
+      "demo/**/*.ts",
+      "*.ts",
+      "*.json",
+      "*.jsonc",
+      "src/*.json",
+      "!src/sky/presets-data.ts",
+      "!package.json",
+      "!!**/.claude"
+    ]
+  },
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 120 },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "asNeeded"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      // noPropertyAccessFromIndexSignature (tsconfig) requires obj['key'] for index-signature
+      // keys, the very form this rule rewrites; the compiler decides where dots are allowed.
+      "complexity": { "useLiteralKeys": "off" }
+    }
+  },
+  "assist": { "enabled": false }
+}

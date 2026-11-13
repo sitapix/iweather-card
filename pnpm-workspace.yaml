@@ -1,0 +1,4 @@
+# A dependency's install script runs only if it is allowed here. lefthook's would install hooks in
+# the global hooks directory, and this repository keeps its own in .githooks.
+allowBuilds:
+  lefthook: false
