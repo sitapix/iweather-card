@@ -1,8 +1,11 @@
+import { CLOUD_ART } from './cloud-art.ts';
+import type { CloudArt } from './presets-data.ts';
+
 // Cloud sprites: each cloud is a small volume of density, baked into six-way
 // lighting maps (how lit every pixel is by light from +x, −x, +y, −y, +z and −z)
 // plus alpha. Relighting then needs no further volume work: a pixel's light for
 // any sun direction is the six maps weighted by the squares of that direction's
-// components. The volumes are procedural.
+// components. The daylight storm bake adds separate crest exposure and diffuse sky light.
 
 const hash = (x: number, y: number, z: number) => {
   let n = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1440662683);
@@ -69,6 +72,7 @@ export type CloudKind =
   | 'cumulus'
   | 'stratusBlanket'
   | 'stormBlanket'
+  | 'isolatedStorm'
   | 'heap'
   | 'cirrus'
   | 'wispy'
@@ -104,6 +108,7 @@ export const CLOUD_SPRITES: readonly Sprite[] = [
   ['cirrostratus', 2],
   ['cirrostratus', 6],
   ['cirrostratus', 11],
+  ['isolatedStorm', 5],
 ];
 export const SPRITE_WIDTH = 768,
   SPRITE_HEIGHT = 336,
@@ -128,7 +133,7 @@ export interface SpriteRect {
   width: number;
   height: number;
 }
-export function spriteRect(index: number): SpriteRect {
+function bakedRect(index: number): SpriteRect {
   if (index < CLOUD_SPRITES.length)
     return {
       left: (index % ATLAS_COLUMNS) * SPRITE_WIDTH,
@@ -144,7 +149,41 @@ export function spriteRect(index: number): SpriteRect {
     height: BLANKET_HEIGHT,
   };
 }
-export const spriteDepth = (kind: string): number => (kind === 'cirrus' ? 16 : kind === 'wispy' ? 20 : 32);
+
+const packed = typeof __CLOUD_ATLAS__ === 'undefined' ? undefined : __CLOUD_ATLAS__;
+const bakedSlots = [...CLOUD_SPRITES, ...BLANKETS];
+const artSlots = new Map<string, number[]>();
+const slots: { width: number; height: number; proxy: number; blanket: boolean }[] = [];
+for (const [name, group] of Object.entries(CLOUD_ART)) {
+  const matching = bakedSlots.flatMap(([kind], index) => (kind === group.proxy ? [index] : []));
+  const ids = group.sizes.map(([width, height], variant) => {
+    const index = bakedSlots.length + slots.length;
+    slots.push({ width, height, proxy: matching[variant % matching.length] ?? 0, blanket: name.includes('Blanket') });
+    return index;
+  });
+  artSlots.set(name, ids);
+}
+
+export const cloudSlots = (art: CloudArt): readonly number[] => artSlots.get(art) ?? [];
+export const cloudAtlasWidth = (): number => packed?.width ?? ATLAS_WIDTH;
+export const cloudAtlasHeight = (): number => packed?.height ?? PLANE_HEIGHT;
+export const cloudIsBlanket = (index: number): boolean =>
+  slots[index - bakedSlots.length]?.blanket ?? (index >= CLOUD_SPRITES.length && index < bakedSlots.length);
+export function spriteSize(index: number): { width: number; height: number } {
+  return slots[index - bakedSlots.length] ?? bakedRect(index);
+}
+export function spriteRect(index: number): SpriteRect {
+  const logical = index - bakedSlots.length;
+  const rect = packed?.rects[logical];
+  if (rect) {
+    const [left, top, width, height] = rect;
+    return { left, top, width, height };
+  }
+  return bakedRect(slots[logical]?.proxy ?? index);
+}
+// More slices resolve the narrow overhangs and their shadows in the storm bank.
+export const spriteDepth = (kind: string): number =>
+  kind === 'isolatedStorm' ? 48 : kind === 'cirrus' ? 16 : kind === 'wispy' ? 20 : 32;
 // How each kind takes light: `extinction` (how dense it is to light), `spread` (how
 // far scattered light carries, softening shadows) and `scatter` (the share of light
 // that scatters on rather than being shadowed), and `albedo` (how much of the light
@@ -160,6 +199,7 @@ interface Optics {
 const OPTICS: Readonly<Partial<Record<CloudKind, Optics>>> = {
   stratusBlanket: { extinction: 45, spread: 0.45, scatter: 0.14, albedo: 0.82 },
   stormBlanket: { extinction: 60, spread: 0.6, scatter: 0.09, albedo: 0.8, sharpen: 2 },
+  isolatedStorm: { extinction: 19, spread: 0.88, scatter: 0.29, albedo: 1 },
   heap: { extinction: 70, spread: 0.4, scatter: 0.08, albedo: 0.62, sharpen: 3 },
   stratus: { extinction: 18, spread: 0.55, scatter: 0.22 },
   wispy: { extinction: 5, spread: 0.9, scatter: 0.45 },
@@ -349,6 +389,58 @@ export const KINDS: Readonly<Record<CloudKind, (seed: number) => Field>> = {
       const fray = billow(wx * 30, wy * 30, z * 24, seed + 60, 2) * 0.3 * clamp(1 - mass * 3),
         inner = 0.45 + 0.9 * fbm3(wx * 14, wy * 14, z * 14, seed + 70, 3);
       return clamp((mass - fray + 0.12) * 2.6) ** 1.3 * inner + skirt;
+    };
+  },
+  // A dense head curls over the viewer and overlaps the distant ceiling. Two low
+  // banks break through the haze ahead of it.
+  isolatedStorm(seed) {
+    const span = SPRITE_WIDTH / SPRITE_HEIGHT;
+    return (x, y, z) => {
+      if (y > 0.9 || z < 0.04 || z > 0.97) return 0;
+      const X = x * span,
+        wx = X + (fbm3(X * 3.1, y * 3.6, z * 2.2, seed + 11, 3) - 0.5) * 0.17,
+        wy = y + (fbm3(X * 3.6 + 7, y * 4, z * 2.5, seed + 12, 3) - 0.5) * 0.13,
+        fold = fbm3(wx * 5.5, wy * 6.5, z * 3.1, seed + 4, 3) - 0.5,
+        curl = billow(wx * 13, wy * 16, z * 9, seed + 31, 3) - 0.32,
+        fleck = fbm3(wx * 28 + wy * 3, wy * 32, z * 8, seed + 51, 3) - 0.5;
+      const swell = 0.45 * fold - 0.27 * curl + 0.1 * fleck,
+        left = Math.exp(-(((x - 0.849) / 0.22) ** 2)),
+        right = Math.exp(-(((x - 0.26) / 0.19) ** 2));
+      // The forward face moves in depth with the swell. Light from above has to pass
+      // through the overhanging shoulders before it reaches the hollow under each one.
+      const body =
+          1 -
+          ((wx - span * 0.852) / 0.54) ** 2 -
+          ((wy - (0.305 - (x - 0.845) * 0.46)) / 0.206) ** 2 -
+          ((z - 0.48 - fold * 0.2) / 0.31) ** 2 +
+          swell * 2.1,
+        roll =
+          1 -
+          ((wx - span * 0.807) / 0.31) ** 2 -
+          ((wy - (0.213 - (x - 0.845) * 0.43)) / 0.107) ** 2 -
+          ((z - 0.31) / 0.22) ** 2 +
+          swell * 2.5,
+        head = clamp(Math.max(body, roll) / 0.27) * clamp((0.58 - wy) / 0.32) ** 2.2;
+      const trail =
+          Math.exp(-(((wy - 0.37 - (0.84 - x) * 0.4) / 0.15) ** 2)) *
+          Math.exp(-(((z - 0.66) / 0.12) ** 2)) *
+          Math.max(left, right * 0.37),
+        upper = Math.exp(-(((x - 0.66) / 0.088) ** 2)),
+        ceilingBase = 0.22 + right * 0.13 + upper * 0.075 + fold * 0.31 - curl * 0.1,
+        ceiling = clamp((ceilingBase - wy) / 0.14) * clamp(1 - Math.abs(z - 0.7 + swell * 0.3) / 0.23),
+        cells = clamp((fold + 0.16 - curl * 0.25) * 3);
+      const banks = Math.max(Math.exp(-(((x - 0.819) / 0.12) ** 2)), Math.exp(-(((x - 0.27) / 0.112) ** 2)) * 0.91),
+        bankSide = Math.exp(-(((x - 0.902) / 0.082) ** 2)),
+        bankTop = 0.7 - Math.max(banks * 0.263, bankSide * 0.165),
+        bankDepth = clamp(1 - Math.abs(z - 0.22 - swell * 0.55) / 0.14),
+        bank = clamp((wy - bankTop + swell * 0.39) / 0.032) * clamp((0.815 - wy) / 0.265) ** 2;
+      return (
+        (head * (0.68 + 0.46 * cells) +
+          ceiling * (0.025 + cells * (0.09 + (right + upper) * 0.38)) +
+          trail * (0.14 + 0.26 * cells) +
+          bank * Math.max(banks, bankSide * 0.72) * bankDepth * (0.095 + cells * 0.32) * (0.1 + 0.38 * left)) *
+        clamp((0.9 - y) / 0.1)
+      );
     };
   },
   // Large cumulus: broad, dense heaps that shadow themselves deeply, with
@@ -547,7 +639,8 @@ export function bakeCloud(kind: CloudKind, seed: number, width: number, height: 
   // bottom fade.
   const wide = BLANKETS.some(([name]) => name === kind),
     shape = KINDS[kind](seed),
-    border = (x: number, y: number) => (wide ? 1 : clamp(Math.min(x, 1 - x) / 0.04)) * clamp(Math.min(y, 1 - y) / 0.06);
+    border = (x: number, y: number) =>
+      kind === 'isolatedStorm' ? 1 : (wide ? 1 : clamp(Math.min(x, 1 - x) / 0.04)) * clamp(Math.min(y, 1 - y) / 0.06);
   const density = (x: number, y: number, z: number) => shape(x, y, z) * border(x, y),
     n = width * height * depth,
     field = new Float32Array(n);

@@ -1,8 +1,8 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { CLOUD_SPRITES, bakeCloud, relight, sharpened } from '../src/sky/clouds.ts';
-import { DECK_COUNT, deckClouds, type CloudDeck } from '../src/sky/cloud-decks.ts';
-import { noiseCube } from '../src/sky/clouds-gl.ts';
+import { CLOUD_SPRITES, cloudSlots, bakeCloud, relight, sharpened } from '../src/sky/clouds.ts';
+import { DECK_COUNT, cloudPicks, cloudPosition, deckClouds, type CloudDeck } from '../src/sky/cloud-decks.ts';
+import { lightStorm } from '../scripts/storm-light.ts';
 
 test('baked sprites carry six light maps and coverage that fades before the edges', () => {
   const { maps, width, height } = bakeCloud('cumulus', 2, 48, 24, 12);
@@ -16,6 +16,53 @@ test('baked sprites carry six light maps and coverage that fades before the edge
     top = lit[(Math.floor(height * 0.35) * width + centre[0]) * 4] ?? NaN,
     base = lit[(Math.floor(height * 0.85) * width + centre[0]) * 4] ?? NaN;
   assert.ok(top > base);
+});
+
+test('the isolated storm shades its dense folds and leaves an opening between the low banks', () => {
+  const sprite = CLOUD_SPRITES.find(([kind]) => kind === 'isolatedStorm');
+  assert.ok(sprite);
+  const volume = bakeCloud(...sprite, 96, 42, 12),
+    { width, maps } = volume;
+  // Small patches across the baked view: a crest above the left bank and a gap between banks.
+  const patch = (x: number, y: number, channel: number) => {
+    let sum = 0;
+    for (let row = y; row < y + 4; row++)
+      for (let col = x; col < x + 4; col++) sum += maps[(row * width + col) * 7 + channel] ?? 0;
+    return sum / 16;
+  };
+  const coverage = (x: number, y: number) => patch(x, y, 6),
+    crest = coverage(78, 7),
+    left = coverage(78, 22),
+    right = coverage(26, 22),
+    gap = coverage(47, 22);
+  assert.ok(crest > left && left > right);
+  assert.ok(right > gap + 0.025);
+  assert.equal(coverage(78, 38), 0);
+  // An opaque shoulder shadows the opaque cloud just below it. Both should remain
+  // visible when lit from the front, which uses a separate directional map.
+  assert.ok(coverage(78, 7) > 0.9 && coverage(78, 14) > 0.9);
+  assert.ok(patch(78, 7, 2) > patch(78, 14, 2) + 0.28);
+  assert.ok(patch(78, 14, 4) > patch(78, 14, 2) + 0.2);
+
+  const haze = coverage(78, 29);
+  lightStorm(volume);
+  // The visible lip still has cloud and sky fill. Direct light falls away across it.
+  const overhead = patch(78, 7, 2),
+    lip = patch(63, 14, 2);
+  assert.ok(coverage(63, 14) > 0.35 && overhead > 0.35);
+  assert.ok(lip < overhead * 0.3 && patch(78, 14, 2) < overhead * 0.2);
+  assert.ok(patch(63, 14, 3) > 0.7 && patch(78, 22, 2) < overhead * 0.3);
+
+  // Two staggered crests on the far side of the frame emerge through the open haze.
+  const farCrest = patch(20, 17, 2),
+    nearCrest = patch(27, 20, 2),
+    opening = patch(25, 16, 2);
+  assert.ok(Math.min(farCrest, nearCrest) > opening + 0.035);
+  assert.ok(patch(26, 6, 2) > patch(32, 6, 2) + 0.12, 'the upper bank hangs over a shaded fold');
+  // Below the painted banks only the volume contributes haze. Extending the last
+  // painted row here drags its individual pixels into long vertical streaks.
+  assert.equal(coverage(78, 29), haze * 0.5);
+  assert.equal(patch(78, 29, 2), 0);
 });
 
 test('decks follow the preset decks: family, count, height and size', () => {
@@ -35,24 +82,45 @@ test('decks follow the preset decks: family, count, height and size', () => {
   );
   assert.ok(high);
   for (const cloud of high) {
-    assert.equal(CLOUD_SPRITES[cloud.sprite]?.[0], 'cirrostratus');
-    assert.ok(cloud.y < 0.1, 'a high deck sits at the top of the sky');
-    assert.ok(cloud.scale >= 14 / 48 && cloud.scale <= 20 / 48);
+    assert.ok(cloudSlots('Cirrostratus_SingleL').includes(cloud.sprite));
+    assert.ok(cloud.y >= 41 && cloud.y <= 45);
+    assert.ok(cloud.scale >= 14 && cloud.scale <= 20);
   }
-  assert.deepEqual(deckClouds(decks, 3), deckClouds(decks, 3), 'seeded, so a sky is stable');
+  assert.deepEqual(deckClouds(decks, 3), deckClouds(decks, 3));
 });
 
-test('a deck can draw its clouds thinner and taller than baked', () => {
-  const plain: CloudDeck = ['wispy', 4, [15, 19], 17, [0.45, 0.5], [45, 10, 5]],
-    drawn: CloudDeck = ['wispy', 4, [15, 19], 17, [0.45, 0.5], [45, 10, 5], 0.5, 1.5],
-    solid = deckClouds([plain], 2)[0]?.[0],
-    thin = deckClouds([drawn], 2)[0]?.[0];
-  assert.ok(solid && thin);
-  assert.equal(solid.tall, 1, 'as baked unless the deck says');
-  assert.equal(thin.tall, 1.5);
-  assert.ok(Math.abs(thin.alpha - solid.alpha * 0.5) < 1e-9);
+test('eight particles share six distinct textures and wrap through the emitter fade', () => {
+  const deck: CloudDeck = ['cumulus', 8, [2, 6], 0, [1, 3], [100, 0, 0], 'Cumulus_SingleM', 0, 0, true, 8];
+  const particles = deckClouds([deck], 7)[0] ?? [],
+    slots = cloudPicks('Cumulus_SingleM', 8, 6, 7);
+  assert.deepEqual(
+    particles.map(p => p.sprite),
+    [slots[0], slots[0], slots[1], slots[1], ...slots.slice(2)],
+  );
+  assert.equal(new Set(slots).size, 6);
+  const first = particles[0];
+  assert.ok(first);
+  assert.ok(Math.abs(first.speed - (1 + 2 * 0.1397016)) < 1e-6);
+  assert.ok(Math.abs(first.scale - (2 + 4 * 0.1397016)) < 1e-6);
+  assert.deepEqual(cloudPosition({ ...first, x: 100 }, 0), [100, 0]);
+  const [x, fade] = cloudPosition({ ...first, x: -93, speed: 1 }, 4);
+  assert.equal(x, -97);
+  assert.ok(Math.abs(fade - 0.4) < 1e-8);
+  assert.deepEqual(cloudPosition({ ...first, x: -99, speed: 1 }, 2), [99, 1 / 7.5]);
 });
-
+test('the outer decks capture unit size and the middle decks capture a reproducible uniform size', () => {
+  const deck: CloudDeck = ['cumulus', 6, [4, 4], 0, [0, 0], [12, 8, 4]];
+  const scales = (artSeed: number) =>
+    deckClouds([deck, deck, deck, deck], artSeed).map(group => group?.map(p => p.scale));
+  const [back, midBack, midFront, front] = scales(12);
+  assert.deepEqual(back, [4, 4, 4, 4, 4, 4]);
+  assert.deepEqual(front, back);
+  assert.ok(midBack && midFront && [...midBack, ...midFront].every(size => size >= 0 && size <= 4));
+  assert.equal(new Set(midBack).size, 6);
+  assert.deepEqual(scales(12), scales(31));
+  const foreground = deckClouds([null, null, deck])[2];
+  assert.ok(foreground?.every(particle => particle.y >= 6 && particle.y <= 14 && Math.abs(particle.z) <= 2));
+});
 test('sharpening deepens an edge, leaves flat cloud alone and stays within the maps', () => {
   const width = 16,
     height = 4,
@@ -64,20 +132,4 @@ test('sharpening deepens an edge, leaves flat cloud alone and stays within the m
   assert.equal(at(width - 1), 0.75);
   assert.ok(at(edge - 1) < 0.25 && at(edge) > 0.75, 'each side of the edge is pushed away from the other');
   assert.ok(sharpened(maps, width, height, 20).every(value => value >= 0 && value <= 1));
-});
-
-// The cube's bytes folded into one number (32-bit FNV-1a): any texel out by a shade changes it.
-const fingerprint = (bytes: Uint8Array) =>
-  bytes.reduce((folded, byte) => Math.imul(folded ^ byte, 16_777_619) >>> 0, 2_166_136_261);
-
-test('the GPU clouds tear their edges with the noise they were tuned on, to the byte', async () => {
-  let pauses = 0;
-  const cube = await noiseCube(64, () => {
-    pauses++;
-    return Promise.resolve();
-  });
-  assert.equal(cube.length, 64 ** 3);
-  assert.equal(fingerprint(cube).toString(16), '1ea88d71');
-  // Built a few slices at a time, so the page draws in between.
-  assert.equal(pauses, 8);
 });

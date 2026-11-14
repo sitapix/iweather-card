@@ -5,3 +5,6 @@ _site/
 .vitest/
 test-results/
 perf-results/
+!scripts/art/isolated-storm.rgb.gz
+/.local/
+/generated_images/

@@ -216,6 +216,7 @@ export interface SheetHost
   measureZoom(): number;
   remeasure(): void;
   drawMoons(): void;
+  syncEffects(): void;
 }
 // What a sheet's tabs and strip of days are when it's drawn again.
 interface Held {
@@ -306,6 +307,7 @@ export class DetailSheets {
     // A page scrolling on the document runs on behind a modal sheet, so the sheet goes with its tile.
     addEventListener('scroll', detail.followed, true);
     if (!docking) void this.history.loadHistory();
+    if (id === 'map' && dialog.hasAttribute('data-full')) this.card.syncEffects();
   }
   // A sheet's dialog, with what it answers: picking a day, a tab or a month, closing, and reading
   // its charts.
@@ -589,6 +591,7 @@ export class DetailSheets {
       removeEventListener('resize', created.resized);
       removeEventListener('scroll', created.followed, true);
       this.anchorOf(created).focus({ preventScroll: true });
+      if (created.id === 'map' && dialog.hasAttribute('data-full')) card.syncEffects();
     });
     card.root.append(dialog);
     return created;

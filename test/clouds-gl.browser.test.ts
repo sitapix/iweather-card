@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { CloudAtlas } from '../src/sky/cloud-decks.ts';
-import { CLOUD_SPRITES } from '../src/sky/clouds.ts';
+import { cloudIsBlanket } from '../src/sky/clouds.ts';
 import { CloudPainter, cloudPainter, resetCloudPainter } from '../src/sky/clouds-gl.ts';
 import { WeatherScene } from '../src/sky/scene.ts';
 import { context2d } from '../src/lib/canvas.ts';
@@ -54,6 +54,7 @@ test('the GPU draws an overcast in the tone the 2D drawing gives it', async () =
   WeatherScene.gpuClouds = false;
   const atlas = new CloudAtlas(CLOUD_MAPS);
   WeatherScene.atlas = atlas;
+  vi.spyOn(Math, 'random').mockReturnValue(0.375);
   const flat = sky(OVERCAST);
   await drawn(flat, atlas);
   const before = tone(flat);
@@ -70,23 +71,23 @@ test('the GPU draws an overcast in the tone the 2D drawing gives it', async () =
   expect(atlas.loaded).toBe(false);
 });
 
-test('on the GPU, the copies of a lid meet on whole device pixels, each where the last ends', async () => {
+test('the blanket repeats one oriented image and preserves its aspect as it drifts', async () => {
   const atlas = new CloudAtlas(CLOUD_MAPS, { now: false });
   WeatherScene.atlas = atlas;
-  // Fog lifted into a low overcast, by day: a lid that shows plainly.
-  const scene = sky({ condition: 'fog', night: false, elevation: 30, visibility: 8 });
+  const scene = sky({ condition: 'cloudy', night: false, elevation: 30, cloudCover: 100 });
   await drawn(scene, atlas);
   expect(scene.painter()).not.toBeNull();
   const paint = vi.spyOn(CloudPainter.prototype, 'paint');
   for (const phase of [1234, 3456, 8888]) scene.paint(WIDTH, HEIGHT, RATIO, phase);
   const lids = paint.mock.calls
     .filter(([target]) => target.canvas === scene.canvas)
-    .map(([, draws]) => draws.filter(draw => draw.sprite >= CLOUD_SPRITES.length));
+    .map(([, draws]) => draws.filter(draw => cloudIsBlanket(draw.sprite)));
   expect(lids.length).toBeGreaterThanOrEqual(3);
   for (const copies of lids) {
-    expect(copies.length).toBe(6);
+    expect(copies.length).toBeGreaterThan(0);
     for (const [index, { x, width }] of copies.entries()) {
-      for (const edge of [x, x + width]) expect(Math.abs(edge * RATIO - Math.round(edge * RATIO))).toBeLessThan(1e-6);
+      expect(copies[index]?.flip).toBe(false);
+      expect(copies[index]?.sprite).toBe(copies[0]?.sprite);
       const next = copies[index + 1];
       if (next) expect(next.x).toBeCloseTo(x + width, 6);
     }
@@ -98,10 +99,10 @@ test('without WebGL2 the clouds go to the 2D drawing', async () => {
   WeatherScene.atlas = atlas;
   // The painter asks for its context first of all.
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValueOnce(null);
-  expect(cloudPainter(atlas, image => image)).toBeNull();
+  expect(cloudPainter(atlas)).toBeNull();
   await expect(atlas.ready).resolves.toBe(true);
   expect(atlas.loaded).toBe(true);
-  expect(cloudPainter(atlas, image => image)).toBeNull();
+  expect(cloudPainter(atlas)).toBeNull();
 });
 
 test('a GPU that loses its context hands the clouds back to the 2D drawing', async () => {

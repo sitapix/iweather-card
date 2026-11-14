@@ -1,7 +1,6 @@
 // What lies on the glass panels over the sky: rain beading on them, frost in freezing weather,
 // and falling snow settled along their tops.
 import { CHANNEL_MAX, context2d, rgb } from '../lib/canvas.ts';
-import type { EntityAttributes, HomeAssistant } from './home-assistant.ts';
 import { SECOND } from '../lib/time.ts';
 import {
   dropletTier,
@@ -14,7 +13,7 @@ import {
 } from '../sky/droplets.ts';
 import { sharedGlass, type GlassRain } from '../sky/glass-gl.ts';
 import { localHour } from '../weather/forecast-items.ts';
-import { convertUnit } from '../weather/units.ts';
+import { loadEffectArt } from '../sky/effect-art.ts';
 import type { Parts, Geometry } from './parts.ts';
 import type { CardConfig } from './config.ts';
 import type { WeatherScene } from '../sky/scene.ts';
@@ -62,13 +61,13 @@ interface GlassHost extends Pick<HTMLElement, 'getBoundingClientRect'> {
   readonly root: ShadowRoot;
   readonly parts: Parts;
   readonly config: CardConfig | undefined;
-  readonly readHass: HomeAssistant | undefined;
   readonly scene: WeatherScene;
   readonly timeZone: string | undefined;
   readonly zoom: number;
   geometry(): Geometry;
 }
 export class PanelGlass {
+  private frostRequested = false;
   private renderer: GlassRain | undefined;
   readonly card: GlassHost;
   // Rain on the glass is drawn once for the whole card here, then each panel takes its part
@@ -80,7 +79,7 @@ export class PanelGlass {
   }
   // A released surface needs a fresh sky when the card comes back into view.
   get hasRain(): boolean {
-    return this.renderer !== undefined && dropletTier(this.card.scene.preset?.kind ?? '') > 0;
+    return this.renderer !== undefined && dropletTier(this.card.scene.preset?.effectKind ?? '') > 0;
   }
   // Takes the rain off the panels' glass (see paint).
   clearDrops() {
@@ -99,14 +98,12 @@ export class PanelGlass {
       config = card.config;
     if (!config) return;
     // Frost in freezing weather, rain beads otherwise.
-    const attrs: EntityAttributes = card.readHass?.states[config.entity]?.attributes ?? {},
-      celsius = convertUnit('temperature_unit', attrs.temperature ?? NaN, attrs.temperature_unit, '°C');
-    const kind = card.scene.preset?.kind,
+    const kind = card.scene.preset?.effectKind,
       scene = config.weather_scene,
       rain = card.parts.droplets,
       flat = card.parts.frost;
     const hour = localHour(Date.now(), card.timeZone);
-    const frost = scene && frostEffect(kind, celsius, hour),
+    const frost = scene && frostEffect(kind, card.scene.preset?.temperature, hour),
       // Low power gives up the drops running down the glass, the costliest thing the panels draw.
       tier = scene && !frost && !config.low_power ? dropletTier(kind ?? '') : 0;
     const glass = tier ? sharedGlass() : null;
@@ -152,6 +149,15 @@ export class PanelGlass {
   }
   // Frost holds still, so it is drawn again only when the panels move.
   drawFrost(panels: Panel[], { dpr, width, height, root }: Sizes) {
+    if (!this.frostRequested) {
+      this.frostRequested = true;
+      void loadEffectArt('frost')?.then(loaded => {
+        if (loaded && this.card.root.host.isConnected) {
+          this.frostKey = '';
+          this.paint(0);
+        }
+      });
+    }
     const flat = this.card.parts.frost;
     size(flat, width, height);
     const key = JSON.stringify([panels, width, height]);

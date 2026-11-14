@@ -1,4 +1,4 @@
-import type { EntityAttributes } from '../card/home-assistant.ts';
+import { isCloudAltitude, type EntityAttributes } from '../card/home-assistant.ts';
 import { finite } from '../lib/values.ts';
 import { HOUR } from '../lib/time.ts';
 import { convertUnit, UNITS } from './units.ts';
@@ -92,8 +92,11 @@ export function readingsNow({ entity, sensors, second, hour }: NowInputs): Now {
     from.dew_point = 'worked out';
     lent['dew_point'] = worked;
   } else if (from.dew_point === undefined) take('dew_point');
-  // The cloud's height, which no entity reports, is the hour's.
-  if (hour?.cloud_altitude !== undefined) lent['cloud_altitude'] = hour.cloud_altitude;
+  // Keep a reported cloud height and fill a missing one from the forecast hour.
+  if (!isCloudAltitude(entity.cloud_altitude)) {
+    const altitude = isCloudAltitude(second?.cloud_altitude) ? second.cloud_altitude : hour?.cloud_altitude;
+    if (isCloudAltitude(altitude)) lent['cloud_altitude'] = altitude;
+  }
   if (from.wind_gust_speed === 'second' || from.wind_gust_speed === 'hour') {
     const wind = now('wind_speed'),
       gust = now('wind_gust_speed');

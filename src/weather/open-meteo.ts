@@ -23,10 +23,13 @@ export const openMeteoRain = (unit: string | undefined) =>
 // it shows.
 
 // Yesterday and today's hours before now, and ten rows from any hour of the local day. Up to 14
-// days weigh as one request at the service, and 27 readings as 2.7, so asking hourly comes to 65 of
+// days weigh as one request at the service, and 28 readings as 2.8, so asking hourly comes to 67 of
 // the 10,000 a day it allows.
 const PAST_DAYS = 1;
 const FORECAST_DAYS = 11;
+// The next three hours' precipitation a quarter hour at a time, for what is falling now and how
+// soon it starts (see rainOutlook).
+const QUARTERS = 12;
 // The default time between asks, across cards sharing the browser.
 export const SUPPLEMENT_REFRESH = HOUR;
 
@@ -67,7 +70,7 @@ const DAILY: Readings = {
 const CODE = 'weather_code',
   SNOWFALL = 'snowfall';
 // An hour's cover low, mid and high, which name the height of its cloud (see cloudAltitude).
-const CLOUD_LAYERS = ['cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high'] as const;
+export const CLOUD_LAYERS = ['cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high'] as const;
 
 // The height holding the most of the cloud. Where two hold the most alike, low wins over either and
 // mid over high, so a sky with no cloud at all is low.
@@ -77,12 +80,18 @@ export function cloudAltitude(low: number, mid: number, high: number): CloudAlti
 }
 const SUN = ['sunrise', 'sunset'] as const;
 
-// What an answer brings: every hour, oldest first, and every day, each as a forecast entry.
-// `at`: when it was asked for, as what had ended by then is no forecast.
+// What an answer brings: every hour, oldest first, and every day, each as a forecast entry, and
+// the quarter hours ahead. `at`: when it was asked for, as what had ended by then is no forecast.
 export interface Supplement {
   at: number;
   hours: readonly ForecastEntry[];
   days: readonly ForecastEntry[];
+  quarters: readonly Quarter[];
+}
+// A quarter hour's precipitation: when it ends, and how much (mm) falls in the quarter before.
+export interface Quarter {
+  time: number;
+  precipitation: number;
 }
 
 const valuesOf = (block: Record<string, unknown>, name: string): readonly unknown[] => {
@@ -138,7 +147,13 @@ export function parseSupplement(body: unknown, at: number): Supplement | null {
     if (condition) entry.condition = condition;
     return [withReadings(entry, daily, DAILY, i)];
   });
-  return hours.length && days.length ? { at, hours, days } : null;
+  const minutely = isRecord(body) ? body['minutely_15'] : undefined,
+    amounts = isRecord(minutely) ? valuesOf(minutely, 'precipitation') : [],
+    quarters = (isRecord(minutely) ? valuesOf(minutely, 'time') : []).flatMap((time, i) => {
+      const precipitation = amounts[i];
+      return finite(time) && finite(precipitation) ? [{ time: fromUnix(time), precipitation }] : [];
+    });
+  return hours.length && days.length ? { at, hours, days, quarters } : null;
 }
 
 // The last answer, as it came, for the place it was asked for: read back through the same checks,
@@ -173,7 +188,7 @@ export function openMeteoForecast(
     hourly: [...Object.keys(HOURLY), CODE, SNOWFALL, ...CLOUD_LAYERS].join(','),
     daily: [...Object.keys(DAILY), CODE, ...SUN].join(','),
   };
-  const url = `${OPEN_METEO.forecast}?${atPlace(latitude, longitude)}&hourly=${asked.hourly}&daily=${asked.daily}&past_days=${PAST_DAYS}&forecast_days=${FORECAST_DAYS}&timeformat=unixtime&timezone=${encodeURIComponent(timeZone ?? 'auto')}&wind_speed_unit=ms&precipitation_unit=mm&temperature_unit=celsius`;
+  const url = `${OPEN_METEO.forecast}?${atPlace(latitude, longitude)}&hourly=${asked.hourly}&daily=${asked.daily}&minutely_15=precipitation&forecast_minutely_15=${QUARTERS}&past_days=${PAST_DAYS}&forecast_days=${FORECAST_DAYS}&timeformat=unixtime&timezone=${encodeURIComponent(timeZone ?? 'auto')}&wind_speed_unit=ms&precipitation_unit=mm&temperature_unit=celsius`;
   // Each card decides whether a saved answer is fresh enough before sharing a network request.
   const saved = savedSupplement(url, now, maxAge);
   if (saved) return saved;

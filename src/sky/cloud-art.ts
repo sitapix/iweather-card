@@ -1,0 +1,222 @@
+import type { CloudArt } from './presets-data.ts';
+import type { CloudKind } from './clouds.ts';
+
+interface CloudGroup {
+  proxy: CloudKind;
+  sizes: readonly (readonly [width: number, height: number])[];
+}
+
+// Pixel dimensions determine projected size independently of the atlas resolution.
+export const CLOUD_ART: Record<CloudArt, CloudGroup> = {
+  Altostratus_Blanket: {
+    proxy: 'stratusBlanket',
+    sizes: [
+      [1560, 541],
+      [1560, 539],
+      [1560, 541],
+      [1560, 535],
+      [1560, 571],
+      [1560, 529],
+      [1560, 511],
+      [1560, 549],
+    ],
+  },
+  Altostratus_SingleL: {
+    proxy: 'altostratus',
+    sizes: [
+      [611, 163],
+      [595, 202],
+      [607, 185],
+      [597, 211],
+      [613, 143],
+      [593, 228],
+      [606, 161],
+      [601, 123],
+      [588, 281],
+    ],
+  },
+  Altostratus_SingleS: {
+    proxy: 'altostratus',
+    sizes: [
+      [471, 130],
+      [406, 106],
+      [323, 117],
+      [328, 140],
+      [325, 97],
+      [354, 108],
+      [399, 113],
+      [411, 125],
+      [470, 109],
+    ],
+  },
+  Cirrostratus_SingleL: {
+    proxy: 'cirrostratus',
+    sizes: [
+      [614, 276],
+      [613, 241],
+      [609, 211],
+      [596, 213],
+      [618, 201],
+      [627, 197],
+      [595, 251],
+      [629, 205],
+      [629, 157],
+    ],
+  },
+  Cirrostratus_SingleS: {
+    proxy: 'cirrostratus',
+    sizes: [
+      [616, 201],
+      [627, 200],
+      [640, 227],
+      [599, 165],
+      [599, 158],
+      [601, 187],
+      [607, 175],
+      [617, 151],
+    ],
+  },
+  Cirrus_Blanket: {
+    proxy: 'stratusBlanket',
+    sizes: [
+      [1560, 692],
+      [1560, 696],
+      [1560, 689],
+      [1560, 720],
+    ],
+  },
+  Cirrus_SingleL: {
+    proxy: 'cirrus',
+    sizes: [
+      [571, 227],
+      [576, 286],
+      [606, 279],
+      [556, 320],
+      [584, 248],
+      [612, 273],
+      [609, 270],
+      [399, 323],
+      [618, 195],
+      [624, 238],
+    ],
+  },
+  Cirrus_SingleS: {
+    proxy: 'cirrus',
+    sizes: [
+      [381, 161],
+      [337, 201],
+      [413, 164],
+      [348, 226],
+      [369, 245],
+      [373, 273],
+    ],
+  },
+  Cumulonimbus_BlanketL: {
+    proxy: 'stormBlanket',
+    sizes: [
+      [1560, 707],
+      [1560, 700],
+      [1560, 692],
+      [1560, 540],
+    ],
+  },
+  Cumulonimbus_BlanketS: {
+    proxy: 'stormBlanket',
+    sizes: [
+      [1560, 535],
+      [1560, 525],
+      [1560, 491],
+      [1560, 499],
+      [1560, 484],
+      [1560, 513],
+    ],
+  },
+  Cumulus_SingleL: {
+    proxy: 'cumulus',
+    sizes: [
+      [640, 266],
+      [621, 267],
+      [621, 234],
+      [613, 233],
+      [613, 217],
+      [601, 248],
+      [635, 253],
+      [623, 286],
+      [625, 253],
+      [630, 274],
+    ],
+  },
+  Cumulus_SingleM: {
+    proxy: 'cumulus',
+    sizes: [
+      [513, 212],
+      [551, 230],
+      [488, 190],
+      [495, 213],
+      [447, 180],
+      [463, 238],
+      [580, 218],
+      [481, 199],
+      [465, 186],
+      [482, 243],
+      [609, 225],
+      [429, 202],
+      [385, 241],
+      [554, 240],
+      [547, 219],
+    ],
+  },
+  Nimbostratus_SingleL: {
+    proxy: 'nimbus',
+    sizes: [
+      [603, 291],
+      [597, 320],
+      [603, 241],
+      [589, 320],
+      [551, 291],
+      [591, 229],
+      [563, 253],
+      [631, 258],
+      [595, 244],
+      [598, 239],
+    ],
+  },
+  Stratus_Blanket: {
+    proxy: 'stratusBlanket',
+    sizes: [
+      [1560, 720],
+      [1560, 707],
+      [1560, 720],
+      [1560, 720],
+      [1560, 720],
+      [1560, 720],
+      [1560, 720],
+      [1560, 720],
+    ],
+  },
+  Stratus_SingleL: {
+    proxy: 'stratus',
+    sizes: [
+      [577, 267],
+      [607, 136],
+      [601, 237],
+      [561, 302],
+      [621, 278],
+      [605, 236],
+      [591, 297],
+      [625, 233],
+      [598, 308],
+    ],
+  },
+  Wispy_Single: {
+    proxy: 'wispy',
+    sizes: [
+      [468, 344],
+      [496, 344],
+      [564, 312],
+      [508, 328],
+      [608, 304],
+      [604, 328],
+    ],
+  },
+};

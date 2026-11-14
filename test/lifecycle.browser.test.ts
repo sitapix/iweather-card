@@ -78,6 +78,30 @@ const redrawn = async (card: IWeatherCard) => {
   await new Promise(requestAnimationFrame);
 };
 
+test('only compact and strip apply the tile sky when switching layouts', () => {
+  const card = page({ weather_layout: 'compact' });
+  for (const layout of ['compact', 'strip', 'expanded', 'auto', 'page'] as const) {
+    card.setConfig({ ...card.config, weather_layout: layout });
+    const raw = card.scene.preset?.sky,
+      background = card.scene.background;
+    expect(raw).toBeDefined();
+    expect(background).toBeDefined();
+    if (layout === 'compact' || layout === 'strip') expect(background?.colors).not.toEqual(raw);
+    else expect(background?.colors).toEqual(raw);
+    expect(card.parts.weather.style.getPropertyValue('--sky-0')).toBe(background?.colors[0]);
+  }
+});
+
+test('a full-screen map pauses the sky until the map closes', async () => {
+  const card = page({ weather_animation: true, sheet_style: 'sheet' });
+  vi.spyOn(card.sheets, 'canDock').mockReturnValue(false);
+  card.sheets.open('map', tile(card, 'map'));
+  expect(card.sheets.detail?.dialog.hasAttribute('data-full')).toBe(true);
+  expect(card.animating).toBe(false);
+  card.sheets.detail?.dialog.close();
+  await vi.waitFor(() => expect(card.animating).toBe(true));
+});
+
 // Observe the shared renderer through a real rainy card, keeping other cards' cleanup
 // out of the counts. Still weather lets each test choose when the next repaint occurs.
 async function rainyCard() {

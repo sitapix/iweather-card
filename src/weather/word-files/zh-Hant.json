@@ -774,5 +774,5 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "設定 {key} 必須為 {kinds} 中的每一項指定包含 {z}、{x} 和 {y} 的 https URL。",
   "Choose a valid IANA time zone for {key}, for example {example}.": "請為 {key} 選擇有效的 IANA 時區，例如 {example}。",
   "In {minutes} minutes": "{minutes}分鐘後",
-  "{minutes} minutes ago": "{minutes}分鐘前"
+  "In {count} hours": "{count}小時後"
 }

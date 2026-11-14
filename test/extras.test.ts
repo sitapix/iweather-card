@@ -565,16 +565,18 @@ test('the large map opens further out the longer precipitation is off, and each 
     soon = (hours: number): ForecastEntry[] => [
       { datetime: new Date(now + hours * 3600000).toISOString(), precipitation: 0.2 },
     ],
-    rain = (hourly: ForecastEntry[]) => openingZoom('precipitation', { state: 'cloudy', hourly, now });
-  assert.equal(openingZoom('precipitation', { state: 'rainy', now }), 8.5);
-  assert.equal(openingZoom('precipitation', { state: 'cloudy', nextHour: true, now }), 8);
-  assert.equal(rain(soon(1)), 8);
+    rain = (hourly: ForecastEntry[]) => openingZoom('precipitation', { hourly, now });
+  // By the outlook: falling now and starting within the hour, which only the minute forecast tells.
+  assert.equal(openingZoom('precipitation', { outlook: 'now', now }), 8.5);
+  assert.equal(openingZoom('precipitation', { outlook: 'nextHour', now }), 8);
+  // Otherwise the first wet hour, in whole hours off.
+  assert.equal(rain(soon(1)), 6.5);
   assert.equal(rain(soon(2)), 6.5);
   assert.equal(rain(soon(5)), 5.5);
   assert.equal(rain(soon(7)), 4);
   assert.equal(rain([]), 4);
-  // Rain already past doesn't count, and the soonest of several does.
-  assert.equal(rain(soon(-1)), 4);
+  // Rain begun over an hour ago doesn't count, and the soonest of several does.
+  assert.equal(rain(soon(-2)), 4);
   assert.equal(rain([...soon(5), ...soon(2)]), 6.5);
   assert.equal(openingZoom('wind', { state: 'rainy', now }), 6);
   assert.equal(openingZoom('temperature', { state: 'rainy', now }), 6.5);

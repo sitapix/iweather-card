@@ -59,13 +59,31 @@ const hassWith = (
 // radar tile answers once `tiles` does, with none to draw.
 let latest = 0,
   frameEpoch: number | undefined,
-  tiles: Promise<unknown> = Promise.resolve();
+  tiles: Promise<unknown> = Promise.resolve(),
+  // Open-Meteo answers with precipitation falling this quarter hour, so the outlook is now.
+  raining = false;
+const fallingNow = () => {
+  const hour = Math.floor(Date.now() / 3_600_000) * 3600,
+    quarter = Math.floor(Date.now() / 900_000) * 900;
+  return {
+    hourly: {
+      time: Array.from({ length: 48 }, (_, i) => hour + i * 3600),
+      precipitation: Array.from({ length: 48 }, () => 1),
+    },
+    daily: { time: [hour, hour + 86_400] },
+    minutely_15: {
+      time: Array.from({ length: 12 }, (_, i) => quarter + (i + 1) * 900),
+      precipitation: Array.from({ length: 12 }, () => 0.5),
+    },
+  };
+};
 const asked = vi.fn();
 const lastFrame = () => {
   frameEpoch ??= Math.floor(Date.now() / STEP) * STEP - STEP;
   return frameEpoch + latest * STEP;
 };
 async function answer(url: string) {
+  if (raining && url.includes('api.open-meteo.com/v1/forecast')) return new Response(JSON.stringify(fallingNow()));
   if (url.includes('radar.invalid')) await tiles;
   // Where the radar reaches is asked apart from its frames (see covering).
   if (!url.includes('rainviewer') || url.includes('/v2/coverage/')) return new Response('{}', { status: 404 });
@@ -109,6 +127,9 @@ async function mapped(state = 'cloudy', hass = hassWith(state, 'above_horizon'),
 
 beforeEach(() => {
   latest = 0;
+  raining = false;
+  // An answer kept from another test would decide this one's outlook.
+  localStorage.removeItem('iweather-supplement-v1');
   // Capture on first use, after a test can set its clock. Then advance through
   // `latest`, not when the real clock crosses ten minutes while waiting for tiles.
   frameEpoch = undefined;
@@ -136,7 +157,7 @@ test('with precipitation animation off the small map holds the latest radar fram
   expect(layer?.hasAttribute('data-on')).toBe(true);
 });
 
-test('precipitation plays on the card without opening the map, and switches back to its latest frame', async () => {
+test('precipitation plays on the card from now into the forecast, never before now, and rests on now', async () => {
   const pixel = new Blob([Uint8Array.from(atob(PIXEL.split(',')[1] ?? ''), char => char.charCodeAt(0))], {
     type: 'image/gif',
   });
@@ -153,59 +174,70 @@ test('precipitation plays on the card without opening the map, and switches back
   const card = placed(hassWith('cloudy', 'above_horizon'), config);
   // Removing the fixture's override exercises the saved configuration's default.
   card.setConfig(config);
-  const shown = () => layers(card).find(layer => layer.hasAttribute('data-on'))?.dataset['frame'];
-  await vi.waitFor(() => expect(layers(card)).toHaveLength(3));
-  await vi.waitFor(() => expect(shown()).toBe('0'));
-  await vi.waitFor(() => expect(shown()).toBe('1'));
+  const hours = () => card.root.querySelectorAll('.map-hour').length,
+    when = () => card.root.querySelector('.map-when')?.textContent ?? '';
+  // Three frames are observed, but only the one now is shown: the loop never goes back before it.
+  await vi.waitFor(() => expect(layers(card)).toHaveLength(1));
+  expect(when()).toBe('Now');
   expect(card.maps.largeView()).toBeNull();
+  // The forecast's precipitation for the next 18 hours, over the whole map.
+  const now = Date.now(),
+    field = { north: 85, west: -180, step: 2, rows: 86, cols: 181, values: new Float32Array(86 * 181).fill(2) },
+    slots = Array.from({ length: 18 }, (_, i) => now + (i + 1) * 3_600_000);
+  card.maps.winds = [
+    {
+      source: 'rain',
+      at: now,
+      bounds: { north: 85, south: -85, west: -180, east: 180 },
+      step: 2,
+      hours: { times: slots, fields: [], precipitation: slots.map(() => field), slot: 3_600_000 },
+    },
+  ];
+  card.maps.draw();
+  await vi.waitFor(() => expect(hours()).toBe(12));
+  expect(layers(card)).toHaveLength(1);
+  await vi.waitFor(() => expect(when()).toBe('In 1 hour'), { timeout: 5000 });
   expect(card.maps.timelineTime).toBeUndefined();
-  expect(card.root.querySelector('.radar .wind-time')).toBeNull();
 
   card.setConfig({ ...config, map_precipitation_animation: false });
-  await vi.waitFor(() => expect(layers(card)).toHaveLength(1));
-  expect(shown()).toBe('2');
-  await pause(650);
-  expect(shown()).toBe('2');
+  await vi.waitFor(() => expect(hours()).toBe(0));
+  expect(layers(card)).toHaveLength(1);
+  expect(when()).toBe('');
 
   card.setConfig(config);
-  await vi.waitFor(() => expect(layers(card)).toHaveLength(3));
-  await vi.waitFor(() => expect(shown()).toBe('0'));
+  await vi.waitFor(() => expect(hours()).toBe(12));
   card.visible = false;
   card.maps.draw();
-  expect(shown()).toBe('2');
-  await pause(650);
-  expect(shown()).toBe('2');
+  expect(when()).toBe('Now');
+  await pause(1500);
+  expect(when()).toBe('Now');
   card.visible = true;
   card.maps.draw();
-  await vi.waitFor(() => expect(shown()).toBe('0'));
+  await vi.waitFor(() => expect(when()).toBe('In 1 hour'), { timeout: 5000 });
+});
 
-  card.setConfig({ ...config, weather_animation: false });
-  await vi.waitFor(() => expect(layers(card)).toHaveLength(1));
-  expect(shown()).toBe('2');
-
+test('while rain is falling the card plays its latest radar on fifty minutes at the rain’s drift, and no forecast hours', async () => {
+  const pixel = new Blob([Uint8Array.from(atob(PIXEL.split(',')[1] ?? ''), char => char.charCodeAt(0))], {
+    type: 'image/gif',
+  });
+  const fetched = vi.fn((url: string) =>
+    url.includes('radar.invalid') ? Promise.resolve(new Response(pixel)) : answer(url),
+  );
+  vi.stubGlobal('fetch', fetched);
+  const config = { type: 'custom:iweather-card', entity: 'weather.home', weather_layout: 'page', map: 'rainviewer' };
+  raining = true;
+  const card = placed(hassWith('rainy', 'above_horizon'), config);
   card.setConfig(config);
-  await vi.waitFor(() => expect(layers(card)).toHaveLength(3));
-  if (!card.motion) throw new Error('The card needs its motion preference');
-  const motion = vi.spyOn(card.motion, 'matches', 'get').mockReturnValue(true);
-  try {
-    card.maps.draw();
-    expect(layers(card)).toHaveLength(1);
-    expect(shown()).toBe('2');
-  } finally {
-    motion.mockRestore();
-  }
+  await vi.waitFor(() => expect(card.update?.ctx.rainOutlook).toBe('now'));
   card.maps.draw();
-  await vi.waitFor(() => expect(layers(card)).toHaveLength(3));
-  await vi.waitFor(() => expect(shown()).toBe('0'));
-  const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
-  try {
-    card.maps.draw();
-    expect(shown()).toBe('2');
-    await pause(650);
-    expect(shown()).toBe('2');
-  } finally {
-    hidden.mockRestore();
-  }
+  // The latest frame and those after it, ten minutes apart, to fifty minutes past now: the stand-in's
+  // latest frame is up to twenty minutes old, so as many as eight.
+  await vi.waitFor(() => expect(layers(card).length).toBeGreaterThanOrEqual(6));
+  expect(layers(card).length).toBeLessThanOrEqual(8);
+  expect(card.root.querySelectorAll('.map-hour')).toHaveLength(0);
+  expect(card.root.querySelector('.map-when')?.textContent).toBe('Now');
+  expect(card.maps.winds.some(grid => grid.source === 'rain')).toBe(false);
+  expect(fetched.mock.calls.some(([url]) => url.includes('mesonet'))).toBe(false);
 });
 
 test('the small map looks as far out as the weather calls for', async () => {
@@ -213,8 +245,11 @@ test('the small map looks as far out as the weather calls for', async () => {
     view = dry.root.querySelector<HTMLElement>('.radar');
   // The page is drawn at 125%, so a zoom takes in as much here as it would on screen at 100%.
   expect(view && dry.maps.centreOf(view).zoom).toBeCloseTo(4 + Math.log2(1.25));
+  // Precipitation falling now, by the minute forecast, brings it close in.
+  raining = true;
   const wet = await mapped('rainy'),
     close = wet.root.querySelector<HTMLElement>('.radar');
+  await vi.waitFor(() => expect(wet.update?.ctx.rainOutlook).toBe('now'));
   expect(close && wet.maps.centreOf(close).zoom).toBeCloseTo(8.5 + Math.log2(1.25));
 });
 
@@ -624,9 +659,11 @@ test('without the live map, the 12-hour forecast blends between hours before it 
       );
     }),
   );
+  raining = true;
   const card = await mapped('rainy', hassWith('rainy', 'above_horizon'), {
     map_tile_url: 'https://tiles.invalid/{z}/{x}/{y}.png',
   });
+  await vi.waitFor(() => expect(card.update?.ctx.rainOutlook).toBe('now'));
   card.root.querySelector<HTMLElement>('.tile[data-tile=map]')?.click();
   await vi.waitFor(() => {
     expect(card.maps.largeView()).not.toBeNull();

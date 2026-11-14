@@ -1,5 +1,6 @@
 import { drawRadarCoverage } from './coverage.ts';
-import { RadarPreview } from './radar-preview.ts';
+import { FORECAST_LABEL_STEP, RADAR_LABEL_STEP, RadarPreview } from './radar-preview.ts';
+import { carry, type Drift, measureDrift, STILL } from './radar-drift.ts';
 import { clamp } from '../lib/values.ts';
 // The map views: the map tile's, and the large one in its sheet. For each, what it shows and
 // where it looks, the data asked for it, and everything that moves on it.
@@ -153,6 +154,36 @@ function fieldAt(fields: readonly ScalarField[], at: number): ScalarField | unde
   return a && b && share > 0
     ? { ...a, values: a.values.map((value, i) => value + ((b.values[i] ?? value) - value) * share) }
     : a;
+}
+
+// The small map plays one of two loops, by the rain's outlook (see rainOutlook). While it is falling,
+// the radar's latest frame and those after it (see AHEAD), each a step further on at the rain's drift.
+// Otherwise the forecast's precipitation, TILE_HOURS of it an hour a picture from the hour now.
+const TILE_HOURS = 12,
+  // A forecast hour shows at this opacity at most, as the large map's field does (see the styles).
+  HOUR_PEAK = 0.9;
+interface HourFrame {
+  time: number;
+  field: ScalarField;
+}
+// The radar's latest frame carried `ahead` steps on by the rain's drift (see radar-drift.ts).
+interface AheadFrame {
+  time: number;
+  ahead: number;
+}
+type TileFrame = RadarFrame | HourFrame | AheadFrame;
+// A frame every ten minutes from the latest, as many as reach fifty minutes past now: the latest
+// comes some minutes late, so it can take one more.
+const AHEAD = { step: 10 * MINUTE, reach: 50 * MINUTE } as const;
+function hoursFromNow(hours: WindHours, now: number): HourFrame[] {
+  const fields = hours.precipitation ?? [],
+    slot = hours.slot ?? HOUR,
+    at = hours.times.findIndex(end => end > now);
+  if (at < 0) return [];
+  return hours.times.slice(at, at + TILE_HOURS).flatMap((end, step) => {
+    const field = fields[at + step];
+    return field ? [{ time: end - slot, field }] : [];
+  });
 }
 
 interface Radar {
@@ -364,7 +395,7 @@ export class MapViews {
   timelineScrub = false;
   windMaps: { canvas: HTMLCanvasElement; map: WindMap }[] = [];
   radarFrame = -1;
-  private readonly radarPreviews = new Map<HTMLElement, RadarPreview>();
+  private readonly radarPreviews = new Map<HTMLElement, RadarPreview<TileFrame>>();
   // The small map's pictures of its ground, by look and view (see drawStill); null where none could
   // be drawn; and the one being drawn.
   stills = new Map<string, GroundStill | null>();
@@ -494,7 +525,9 @@ export class MapViews {
       config.map_tile_url ||
       config.map !== 'rainviewer' ||
       this.inputsOf(view)?.kind !== 'precipitation' ||
-      (view.classList.contains('large') ? !this.gl || this.rainSpan !== '1h' : !this.previews(config))
+      !view.classList.contains('large') ||
+      !this.gl ||
+      this.rainSpan !== '1h'
     )
       return false;
     const bounds = rainBounds(this.centreOf(view), view.clientWidth, view.clientHeight);
@@ -644,10 +677,7 @@ export class MapViews {
   // How far out a layer looks with the weather as it is now (see openingZoom).
   zoomOf(kind: MapLayerKind): number {
     const ctx = this.card.update?.ctx;
-    return openingZoom(
-      kind,
-      ctx ? { state: ctx.condition, hourly: ctx.hourly, now: ctx.now, nextHour: ctx.nextHour === true } : {},
-    );
+    return openingZoom(kind, ctx ? { hourly: ctx.hourly, now: ctx.now, outlook: ctx.rainOutlook } : {});
   }
   // Where a map view looks: home, as far out as its layer and the weather call for (the large map
   // as it opened), or wherever the large map was moved to. A sheet's own map of the wind stands at
@@ -1244,19 +1274,24 @@ export class MapViews {
     // MapLibre has loaded (see startGl); the card's own tiles until then, or without it.
     const live = large && config.map === 'rainviewer' && !config.map_tile_url;
     if (live && !this.gl) void this.startGl();
-    // Small, the radar plays by itself where set to; on into the next hour wherever the short
-    // forecast covers the place, as the large map's timeline does (see RadarPreview).
+    // Small, the radar plays by itself where set to (see RadarPreview): its next hour while rain is
+    // falling where the short forecast covers the place, and otherwise the forecast's hours.
     const gl = live ? this.gl : undefined,
       preview = !large && radar && this.previews(config),
-      ahead = radar && (gl || preview) ? this.shortFrames(view) : [],
+      ahead = radar && gl ? this.shortFrames(view) : [],
+      outlook = this.card.update?.ctx.rainOutlook,
+      // Undecided, it rests on the radar now until the minute forecast comes.
+      radarLoop = preview && outlook === 'now',
+      hoursLoop = preview && outlook !== undefined && !radarLoop,
       frames = radar ? [...allFrames, ...ahead] : [];
     // With the online map, wind and temperature come from a forecast grid over the view, the
     // AQI from one of the air (see loadGrid).
+    // A small map playing the forecast's hours takes its precipitation too.
     const rainHours = large && radar && this.rainSpan === '12h',
-      source: GridSource = kind === 'air_quality' ? 'air' : rainHours ? 'rain' : 'forecast',
+      source: GridSource = kind === 'air_quality' ? 'air' : rainHours || hoursLoop ? 'rain' : 'forecast',
       gridded =
         config.map === 'rainviewer' &&
-        (kind === 'wind' || kind === 'temperature' || kind === 'air_quality' || rainHours);
+        (kind === 'wind' || kind === 'temperature' || kind === 'air_quality' || rainHours || hoursLoop);
     if (gridded) void this.loadGrid(centre, width, height, large, source);
     // The wind across the map when the online map has it; else home's, drawn near home only.
     const { card } = this,
@@ -1401,25 +1436,61 @@ export class MapViews {
       // radar's own.
       colours: kind === 'precipitation' ? (rainHours || !radar || gl ? PRECIPITATION : RADAR_COLOURS) : stops,
       timeline: timeline ? timelineMarkup(timeline, card.update?.ctx, card.text?.now ?? 'Now') : '',
-      dataCredit: ahead.length
-        ? HRRR_CREDIT
-        : grid?.hours
-          ? (RAIN_MODELS.find(model => model.id === grid.model)?.credit ?? 'Open-Meteo')
-          : '',
+      dataCredit: [
+        ...new Set([
+          ahead.length > 0 ? HRRR_CREDIT : '',
+          grid?.hours && (rainHours || hoursLoop)
+            ? (RAIN_MODELS.find(model => model.id === grid.model)?.credit ?? 'Open-Meteo')
+            : '',
+        ]),
+      ]
+        .filter(Boolean)
+        .join(' · '),
       failed: Boolean(this.radar?.failed),
     });
     if (large) this.setPin(view, this.pin);
     // The frame it had carries over, as long as it is the frame and place it is now.
-    const frameCanvas = large ? null : view.querySelector('canvas.radar-layer.frame');
+    const frameCanvas = large ? null : view.querySelector('canvas.radar-layer.frame'),
+      hours = hoursLoop && grid?.hours ? hoursFromNow(grid.hours, Date.now()) : [],
+      // The radar frame before the latest, to see how far the rain moves in a step.
+      previous = frames[this.radarFrame - 1];
+    let drift: Promise<Drift> | undefined;
     if (frameCanvas instanceof HTMLCanvasElement && newest) {
       if (preview)
         this.radarPreviews.set(
           view,
-          new RadarPreview(
-            frameCanvas,
-            ahead.length ? [newest, ...ahead] : frames.slice(0, this.radarFrame + 1),
-            ahead.length ? 0 : this.radarFrame,
-            paint,
+          // Never before now: the radar's latest frame carried on by the rain's drift while it falls,
+          // or else the forecast's hours, each drawn as a field over the map rather than in the
+          // radar's own layer, which then stays hidden.
+          new RadarPreview<TileFrame>(
+            hours.length > 0 ? null : frameCanvas,
+            hours.length > 0
+              ? hours
+              : radarLoop
+                ? [
+                    newest,
+                    ...Array.from(
+                      { length: Math.ceil((Date.now() + AHEAD.reach - newest.time) / AHEAD.step) },
+                      (_, step) => ({
+                        time: newest.time + (step + 1) * AHEAD.step,
+                        ahead: step + 1,
+                      }),
+                    ),
+                  ]
+                : [newest],
+            hours.length > 0 ? FORECAST_LABEL_STEP : RADAR_LABEL_STEP,
+            (canvas, frame, signal) => {
+              if ('field' in frame) {
+                drawField(canvas, frame.field, { ...centre, width, height }, PRECIPITATION);
+                return Promise.resolve(true);
+              }
+              if (!('ahead' in frame)) return paint(canvas, frame, signal);
+              drift ??= previous ? measureDrift(paint, previous, newest, signal) : Promise.resolve(STILL);
+              return Promise.all([paint(canvas, newest, signal), drift]).then(([painted, moved]) => {
+                if (painted) carry(canvas, moved.x * frame.ahead, moved.y * frame.ahead);
+                return painted;
+              });
+            },
             () =>
               Boolean(
                 card.isConnected &&
@@ -1430,6 +1501,17 @@ export class MapViews {
                   this.previews(card.config),
               ),
             view.querySelector<HTMLElement>('.map-when'),
+            (canvas, frame) => {
+              if ('field' in frame) {
+                canvas.className = 'map-field map-hour';
+                canvas.dataset['kind'] = 'precipitation';
+                canvas.dataset['peak'] = String(HOUR_PEAK);
+                frameCanvas.parentElement?.after(canvas);
+              } else {
+                canvas.className = 'radar-layer frame';
+                frameCanvas.before(canvas);
+              }
+            },
           ),
         );
       else if (held?.dataset['tiles'] === tilesOf(newest)) frameCanvas.replaceWith(held);

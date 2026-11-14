@@ -99,6 +99,9 @@ export class WeatherRecords {
   recentRain: { rain: RecentRain | null; place: string; unit: string | undefined; at: number } | undefined;
   // The supplement last asked for: for where, when, and whether that brought nothing.
   supplementAsked: { key: string; at: number; failed: boolean; pending: boolean } | undefined;
+  // Whether Open-Meteo has answered for this place, or failed to, or won't be asked: until then its
+  // minute forecast may yet come, and how soon precipitation comes waits for it (see rainOutlook).
+  supplementSettled = false;
   // Air quality filled in where no sensor gives it (see loadAirSupply): for where, and when asked.
   // `known`: the place has had an answer in this browser before, so one is expected.
   airSupply: { supply: AirSupply | null; key: string; at: number; failed: boolean; known: boolean } | undefined;
@@ -493,14 +496,19 @@ export class WeatherRecords {
     };
     if (config?.weather_layout !== 'page' || !config.open_meteo_forecast || !finite(latitude) || !finite(longitude)) {
       drop();
+      this.supplementSettled = true;
       return;
     }
     // Its hours are kept in the entity's units, so another entity starts afresh.
     const key = JSON.stringify([latitude, longitude, timeZone, config.entity]);
-    if (this.supplementAsked?.key !== key) drop();
+    if (this.supplementAsked?.key !== key) {
+      drop();
+      this.supplementSettled = false;
+    }
     if (!forecasts.answered || !weatherAvailable(hass?.states[config.entity])) return;
     if (!forecastLacks(forecasts.own, config.forecast_days, now, timeZone)) {
       drop();
+      this.supplementSettled = true;
       return;
     }
     const asked = this.supplementAsked,
@@ -519,6 +527,7 @@ export class WeatherRecords {
     const awaited = this.supplementAwaited;
     asking.pending = false;
     asking.failed = !supplement;
+    this.supplementSettled = true;
     if (supplement) {
       // A saved answer is as old as it is, not as this ask.
       asking.at = supplement.at;

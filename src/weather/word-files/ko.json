@@ -774,5 +774,5 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "설정 {key}은(는) {kinds} 각각에 {z}, {x}, {y}가 포함된 https URL을 지정해야 합니다.",
   "Choose a valid IANA time zone for {key}, for example {example}.": "설정 {key}에 유효한 IANA 시간대를 선택하세요(예: {example}).",
   "In {minutes} minutes": "{minutes}분 후",
-  "{minutes} minutes ago": "{minutes}분 전"
+  "In {count} hours": "{count}시간 후"
 }

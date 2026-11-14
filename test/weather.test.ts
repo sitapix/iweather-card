@@ -574,7 +574,7 @@ test('weather and lunar position determine what the scene draws', async () => {
   assert.equal(scenePreset({ condition: 'clear-night', night: true, elevation: -30, moonAltitude: 8 }).moon, false);
   assert.equal(scenePreset({ condition: 'sunny', elevation: 20, moonAltitude: 30 }).moon, false);
   assert.equal(scenePreset({ condition: 'sunny', elevation: 5, moonAltitude: 30 }).moon, true);
-  assert.equal(scenePreset({ condition: 'cloudy', elevation: -1, moonAltitude: 30, cloudCover: 75 }).moon, true);
+  assert.equal(scenePreset({ condition: 'cloudy', elevation: -1, moonAltitude: 30, cloudCover: 75 }).moon, false);
   assert.equal(scenePreset({ condition: 'cloudy', elevation: -1, moonAltitude: 30 }).moon, false);
   assert.equal(
     scenePreset({ condition: 'clear-night', night: true, elevation: -30, moonAltitude: 30, moonPhase: 0 }).moon,
@@ -798,6 +798,63 @@ test('scene changes ease in while animating and settle at once in a still frame'
   scene.preset = scenePreset({ condition: 'sunny' });
   assert.ok(scene.advance(6100).rain > 0, 'stopping rain tapers off');
   assert.equal(scene.advance(0).rain, 0, 'a still frame cuts straight to the new scene');
+});
+
+test('compact skies keep the native lighting colours and mix before their gradient is rounded', async () => {
+  const { WeatherScene } = await import('../src/sky/scene.ts');
+  const scene = new WeatherScene(null),
+    inputs = { condition: 'sunny', elevation: 0, rising: true };
+  scene.prepare(inputs);
+  const native = scene.preset?.sky;
+  assert.deepEqual(native, ['#1e3b6b', '#70709b', '#bf7a82']);
+  assert.deepEqual(scene.background?.colors, native);
+  scene.prepare({ ...inputs, tile: true });
+  assert.deepEqual(scene.preset?.sky, native);
+  assert.deepEqual(scene.background.colors, ['#656994', '#706d96', '#7b7197']);
+  assert.equal(scene.background.middleStop, 0.5);
+  scene.prepare(inputs);
+  assert.deepEqual(scene.background.colors, native);
+});
+
+test('scene fades follow condition and location changes while solar updates and layout changes settle directly', async () => {
+  const { WeatherScene } = await import('../src/sky/scene.ts');
+  const scene = new WeatherScene(null),
+    inputs = { condition: 'cloudy', elevation: 20, cloudCover: 100 };
+  scene.prepare(inputs, { location: 'home' });
+  scene.advance(1000);
+  scene.prepare({ ...inputs, elevation: 21 }, { animate: true, location: 'home' });
+  assert.equal(scene.outgoing, null);
+  scene.prepare({ ...inputs, condition: 'rainy' }, { animate: true, location: 'home' });
+  assert.notEqual(scene.outgoing, null);
+  scene.advance(1100);
+  assert.equal(scene.fadeProgress(1500), 0.5);
+  scene.advance(1600);
+  scene.prepare({ ...inputs, condition: 'rainy' }, { animate: true, location: 'another place' });
+  assert.equal(scene.fadeProgress(1700), 0.75);
+  scene.advance(1900);
+  assert.equal(scene.outgoing, null);
+  scene.prepare({ ...inputs, condition: 'rainy' }, { animate: true, location: 'away' });
+  assert.notEqual(scene.outgoing, null);
+  scene.prepare({ ...inputs, condition: 'rainy', tile: true }, { animate: true, location: 'away' });
+  assert.equal(scene.outgoing, null);
+});
+
+test('list cameras use the preset lens, the resolved stars and the accessible film offset', async () => {
+  const { cloudCamera, listTextScale } = await import('../src/sky/cloud-camera.ts');
+  const { scenePreset } = await import('../src/sky/sky.ts');
+  const rain = scenePreset({ condition: 'rainy', elevation: 30 }),
+    width = 393,
+    height = 180,
+    list = cloudCamera(rain, width, height, true, 1);
+  assert.equal(list.y, rain.look.camera.y);
+  assert.equal(list.z, rain.look.camera.z);
+  assert.ok(Math.abs(list.centerY - (height / 2 + (325 * width) / 1179)) < 0.000001);
+  assert.equal(list.focalPixels, (height / 48) * (100 / 50) * rain.look.camera.z);
+  assert.equal(cloudCamera(rain, width, height, false, 1).centerY, height / 2);
+  assert.equal(listTextScale(16), 1);
+  assert.equal(listTextScale(32), 0.78);
+  const night = cloudCamera({ ...rain, stars: 1 }, width, height, true, listTextScale(32));
+  assert.ok(Math.abs(night.centerY - (height / 2 + (650 * 0.75 * 0.78 * width) / 1179)) < 0.000001);
 });
 
 // The editor: sections appear where they apply, and the settings keep only what was chosen.

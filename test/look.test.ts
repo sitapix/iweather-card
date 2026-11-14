@@ -558,6 +558,10 @@ test('symbols follow the kind of sky, by day and night, and alerts show their le
   assert.equal(weatherIcon('cloudy'), SYMBOLS.cloud);
   assert.equal(weatherIcon('Light Rain'), SYMBOLS.rain, "an integration's own words take the nearest symbol");
   assert.equal(weatherIcon('Mostly Cloudy', true), SYMBOLS.cloud);
+  assert.equal(weatherIcon('Hot'), SYMBOLS.hot);
+  assert.equal(weatherIcon('Sun Flurries'), SYMBOLS['sun-snow']);
+  assert.equal(weatherIcon('Sun Flurries', true), SYMBOLS['moon-snow']);
+  assert.equal(weatherIcon('Frigid', true), SYMBOLS.moon);
   assert.equal(weatherIcon('Partly Cloudy', true), SYMBOLS['cloud-moon']);
   assert.equal(weatherIcon('Breezy'), SYMBOLS.wind);
   assert.equal(weatherIcon('Smoke'), SYMBOLS.smoke);

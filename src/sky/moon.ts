@@ -1,4 +1,5 @@
-import { CHANNEL_MAX, context2d } from '../lib/canvas.ts';
+import { CHANNEL_MAX, context2d, rgb } from '../lib/canvas.ts';
+import { PHASE_ATLAS } from './moon-atlas.ts';
 import {
   CALENDAR_LIGHT,
   type MoonPrint,
@@ -59,6 +60,27 @@ function surface(): Promise<Surface> {
   });
   return source;
 }
+const PHASE_COLUMNS = 7;
+const PHASE_COUNT = 28;
+const DISC_FRACTION = 0.55;
+let phaseImage: HTMLImageElement | undefined, readingPhases: Promise<boolean> | undefined;
+function loadPhases(url: string): Promise<boolean> {
+  readingPhases ??= new Promise<boolean>(resolve => {
+    const image = new Image();
+    image.onload = () => {
+      if (image.naturalWidth * (PHASE_COUNT / PHASE_COLUMNS) === image.naturalHeight * PHASE_COLUMNS)
+        phaseImage = image;
+      resolve(Boolean(phaseImage));
+    };
+    image.onerror = () => resolve(false);
+    image.src = url;
+  });
+  return readingPhases;
+}
+
+export const loadSkyMoon = (): Promise<boolean> =>
+  PHASE_ATLAS ? loadPhases(PHASE_ATLAS).then(loaded => loaded || loadMoon()) : loadMoon();
+
 export const loadMoon = (): Promise<boolean> =>
   surface().then(
     () => true,
@@ -82,6 +104,7 @@ const smooth = (a: number, b: number, x: number) => {
 // sky/moon-gpu.ts).
 // `soft` draws it as the sky's moon (see SKY_SOFT).
 interface MoonLook {
+  neutral?: boolean;
   turn?: number;
   frame?: number;
   halo?: number;
@@ -205,7 +228,16 @@ function render(
   pixels: Surface,
   size: number,
   phase: number,
-  { turn = 0, frame = 1, halo = 0, warm = 0, photo = false, bright = false, soft = false }: MoonLook = {},
+  {
+    turn = 0,
+    frame = 1,
+    halo = 0,
+    warm = 0,
+    photo = false,
+    bright = false,
+    soft = false,
+    neutral = false,
+  }: MoonLook = {},
 ): void {
   const full = Math.round(size * frame),
     out = ctx.createImageData(full, full),
@@ -217,9 +249,11 @@ function render(
   const sx = Math.sin(angle),
     sz = -Math.cos(angle),
     lit = (1 - Math.cos(angle)) / 2;
-  const tint = soft
-    ? ([1 + 0.02 * warm, 1.005 - 0.105 * warm, 1.075 - 0.405 * warm] as const)
-    : ([0.98 + 0.04 * warm, 1 - 0.1 * warm, 1.02 - 0.35 * warm] as const);
+  const tint = neutral
+    ? ([1, 1, 1] as const)
+    : soft
+      ? ([1 + 0.02 * warm, 1.005 - 0.105 * warm, 1.075 - 0.405 * warm] as const)
+      : ([0.98 + 0.04 * warm, 1 - 0.1 * warm, 1.02 - 0.35 * warm] as const);
   const sample = bilinear(pixels);
   const mean = soft ? discMean(sample) : 0;
   for (let py = 0; py < full; py++)
@@ -322,12 +356,12 @@ function render(
 // out, 14 at three tenths. Returns null until the texture has loaded; cached per size,
 // phase step and warmth.
 const sprites = new Map<string, HTMLCanvasElement>();
-export function skyMoon(size: number, phase: number, warm = 0): HTMLCanvasElement | null {
-  if (!map) {
-    surface().catch(() => {});
+export function skyMoon(size: number, phase: number, warm = 0, tint?: string): HTMLCanvasElement | null {
+  if (!phaseImage && !map) {
+    void loadSkyMoon();
     return null;
   }
-  const key = `${size}:${phase}:${warm}`,
+  const key = `${size}:${phase}:${tint ?? warm}:${Boolean(phaseImage)}`,
     cached = sprites.get(key);
   // Kept most recently used last, so the least used goes first and other skies keep theirs.
   if (cached) {
@@ -337,7 +371,37 @@ export function skyMoon(size: number, phase: number, warm = 0): HTMLCanvasElemen
   }
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = Math.round(size * 2);
-  render(context2d(canvas), map, size, phase, { frame: 2, halo: 0.22, warm, soft: true });
+  const ctx = context2d(canvas);
+  if (phaseImage) {
+    const index = ((Math.round(phase * PHASE_COUNT) % PHASE_COUNT) + PHASE_COUNT) % PHASE_COUNT;
+    const frame = phaseImage.naturalWidth / PHASE_COLUMNS,
+      width = size / DISC_FRACTION,
+      inset = (canvas.width - width) / 2;
+    ctx.drawImage(
+      phaseImage,
+      (index % PHASE_COLUMNS) * frame,
+      Math.floor(index / PHASE_COLUMNS) * frame,
+      frame,
+      frame,
+      inset,
+      inset,
+      width,
+      width,
+    );
+  } else if (map) {
+    render(ctx, map, size, phase, { frame: 2, halo: 0.22, warm, neutral: tint !== undefined, soft: true });
+  }
+  if (tint && tint !== '#ffffff') {
+    // Tint each channel independently and preserve the atlas's transparent margins.
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height),
+      [red, green, blue] = rgb(tint);
+    for (let i = 0; i < pixels.data.length; i += RGBA) {
+      pixels.data[i] = ((pixels.data[i] ?? 0) * red) / CHANNEL_MAX;
+      pixels.data[i + 1] = ((pixels.data[i + 1] ?? 0) * green) / CHANNEL_MAX;
+      pixels.data[i + 2] = ((pixels.data[i + 2] ?? 0) * blue) / CHANNEL_MAX;
+    }
+    ctx.putImageData(pixels, 0, 0);
+  }
   sprites.set(key, canvas);
   const [oldest] = sprites.keys();
   if (sprites.size > SPRITES_KEPT && oldest !== undefined) sprites.delete(oldest);

@@ -1,5 +1,6 @@
 import { finite } from '../lib/values.ts';
 import { context2d, hash } from '../lib/canvas.ts';
+import { effectImage } from './effect-art.ts';
 
 // Rain on the glass: still beads and running drops over the blurred background, each a tiny
 // lens (refraction) with a highlight, at one of three densities ("tiers").
@@ -224,8 +225,7 @@ const MORNING_FROST = /^(clear|mostlyClear|frigid|windy|breezy|(partly|mostly)?[
 export const frostEffect = (kind: string | undefined, celsius: number | undefined, hour: number): boolean => {
   const cold = finite(celsius) && Math.round((celsius * 9) / 5 + 32) < 20;
   return (
-    cold &&
-    ((kind !== undefined && FROST_KINDS.has(kind)) || (MORNING_FROST.test(kind ?? '') && hour >= 5 && hour <= 8))
+    cold && ((kind !== undefined && FROST_KINDS.has(kind)) || (MORNING_FROST.test(kind ?? '') && hour >= 5 && hour < 9))
   );
 };
 
@@ -320,8 +320,8 @@ export function frostFor(rect: Panel, index: number): FrostPiece[] {
   return out;
 }
 export function paintFrost(ctx: CanvasRenderingContext2D, panels: readonly Panel[], strength = 1): void {
-  crystals ??= [1, 2, 3, 4].map(seed => crystal(seed));
-  const images = crystals;
+  const sheet = effectImage('frost');
+  if (!sheet) crystals ??= [1, 2, 3, 4].map(seed => crystal(seed));
   panels.forEach((rect, index) => {
     ctx.save();
     ctx.beginPath();
@@ -339,8 +339,8 @@ export function paintFrost(ctx: CanvasRenderingContext2D, panels: readonly Panel
     // Two layers: an overlay at 15% and an additive glow at 7%, the glow masked.
     // The crystals are drawn thin, so both carry a fixed gain.
     for (const [mode, layer, masked] of [
-      ['source-over', FROST_LOOK.overlay * 2, false],
-      ['lighter', FROST_LOOK.additive * 3, true],
+      ['source-over', FROST_LOOK.overlay * (sheet ? 1 : 2), false],
+      ['lighter', FROST_LOOK.additive * (sheet ? 1 : 3), true],
     ] as const) {
       ctx.globalCompositeOperation = mode;
       for (const piece of frostFor(rect, index)) {
@@ -348,8 +348,24 @@ export function paintFrost(ctx: CanvasRenderingContext2D, panels: readonly Panel
         ctx.translate(piece.x, piece.y);
         ctx.rotate(piece.angle);
         ctx.globalAlpha = Math.min(1, layer * (masked ? piece.mask : 0.5 + piece.mask * 0.5) * strength);
-        const image = images[piece.variant];
-        if (image) ctx.drawImage(image, -piece.size / 2, -piece.size / 2, piece.size, piece.size);
+        const half = piece.size / 2;
+        if (sheet) {
+          const tile = sheet.naturalWidth / 2;
+          ctx.drawImage(
+            sheet,
+            (piece.variant % 2) * tile,
+            Math.floor(piece.variant / 2) * tile,
+            tile,
+            tile,
+            -half,
+            -half,
+            piece.size,
+            piece.size,
+          );
+        } else {
+          const image = crystals?.[piece.variant];
+          if (image) ctx.drawImage(image, -half, -half, piece.size, piece.size);
+        }
         ctx.restore();
       }
     }

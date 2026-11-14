@@ -1,19 +1,27 @@
-import { PRESET_DATA, SUN_PATHS, type SkyKind, type SkyLook } from './presets-data.ts';
-import type { TextKey } from '../weather/i18n.ts';
-import { mix } from '../lib/canvas.ts';
-import { clamp } from './clouds.ts';
+import {
+  PRESET_DATA,
+  SUN_PATHS,
+  type SkyKind,
+  type SkyLook,
+  type WindowClass,
+  type AirTint,
+  type PrecipitationTint,
+} from './presets-data.ts';
 import type { Direction } from './cloud-decks.ts';
+import type { TextKey } from '../weather/i18n.ts';
+import { alphaHex, CHANNEL_MAX, colorAlpha, mix, toHex, type RGB } from '../lib/canvas.ts';
+import { clamp } from './clouds.ts';
 import { finite } from '../lib/values.ts';
 import { DAY, HOURS_PER_DAY } from '../lib/time.ts';
 import { UNITS, beaufortFloor, convertUnit } from '../weather/units.ts';
-import { CONDITION, type CloudAltitude, isCondition } from '../card/home-assistant.ts';
+import { CONDITION, isCloudAltitude, isCondition } from '../card/home-assistant.ts';
 import { conditionInWords } from '../weather/condition-words.ts';
 import { PERCENT } from '../lib/html.ts';
 import { HALF_TURN, QUARTER_TURN } from '../lib/compass.ts';
 
 export interface SkyKindInputs {
   cloudCover?: number | undefined;
-  cloudAltitude?: CloudAltitude | undefined;
+  cloudAltitude?: string | undefined;
   precipitation?: number | undefined;
   precipitationUnit?: string | undefined;
   temperature?: number | undefined;
@@ -46,20 +54,17 @@ const STORM = { tropical: 17.5, hurricane: 33 } as const;
 const CLEAR_AIR = 10;
 const DUST_WIND = beaufortFloor(5);
 const DRY_AIR = 15;
-// Air rising cools to its dew point about every 125 m for each °C it starts above it, so a sky
-// within 4.5 °C of its dew point has its cloud base below some 560 m: low cloud, seen from under it.
-const LOW_CLOUD_SPREAD = 4.5;
 // Fog thins to mist past a kilometre of visibility, and past 5 km the mist is no longer the
 // weather: the sky above it is. Mist is wet air and haze dry, which services report alike as fog,
 // so it is haze only where the air is known to be dry: under 80% humidity, or 3 °C or more from
 // its dew point.
 const MIST = { thins: 1, lifts: 5 } as const;
 const DRY = { humidity: 80, spread: 3 } as const;
-// A cloudy sky at the height its cloud is, mid where that isn't known.
+// Use the low cloud preset when the provider has no height information.
 const ALOFT = { low: 'LowAltitude', mid: 'MidAltitude', high: 'HighAltitude' } as const;
-const aloft = (sky: 'partlyCloudy' | 'mostlyCloudy' | 'cloudy', altitude: CloudAltitude | undefined = 'mid'): SkyKind =>
-  `${sky}${ALOFT[altitude]}`;
-const coverKind = (cover: number, altitude: CloudAltitude | undefined): SkyKind =>
+const aloft = (sky: 'partlyCloudy' | 'mostlyCloudy' | 'cloudy', altitude?: string): SkyKind =>
+  `${sky}${ALOFT[isCloudAltitude(altitude) ? altitude : 'low']}`;
+const coverKind = (cover: number, altitude: string | undefined): SkyKind =>
   cover < COVER.clear
     ? 'clear'
     : cover < COVER.mostlyClear
@@ -69,21 +74,13 @@ const coverKind = (cover: number, altitude: CloudAltitude | undefined): SkyKind 
         : cover < COVER.mostlyCloudy
           ? aloft('mostlyCloudy', altitude)
           : aloft('cloudy', altitude);
-// Kinds of sky, from a Home Assistant condition. Cloud cover splits the fair-weather
-// conditions in eighths (12.5, 37.5, 62.5, 87.5%), within what the condition says: a clear sky
-// stays clear or mostly clear, a partly cloudy one between mostly clear and mostly cloudy, and a
-// cloudy one mostly cloudy or overcast, as the cover can come from a forecast other than the one
-// that named the condition. Where the entity reports more, standard definitions refine the condition:
-// light precipitation is drizzle or flurries, rain at or below freezing is freezing
-// drizzle, or rain any heavier freezing rain, rain under a sky that still shows the sun is sun
-// showers, storms under partial cloud are scattered, snow in a strong wind is blowing snow and in a
-// gale a blizzard, and "fog" you can see a kilometre through is haze. "exceptional" stands for
-// whatever else the service can't name, so the wind and the air say which it is. A condition in an
-// integration's own words takes the sky they name, or else the nearest condition's (see
-// conditionInWords). `temperature` and `dewPoint` are in °C, `windSpeed` in m/s, `visibility` in km.
+// Named conditions select their own sky. Wind with measured cover uses the five cloud bands.
+// Home Assistant groups several kinds of precipitation, fog and exceptional weather under
+// broad names. Use the available measurements to refine those groups.
 export function skyKind(condition: string, inputs: SkyKindInputs = {}): SkyKind {
   if (!isCondition(condition)) {
     const worded = conditionInWords(condition);
+    if (worded?.kind === 'mostlyCloudy') return aloft('mostlyCloudy', inputs.cloudAltitude);
     if (worded !== undefined) return worded.kind ?? skyKind(worded.condition, inputs);
   }
   const {
@@ -107,24 +104,11 @@ export function skyKind(condition: string, inputs: SkyKindInputs = {}): SkyKind 
   switch (isCondition(condition) ? condition : undefined) {
     case 'sunny':
     case 'clear-night':
-      return cover !== null && cover >= COVER.clear ? 'mostlyClear' : 'clear';
-    // Cloudy skies are drawn at the height that holds the most of their cloud, where that is known.
+      return 'clear';
     case 'partlycloudy':
-      if (cover === null) return aloft('partlyCloudy', altitude);
-      return cover < COVER.mostlyClear
-        ? 'mostlyClear'
-        : cover < COVER.partlyCloudy
-          ? aloft('partlyCloudy', altitude)
-          : aloft('mostlyCloudy', altitude);
-    // Where the cloud's height isn't known, a full overcast takes the high sky of soft mottling
-    // that most cloudy days show, unless the air is so near its dew point that the cloud must be
-    // low: then it's the heaped, darker sky from under a low deck.
+      return aloft('partlyCloudy', altitude);
     case 'cloudy':
-      if (cover !== null && cover < COVER.mostlyCloudy) return aloft('mostlyCloudy', altitude);
-      if (altitude !== undefined) return aloft('cloudy', altitude);
-      return finite(temperature) && finite(dewPoint) && temperature - dewPoint <= LOW_CLOUD_SPREAD
-        ? 'cloudyLowAltitude'
-        : 'cloudyHighAltitude';
+      return aloft('cloudy', altitude);
     // The international lines between fog, mist and none: 1 and 5 km of visibility. Past them the
     // sky shows as its cover, and a full one or none reported as a low deck, which mist lies under.
     case 'fog': {
@@ -165,9 +149,9 @@ export function skyKind(condition: string, inputs: SkyKindInputs = {}): SkyKind 
     case 'hail':
       return 'hail';
     case 'windy':
-      return 'mostlyClear';
+      return cover === null ? 'mostlyClear' : coverKind(cover, altitude);
     case 'windy-variant':
-      return aloft('mostlyCloudy', altitude);
+      return cover === null ? aloft('mostlyCloudy', altitude) : coverKind(cover, altitude);
     case 'exceptional': {
       const hazy = finite(visibility) && visibility < CLEAR_AIR,
         breezy = finite(windSpeed) && windSpeed >= DUST_WIND,
@@ -177,10 +161,10 @@ export function skyKind(condition: string, inputs: SkyKindInputs = {}): SkyKind 
       // Otherwise a storm, by its wind, and with no wind to go by the worst. A wind known to be under
       // a tropical storm's is none, and leaves an overcast sky that claims nothing.
       if (!finite(windSpeed) || windSpeed >= STORM.hurricane) return 'hurricane';
-      return windSpeed >= STORM.tropical ? 'tropicalStorm' : 'cloudyMidAltitude';
+      return windSpeed >= STORM.tropical ? 'tropicalStorm' : aloft('cloudy', altitude);
     }
     default:
-      return 'cloudyMidAltitude';
+      return aloft('cloudy', altitude);
   }
 }
 // Names for the kinds a Home Assistant condition doesn't name itself, as keys of
@@ -215,7 +199,21 @@ export const NIGHT_LABELS: Readonly<Partial<Record<SkyKind, TextKey>>> = {
   clear: 'clear',
   mostlyClear: 'mostly_clear',
 };
-export const skyPreset = (kind: SkyKind): SkyLook => PRESET_DATA.kinds[kind];
+const WINDOW_WIDTH = { compact: 465, regular: 1133, ultrawide: 1800 } as const;
+const SCREEN_CUTOFFS: ReadonlySet<number> = new Set([1024, 1080, 1112]);
+
+export function skyWindowClass(width: number, height: number, screenLongSide?: number): WindowClass {
+  if (width < WINDOW_WIDTH.compact) return 'compact';
+  if (width >= WINDOW_WIDTH.ultrawide) return 'ultrawide';
+  const regular =
+    screenLongSide !== undefined && SCREEN_CUTOFFS.has(screenLongSide) ? screenLongSide : WINDOW_WIDTH.regular;
+  if (width >= regular) return 'landscapeRegular';
+  if (height < WINDOW_WIDTH.compact && width > height) return 'compactLandscape';
+  return 'portraitRegular';
+}
+
+export const skyPreset = (kind: SkyKind, windowClass: WindowClass = 'compact'): SkyLook =>
+  PRESET_DATA.windows[windowClass][kind];
 
 // Keyframes run from midnight (-90°) up to noon and back down for the afternoon.
 // A position along that day cycle lets morning and evening stops interpolate apart.
@@ -242,23 +240,43 @@ function around<K extends Keyframe>(
   const t = after[0] === before[0] ? 0 : (at - before[0]) / (after[0] - before[0]);
   return [before[1], after[1], clamp(t)];
 }
+const TILE_EDGE_SHARE = 0.14;
+const TILE_MIDPOINT = 0.5;
 // The sky gradient for a kind at a solar elevation: [top, middle, bottom, middle stop].
 export function skyGradientFor(
   kind: SkyKind,
   elevation: number,
   rising = true,
+  tile = false,
 ): [top: string, middle: string, bottom: string, stop: number] {
   const [[, , top, middle, bottom, stop], [, , toTop, toMiddle, toBottom, toStop], t] = around(
     PRESET_DATA.gradients[skyPreset(kind).sky],
     elevation,
     rising,
   );
-  return [mix(top, toTop, t), mix(middle, toMiddle, t), mix(bottom, toBottom, t), stop + (toStop - stop) * t];
+  const blend = (a: RGB, b: RGB, share: number): RGB => [
+      a[0] + (b[0] - a[0]) * share,
+      a[1] + (b[1] - a[1]) * share,
+      a[2] + (b[2] - a[2]) * share,
+    ],
+    first = blend(top, toTop, t),
+    center = blend(middle, toMiddle, t),
+    last = blend(bottom, toBottom, t);
+  if (tile) {
+    // Mix in the interpolated channels before quantizing the final display colours.
+    const upper = blend(center, first, TILE_EDGE_SHARE),
+      lower = blend(center, last, TILE_EDGE_SHARE),
+      display = (color: RGB) => toHex(color.map(channel => Math.fround(channel / CHANNEL_MAX) * CHANNEL_MAX));
+    return [display(upper), display(blend(upper, lower, TILE_MIDPOINT)), display(lower), TILE_MIDPOINT];
+  }
+  return [toHex(first), toHex(center), toHex(last), stop + (toStop - stop) * t];
 }
 // Lighting at a solar elevation: sun, ambient and fill colours with intensities, the
 // four decks' and blanket's tints and brightness, and star opacity. While the moon shows, a kind
 // with light of its own for that (`moonLight`) is lit by it.
 export interface Lighting {
+  air: AirTint;
+  precipitation: PrecipitationTint;
   sun: string;
   sunIntensity: number;
   ambient: string;
@@ -267,9 +285,14 @@ export interface Lighting {
   fillIntensity: number;
   clouds: string[];
   brightness: number[];
-  stars: number;
-  // Where the sun's light on the clouds comes from (see sunDirection).
+  cloudAlpha: number[];
+  sunAngle: [number, number, number];
   direction: Direction;
+  moonIntensity: number;
+  moonRadius: number;
+  moonColor: string;
+  moonHorizon: string;
+  stars: number;
 }
 // The way a sun angle lights the clouds: a lamp facing straight into the scene, tipped up by
 // `pitch` about the horizontal, then turned by `yaw` about the vertical, both in degrees. By day
@@ -279,11 +302,36 @@ export function sunDirection(pitch: number, yaw: number): Direction {
     y = (yaw * Math.PI) / HALF_TURN;
   return [-Math.cos(p) * Math.sin(y), Math.sin(p), -Math.cos(p) * Math.cos(y)];
 }
-export function lightingFor(kind: SkyKind, elevation: number, rising = true, moonlit = false): Lighting {
-  const preset = skyPreset(kind),
+export function lightingFor(
+  kind: SkyKind,
+  elevation: number,
+  rising = true,
+  moonlit = false,
+  windowClass: WindowClass = 'compact',
+): Lighting {
+  const preset = skyPreset(kind, windowClass),
     [from, to, t] = around((moonlit ? preset.moonLight : undefined) ?? preset.light, elevation, rising),
-    [, , sun, sunIntensity, ambient, ambientIntensity, fill, fillIntensity, clouds, brightness, stars, [pitch, yaw]] =
-      from,
+    [
+      ,
+      ,
+      sun,
+      sunIntensity,
+      ambient,
+      ambientIntensity,
+      fill,
+      fillIntensity,
+      clouds,
+      brightness,
+      stars,
+      alpha,
+      angle,
+      moonIntensity,
+      moonRadius,
+      moonColor,
+      moonHorizon,
+      precipitation,
+      air,
+    ] = from,
     [
       ,
       ,
@@ -296,9 +344,30 @@ export function lightingFor(kind: SkyKind, elevation: number, rising = true, moo
       toClouds,
       toBrightness,
       toStars,
-      [toPitch, toYaw],
+      toAlpha,
+      toAngle,
+      toMoonIntensity,
+      toMoonRadius,
+      toMoonColor,
+      toMoonHorizon,
+      toPrecipitation,
+      toAir,
     ] = to,
     lerp = (x: number, y: number) => x + (y - x) * t;
+  const sunAngle: Lighting['sunAngle'] = [
+    lerp(angle[0], toAngle[0]),
+    lerp(angle[1], toAngle[1]),
+    lerp(angle[2], toAngle[2]),
+  ];
+  const color = (a: string, b: string): string => mix(a, b, t) + alphaHex(lerp(colorAlpha(a), colorAlpha(b)));
+  const pair = (a: readonly [string, string], b: readonly [string, string]): readonly [string, string] => [
+    color(a[0], b[0]),
+    color(a[1], b[1]),
+  ];
+  const fall = (key: 'rain' | 'snow' | 'sleet') => ({
+    front: pair(precipitation[key].front, toPrecipitation[key].front),
+    back: pair(precipitation[key].back, toPrecipitation[key].back),
+  });
   return {
     sun: mix(sun, toSun, t),
     sunIntensity: lerp(sunIntensity, toSunIntensity),
@@ -307,10 +376,26 @@ export function lightingFor(kind: SkyKind, elevation: number, rising = true, moo
     fill: mix(fill, toFill, t),
     fillIntensity: lerp(fillIntensity, toFillIntensity),
     clouds: clouds.map((color, i) => mix(color, toClouds[i] ?? color, t)),
-    brightness: brightness.map((value, i) => lerp(value, toBrightness[i] ?? value)),
+    brightness: brightness.map((v, i) => lerp(v, toBrightness[i] ?? v)),
     stars: lerp(stars, toStars),
-    // The angles themselves are eased between keyframes, as the presets were tuned.
-    direction: sunDirection(lerp(pitch, toPitch), lerp(yaw, toYaw)),
+    cloudAlpha: alpha.map((v, i) => lerp(v, toAlpha[i] ?? v)),
+    sunAngle,
+    direction: sunDirection(sunAngle[0], sunAngle[1]),
+    moonIntensity: lerp(moonIntensity, toMoonIntensity),
+    moonRadius: lerp(moonRadius, toMoonRadius),
+    moonColor: mix(moonColor, toMoonColor, t),
+    moonHorizon: mix(moonHorizon, toMoonHorizon, t),
+    air: {
+      near: pair(air.near, toAir.near),
+      noise: pair(air.noise, toAir.noise),
+      fringe: color(air.fringe, toAir.fringe),
+    },
+    precipitation: {
+      rain: fall('rain'),
+      snow: fall('snow'),
+      sleet: fall('sleet'),
+      hail: pair(precipitation.hail, toPrecipitation.hail),
+    },
   };
 }
 
@@ -322,25 +407,35 @@ export interface SunPosition {
   rayAngle: number;
   rainbow: number;
   ghosts: number;
+  color: string;
+  alpha: number;
+  irisLength: number;
+  irisFrequency: number;
+  irisAmplitude: number;
 }
-export function sunPathAt(hour: number, wide = false): SunPosition {
-  const path = SUN_PATHS[wide ? 'landscape' : 'portrait'],
-    h = ((hour % HOURS_PER_DAY) + HOURS_PER_DAY) % HOURS_PER_DAY;
+export function sunPathAt(hour: number, window: WindowClass | boolean = 'compact'): SunPosition {
+  const path = SUN_PATHS[typeof window === 'boolean' ? (window ? 'landscapeRegular' : 'compact') : window],
+    h = finite(hour) ? hour : SOLAR.noon;
   let i = path.findIndex(k => k[0] > h);
-  if (i < 1) i = path.length - 1;
-  const a = path[i - 1],
+  if (i < 0) i = path.length - 1;
+  const a = path[Math.max(0, i - 1)],
     b = path[i];
   if (!a || !b) throw new Error('The sun path has too few keyframes.');
-  const [start, [x, y], rayAngle, rainbow, ghosts] = a,
-    [end, [toX, toY], toRayAngle, toRainbow, toGhosts] = b,
-    t = end === start ? 0 : (h - start) / (end - start),
+  const [start, [x, y], rayAngle, rainbow, ghosts, color, irisLength, irisFrequency, irisAmplitude] = a,
+    [end, [toX, toY], toRayAngle, toRainbow, toGhosts, toColor, toLength, toFrequency, toAmplitude] = b,
+    t = end === start ? 0 : clamp((h - start) / (end - start)),
     lerp = (from: number, to: number) => from + (to - from) * t;
   return {
     x: lerp(x, toX),
     y: lerp(y, toY),
     rayAngle: lerp(rayAngle, toRayAngle),
     rainbow: lerp(rainbow, toRainbow),
-    ghosts: Math.round(lerp(ghosts, toGhosts)),
+    ghosts: Math.trunc(lerp(ghosts, toGhosts)),
+    color: mix(color, toColor, t),
+    alpha: lerp(colorAlpha(color), colorAlpha(toColor)),
+    irisLength: lerp(irisLength, toLength),
+    irisFrequency: lerp(irisFrequency, toFrequency),
+    irisAmplitude: lerp(irisAmplitude, toAmplitude),
   };
 }
 // Solar hour from sun.sun's next sunrise and sunset: today's daylight maps to 6–18
@@ -351,13 +446,33 @@ const SOLAR = { sunrise: 6, noon: 12, sunset: 18 } as const;
 const HALF_DAY = SOLAR.sunset - SOLAR.sunrise;
 const ESTIMATE = { elevation: 40, noon: 55, twilight: 0.5 } as const;
 export interface SunTimes {
+  sunrise?: number | undefined;
+  sunset?: number | undefined;
   nextRising?: number;
   nextSetting?: number;
   elevation?: number | undefined;
   rising?: boolean;
 }
-export function solarHour(now: number, { nextRising, nextSetting, elevation, rising = true }: SunTimes = {}): number {
-  if (finite(nextRising) && finite(nextSetting)) {
+export function solarHour(
+  now: number,
+  { sunrise, sunset, nextRising, nextSetting, elevation, rising = true }: SunTimes = {},
+): number {
+  // A supplied day's crossings keep elapsed daylight correct across longitudes and DST.
+  if (finite(sunrise) && finite(sunset) && sunset > sunrise && sunset - sunrise <= DAY) {
+    return SOLAR.sunrise + HALF_DAY * ((now - sunrise) / (sunset - sunrise));
+  }
+  // HA next-event timestamps can be months apart near the poles. Keep that case on
+  // the bounded elevation path instead of stretching a single day over the season.
+  if (
+    finite(nextRising) &&
+    finite(nextSetting) &&
+    finite(now) &&
+    nextRising >= now &&
+    nextSetting >= now &&
+    nextRising - now <= DAY &&
+    nextSetting - now <= DAY &&
+    nextRising !== nextSetting
+  ) {
     if (nextSetting < nextRising) {
       const sunrise = nextRising - DAY;
       return SOLAR.sunrise + HALF_DAY * clamp((now - sunrise) / (nextSetting - sunrise));

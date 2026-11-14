@@ -48,6 +48,42 @@ test('GPU rain preserves overlap opacity and the ordering of sky layers', () => 
   expect(gl.getError()).toBe(gl.NO_ERROR);
 });
 
+test('near rain samples its selected colored sprite and reuses it between cards', () => {
+  const { sky, canvas, ctx, gl } = setup();
+  const strip = (a: string, b: string) => {
+    const image = document.createElement('canvas');
+    image.width = 4;
+    image.height = 2;
+    const pen = context2d(image);
+    pen.fillStyle = a;
+    pen.fillRect(0, 0, 2, 2);
+    pen.fillStyle = b;
+    pen.fillRect(2, 0, 2, 2);
+    return image;
+  };
+  const first = strip('#ff0000', '#0000ff'),
+    second = strip('#00ff00', '#ff00ff');
+  const sample = (image: HTMLCanvasElement, cell: number) => {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    sky.begin();
+    sky.layer(ctx);
+    const batch = sky.gpu.batches[0];
+    if (!batch) throw new Error('No rain batch.');
+    batch.quad(120, 90, 0, 1, 50, 8, 0.5, cell);
+    sky.gpu.draw(sky.color, image, 2);
+    sky.finish(canvas);
+    return Array.from(ctx.getImageData(120, 90, 1, 1).data);
+  };
+  expect(sample(first, 0)).toEqual([128, 0, 0, 255]);
+  expect(sample(first, 1)).toEqual([0, 0, 128, 255]);
+  expect(sample(second, 0)).toEqual([0, 128, 0, 255]);
+  const uploads = vi.spyOn(gl, 'texImage2D');
+  expect(sample(first, 1)).toEqual([0, 0, 128, 255]);
+  expect(uploads.mock.calls.some(args => args.at(-1) === first)).toBe(false);
+  expect(gl.getError()).toBe(gl.NO_ERROR);
+});
+
 test('glass samples the resident sky without canvas uploads, including a taller overlay', () => {
   const { renderer, sky, canvas, ctx, gl } = setup();
   ctx.fillStyle = '#e03030';

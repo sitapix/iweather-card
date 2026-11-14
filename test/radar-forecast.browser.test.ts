@@ -78,6 +78,23 @@ beforeEach(async () => {
         );
       if (isForecastTile(url))
         return Promise.resolve(failTiles ? new Response('', { status: 503 }) : new Response(forecast));
+      // Open-Meteo: precipitation falling this quarter hour, so the map opens close in.
+      if (url.includes('api.open-meteo.com/v1/forecast')) {
+        const hour = Math.floor(Date.now() / HOUR) * 3600,
+          quarter = Math.floor(Date.now() / (15 * MINUTE)) * 900;
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              hourly: { time: Array.from({ length: 48 }, (_, i) => hour + i * 3600) },
+              daily: { time: [hour, hour + 86_400] },
+              minutely_15: {
+                time: Array.from({ length: 12 }, (_, i) => quarter + (i + 1) * 900),
+                precipitation: Array.from({ length: 12 }, () => 0.5),
+              },
+            }),
+          ),
+        );
+      }
       if (url.includes('/v2/coverage/')) return Promise.resolve(new Response(empty));
       if (url.includes('radar.invalid')) return Promise.resolve(new Response(observed));
       return Promise.resolve(new Response('', { status: 404 }));
@@ -111,6 +128,7 @@ async function openMap() {
   } satisfies HomeAssistant;
   document.body.append(card);
   await vi.waitFor(() => expect(card.root.querySelector('.tile[data-tile=map]')).not.toBeNull());
+  await vi.waitFor(() => expect(card.update?.ctx.rainOutlook).toBe('now'));
   card.root.querySelector<HTMLElement>('.tile[data-tile=map]')?.click();
   await vi.waitFor(() => expect(card.maps.gl).toBeDefined());
   return card;

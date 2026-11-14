@@ -14,6 +14,8 @@ import { finite } from '../lib/values.ts';
 // scenery is, so a shower with sun shows a sun behind the rain.
 const KIND_SYMBOLS: Readonly<Record<SkyKind, readonly [day: SymbolName, night: SymbolName]>> = {
   clear: ['sun', 'moon'],
+  hot: ['hot', 'moon'],
+  frigid: ['sun', 'moon'],
   mostlyClear: ['sun', 'moon'],
   partlyCloudyMidAltitude: ['cloud-sun', 'cloud-moon'],
   partlyCloudyLowAltitude: ['cloud-sun', 'cloud-moon'],
@@ -37,6 +39,7 @@ const KIND_SYMBOLS: Readonly<Record<SkyKind, readonly [day: SymbolName, night: S
   sunShowers: ['sun-rain', 'moon-rain'],
   snow: ['snow', 'snow'],
   flurries: ['flurries', 'flurries'],
+  sunFlurries: ['sun-snow', 'moon-snow'],
   heavySnow: ['heavy-snow', 'heavy-snow'],
   blowingSnow: ['blowing-snow', 'blowing-snow'],
   blizzard: ['blowing-snow', 'blowing-snow'],

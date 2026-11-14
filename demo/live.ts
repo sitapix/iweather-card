@@ -1,6 +1,7 @@
 import type { EntityAttributes, ForecastEntry, ForecastReading } from '../src/card/home-assistant.ts';
 import { DAY, HOUR, fromUnix } from '../src/lib/time.ts';
 import { finite, isList, isRecord, text } from '../src/lib/values.ts';
+import { CLOUD_LAYERS, cloudAltitude } from '../src/weather/open-meteo.ts';
 import { codeCondition, hourCondition } from '../src/weather/weather-codes.ts';
 import { OPEN_METEO, atPlace } from '../src/lib/services.ts';
 import { ENTITY, UNIT_NAMES, type Units, type World } from './world.ts';
@@ -108,6 +109,11 @@ function converted(field: Field, value: number, units: Units, visibilityUnit: un
 }
 
 // The readings `names` maps, from row `index` of `block`, in the units shown.
+function cloudBand(block: Record<string, unknown>, index: number | null): Pick<EntityAttributes, 'cloud_altitude'> {
+  const [low, mid, high] = CLOUD_LAYERS.map(name => (index === null ? block[name] : valuesOf(block, name)[index]));
+  return finite(low) && finite(mid) && finite(high) ? { cloud_altitude: cloudAltitude(low, mid, high) } : {};
+}
+
 function readings(
   block: Record<string, unknown>,
   names: Readonly<Record<string, Field>>,
@@ -148,6 +154,7 @@ export function liveWorld(body: unknown, place: Place, units: Units, now: number
         datetime: new Date(fromUnix(time)).toISOString(),
         ...(condition ? { condition } : {}),
         ...readings(hourly, HOURLY, i, units, unitOf(body, 'hourly_units')),
+        ...cloudBand(hourly, i),
       },
     ];
   });
@@ -167,6 +174,7 @@ export function liveWorld(body: unknown, place: Place, units: Units, now: number
   const condition = hourCondition(current[CODE], current[SNOWFALL], current[DAYTIME] === 1);
   const attributes: EntityAttributes = {
     ...readings(current, CURRENT, null, units, unitOf(body, 'current_units')),
+    ...cloudBand(current, null),
     ...UNIT_NAMES[units],
     friendly_name: place.name,
     latitude: place.latitude,
@@ -189,8 +197,8 @@ export function forecastUrl(place: Place, units: Units): string {
       : '&wind_speed_unit=kmh';
   return (
     `${OPEN_METEO.forecast}?${atPlace(place.latitude, place.longitude)}` +
-    `&current=${[...Object.keys(CURRENT), CODE, SNOWFALL, DAYTIME].join(',')}` +
-    `&hourly=${[...Object.keys(HOURLY), CODE, SNOWFALL, DAYTIME].join(',')}` +
+    `&current=${[...Object.keys(CURRENT), CODE, SNOWFALL, DAYTIME, ...CLOUD_LAYERS].join(',')}` +
+    `&hourly=${[...Object.keys(HOURLY), CODE, SNOWFALL, DAYTIME, ...CLOUD_LAYERS].join(',')}` +
     `&daily=${[...Object.keys(DAILY), CODE].join(',')}` +
     `&forecast_days=${FORECAST_DAYS}&timeformat=unixtime&timezone=auto${unitParams}`
   );

@@ -194,6 +194,9 @@ const ANSWER = {
     temperature_2m: 48.2,
     relative_humidity_2m: 91,
     weather_code: 0,
+    cloud_cover_low: 80,
+    cloud_cover_mid: 15,
+    cloud_cover_high: 15,
     is_day: 0,
     snowfall: 0,
     pressure_msl: 1013.2,
@@ -204,6 +207,9 @@ const ANSWER = {
   hourly: {
     time: [START, START + 3600, START + 7200],
     weather_code: [61, 61, 71],
+    cloud_cover_low: [0, 15, 30],
+    cloud_cover_mid: [0, 80, 20],
+    cloud_cover_high: [0, 10, 95],
     snowfall: [0, 0.2, 0.4],
     is_day: [0, 0, 0],
     temperature_2m: [48, 47, 33],
@@ -225,6 +231,11 @@ test("a place's forecast becomes the weather now, the hours from the one under w
   assert.equal(state?.state, 'clear-night');
   assert.equal(state.attributes.temperature, 48.2);
   assert.equal(state.attributes.pressure, 29.92);
+  assert.equal(state.attributes.cloud_altitude, 'low');
+  assert.deepEqual(
+    world.forecasts.hourly?.map(hour => hour.cloud_altitude),
+    ['mid', 'high'],
+  );
   assert.equal(state.attributes.visibility, 10);
   assert.equal(state.attributes.pressure_unit, 'inHg');
   assert.equal(state.attributes.latitude, PARIS.latitude);
@@ -232,7 +243,7 @@ test("a place's forecast becomes the weather now, the hours from the one under w
   assert.equal(world.states['sun.sun'], undefined, 'the card works out the sun where the weather is');
   assert.deepEqual(world.config, { location_name: 'Home', time_zone: 'Europe/Paris' });
   assert.deepEqual(
-    world.forecasts.hourly?.map(({ condition, visibility }) => [condition, visibility]),
+    world.forecasts.hourly.map(({ condition, visibility }) => [condition, visibility]),
     [
       ['snowy-rainy', 5],
       ['snowy', 1],

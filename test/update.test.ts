@@ -79,6 +79,8 @@ test('in English a sky is capitalised as a headline, as Home Assistant’s own n
   assert.equal(named('partlycloudy', 'en', 'Partly cloudy'), 'Partly Cloudy');
   assert.equal(named('snowy-rainy', 'en'), 'Mixed Rain and Snow');
   assert.equal(named('partlycloudy', 'de', 'Teilweise bewölkt'), 'Teilweise bewölkt');
+  assert.equal(named('windy', 'de', 'Windig'), 'Windig');
+  assert.equal(named('cloudy', 'de', 'Bewölkt'), 'Bewölkt');
 });
 
 test('an update is worked out from its sources alone, with no card and no page', () => {
@@ -388,7 +390,7 @@ test('fog that has thinned past 5 km is named by the sky above it, and haze only
   assert.equal(named({ visibility: 0.2, visibility_unit: 'mi' }), 'Fog');
 });
 
-test('a cover lent to the hour under way splits mostly cloudy from overcast, within what the condition says', () => {
+test('lent cover refines fog and wind while named clear and cloud skies keep their headlines', () => {
   const hour = 3_600_000,
     under = new Date(Math.floor(NOW / hour) * hour).toISOString();
   const update = (state: string, cloud_coverage: number, attributes: object = {}) => {
@@ -409,9 +411,13 @@ test('a cover lent to the hour under way splits mostly cloudy from overcast, wit
   const mist = { visibility: 5, visibility_unit: 'mi', humidity: 94 };
   assert.equal(update('fog', 100, mist).sky, 'cloudyLowAltitude');
   assert.equal(update('fog', 100, mist).conditionText, 'Cloudy');
-  assert.equal(update('fog', 40, mist).sky, 'partlyCloudyMidAltitude');
+  assert.equal(update('fog', 40, mist).sky, 'partlyCloudyLowAltitude');
   assert.equal(update('fog', 40, mist).conditionText, 'Partly Cloudy');
-  assert.equal(update('cloudy', 75).sky, 'mostlyCloudyMidAltitude');
-  assert.equal(update('cloudy', 75).conditionText, 'Mostly Cloudy');
-  assert.equal(update('sunny', 95).sky, 'mostlyClear', 'a cover never turns a clear sky cloudy');
+  assert.equal(update('cloudy', 75).sky, 'cloudyLowAltitude');
+  assert.equal(update('cloudy', 75).conditionText, 'Cloudy');
+  assert.equal(update('sunny', 95).sky, 'clear', 'an explicit clear condition keeps its sky');
+  assert.equal(update('Mostly Cloudy', 10).sky, 'mostlyCloudyLowAltitude');
+  assert.equal(update('Mostly Cloudy', 10).conditionText, 'Mostly Cloudy');
+  assert.equal(update('windy', 75).sky, 'mostlyCloudyLowAltitude');
+  assert.equal(update('windy', 75).conditionText, 'Windy');
 });

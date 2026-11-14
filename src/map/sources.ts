@@ -5,6 +5,7 @@ import { isRecord, text, isList, finite } from '../lib/values.ts';
 import { HOUR, MINUTE, fromUnix } from '../lib/time.ts';
 import type { ForecastEntry } from '../card/home-assistant.ts';
 import { conditionPrecipitation } from '../weather/precipitation.ts';
+import { type RainOutlook, rainOutlook } from '../weather/rain-outlook.ts';
 import type { MapLayerKind } from '../card/config.ts';
 import { NEAR_MINUTES } from '../cards/next-hour/rules.ts';
 
@@ -351,6 +352,8 @@ export interface MapChoice {
   now?: number;
   // The next-hour panel is showing precipitation on its way.
   nextHour?: boolean;
+  // How soon precipitation comes (see rainOutlook), which sets how far out its map looks.
+  outlook?: RainOutlook | undefined;
   radar?: boolean;
   // The air quality is bad enough to put first.
   airSignificant?: boolean;
@@ -405,26 +408,20 @@ export function mapKind({
   return radar ? 'precipitation' : 'temperature';
 }
 
-// How far out the large map opens. Precipitation opens close in while it is falling and further
-// out the longer it is off, out to the whole region with none due, so that what is coming is in
-// view; each other layer has a distance of its own.
+// How far out the large map opens. Precipitation opens by its outlook (see rainOutlook): close in
+// while it is falling and further out the longer it is off, out to the whole region with none due,
+// so that what is coming is in view; each other layer has a distance of its own.
 const OPENING_ZOOMS = { wind: 6, temperature: 6.5, air_quality: 10 } as const,
-  RAIN_ZOOMS = {
-    falling: 8.5,
-    due: [
-      { within: HOUR, zoom: 8 },
-      { within: 3 * HOUR, zoom: 6.5 },
-      { within: 6 * HOUR, zoom: 5.5 },
-    ],
+  RAIN_ZOOMS: Readonly<Record<RainOutlook, number>> = {
+    now: 8.5,
+    nextHour: 8,
+    nextThreeHours: 6.5,
+    nextSixHours: 5.5,
     none: 4,
-  } as const;
+    unknown: 4,
+  };
 
-export function openingZoom(
-  kind: MapLayerKind,
-  { state, hourly = [], now = Date.now(), nextHour = false }: MapChoice = {},
-): number {
+export function openingZoom(kind: MapLayerKind, { hourly = [], now = Date.now(), outlook }: MapChoice = {}): number {
   if (kind !== 'precipitation') return OPENING_ZOOMS[kind];
-  if (wet(state)) return RAIN_ZOOMS.falling;
-  const due = nextHour ? 0 : rainDue(hourly, now);
-  return RAIN_ZOOMS.due.find(({ within }) => due <= within)?.zoom ?? RAIN_ZOOMS.none;
+  return RAIN_ZOOMS[outlook ?? rainOutlook([], hourly, now)];
 }

@@ -29,6 +29,8 @@ varying vec4 form;
 varying float footprint;
 uniform sampler2D image;
 uniform bool near;
+uniform float columns;
+uniform vec3 tint;
 float coverage(float x, float halfSize) {
   float pixel = max(footprint, .001);
   return clamp((halfSize - x) / pixel + .5, 0., 1.) - clamp((-halfSize - x) / pixel + .5, 0., 1.);
@@ -36,7 +38,8 @@ float coverage(float x, float halfSize) {
 void main() {
   float alpha;
   if (near) {
-    alpha = texture2D(image, at).a * form.z;
+    gl_FragColor = texture2D(image, vec2((at.x + form.w) / columns, at.y)) * form.z;
+    return;
   } else {
     vec2 d = abs(at) - vec2(form.y * .5, form.x);
     float distance = form.w > .5
@@ -46,7 +49,7 @@ void main() {
       ? clamp(.5 - distance / footprint, 0., 1.)
       : coverage(at.y, form.x) * (form.w > .5 ? 1. : coverage(at.x, form.y * .5));
   }
-  gl_FragColor = vec4(alpha);
+  gl_FragColor = vec4(tint * alpha, alpha);
 }`;
 const QUAD = `
 attribute vec2 a;
@@ -87,6 +90,7 @@ export class RainBatch {
   data = new Float32Array(INITIAL_QUADS * FLOATS);
   used = 0;
   opacity = 1;
+  tint: readonly [number, number, number] = [1, 1, 1];
   quad(
     x: number,
     y: number,
@@ -95,7 +99,8 @@ export class RainBatch {
     length: number,
     width: number,
     alpha: number,
-    round: boolean,
+    // Far lines pass their rounded-cap flag; near sprites pass their atlas column.
+    capOrCell: boolean | number,
   ): void {
     const needed = this.used + FLOATS;
     if (needed > this.data.length) {
@@ -110,7 +115,7 @@ export class RainBatch {
     this.data[this.used++] = width;
     this.data[this.used++] = length;
     this.data[this.used++] = alpha;
-    this.data[this.used++] = round ? 1 : 0;
+    this.data[this.used++] = Number(capOrCell);
   }
 }
 
@@ -128,13 +133,12 @@ export class RainGPU {
   private readonly instanced: ANGLE_instanced_arrays;
   private readonly rain: WebGLProgram;
   private readonly copy: WebGLProgram;
-  private readonly rainUniforms: Record<'view' | 'near' | 'image', WebGLUniformLocation | null>;
+  private readonly rainUniforms: Record<'view' | 'near' | 'image' | 'columns' | 'tint', WebGLUniformLocation | null>;
   private readonly copyUniforms: Record<'image' | 'opacity' | 'region', WebGLUniformLocation | null>;
   private readonly quad: WebGLBuffer | null;
   private readonly vertices: WebGLBuffer | null;
   private mask: Surface | undefined;
-  private sprite: WebGLTexture | undefined;
-  private spriteReady = false;
+  private readonly sprites = new Map<HTMLCanvasElement, WebGLTexture>();
   readonly batches = Array.from({ length: BANDS }, () => new RainBatch());
   constructor(gl: WebGLRenderingContext, maximum: number, instanced: ANGLE_instanced_arrays) {
     this.gl = gl;
@@ -148,6 +152,8 @@ export class RainGPU {
       view: gl.getUniformLocation(this.rain, 'view'),
       near: gl.getUniformLocation(this.rain, 'near'),
       image: gl.getUniformLocation(this.rain, 'image'),
+      tint: gl.getUniformLocation(this.rain, 'tint'),
+      columns: gl.getUniformLocation(this.rain, 'columns'),
     };
     this.copyUniforms = {
       image: gl.getUniformLocation(this.copy, 'image'),
@@ -185,17 +191,14 @@ export class RainGPU {
   release(): void {
     if (this.mask) this.dispose(this.mask);
     this.mask = undefined;
+    for (const texture of this.sprites.values()) this.gl.deleteTexture(texture);
+    this.sprites.clear();
   }
   prepare(width: number, height: number): void {
     if (!this.mask || this.mask.width < width || this.mask.height < height) {
       const next = this.surface(Math.max(this.mask?.width ?? 0, width), Math.max(this.mask?.height ?? 0, height));
-      this.release();
+      if (this.mask) this.dispose(this.mask);
       this.mask = next;
-    }
-    if (!this.sprite) {
-      const image = this.surface(1, 1);
-      this.sprite = image.texture;
-      this.gl.deleteFramebuffer(image.frame);
     }
   }
   target(surface: Surface | null, width = surface?.width ?? 0, height = surface?.height ?? 0): void {
@@ -245,15 +248,28 @@ export class RainGPU {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
   }
-  draw(surface: Surface, sprite: HTMLCanvasElement | null): void {
+  draw(surface: Surface, sprite: HTMLCanvasElement | null, columns = 1): void {
     const gl = this.gl;
     this.prepare(surface.width, surface.height);
-    if (sprite && !this.spriteReady) {
-      // The streak's tail is texture row zero, matching the rain's along coordinate.
+    let texture = sprite ? this.sprites.get(sprite) : undefined;
+    if (sprite && !texture) {
+      // Four cards can keep GPU skies at once. Reuse each card's strip across frames.
+      if (this.sprites.size >= 4) {
+        const oldest = this.sprites.entries().next().value;
+        if (oldest) {
+          gl.deleteTexture(oldest[1]);
+          this.sprites.delete(oldest[0]);
+        }
+      }
+      const strip = this.surface(1, 1);
+      texture = strip.texture;
+      gl.deleteFramebuffer(strip.frame);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.sprite ?? null);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sprite);
-      this.spriteReady = true;
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      this.sprites.set(sprite, texture);
     }
     for (const batch of this.batches) {
       if (!batch.used) continue;
@@ -284,9 +300,12 @@ export class RainGPU {
       }
       gl.uniform2f(this.rainUniforms.view, surface.width, surface.height);
       gl.uniform1i(this.rainUniforms.near, sprite ? 1 : 0);
+      gl.uniform1f(this.rainUniforms.columns, columns);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.sprite ?? null);
+      // Even the line shader needs a complete sampler on WebGL 1.
+      gl.bindTexture(gl.TEXTURE_2D, texture ?? surface.texture);
       gl.uniform1i(this.rainUniforms.image, 0);
+      gl.uniform3f(this.rainUniforms.tint, ...batch.tint);
       gl.enable(gl.BLEND);
       gl.blendEquation(sprite ? gl.FUNC_ADD : this.maximum);
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

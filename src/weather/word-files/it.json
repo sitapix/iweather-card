@@ -842,5 +842,9 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "L’impostazione {key} deve assegnare a ciascuno di {kinds} un URL https con {z}, {x} e {y}.",
   "Choose a valid IANA time zone for {key}, for example {example}.": "Scegli un fuso orario IANA valido per {key}, ad esempio {example}.",
   "In {minutes} minutes": "Tra {minutes} minuti",
-  "{minutes} minutes ago": "{minutes} minuti fa"
+  "In {count} hours": {
+    "one": "Tra {count} ora",
+    "many": "Tra {count} ore",
+    "other": "Tra {count} ore"
+  }
 }

@@ -859,5 +859,10 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "Nastavení {key} musí každé z hodnot {kinds} přiřadit adresu URL https s {z}, {x} a {y}.",
   "Choose a valid IANA time zone for {key}, for example {example}.": "Vyberte pro {key} platné časové pásmo IANA, například {example}.",
   "In {minutes} minutes": "Za {minutes} minut",
-  "{minutes} minutes ago": "Před {minutes} minutami"
+  "In {count} hours": {
+    "one": "Za {count} hodinu",
+    "few": "Za {count} hodiny",
+    "many": "Za {count} hodiny",
+    "other": "Za {count} hodin"
+  }
 }

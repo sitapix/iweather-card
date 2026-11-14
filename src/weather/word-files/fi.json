@@ -825,5 +825,8 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "Asetuksen {key} on annettava jokaiselle arvolle {kinds} https-osoite, jossa on {z}, {x} ja {y}.",
   "Choose a valid IANA time zone for {key}, for example {example}.": "Valitse asetukselle {key} kelvollinen IANA-aikavyöhyke, esimerkiksi {example}.",
   "In {minutes} minutes": "{minutes} minuutin kuluttua",
-  "{minutes} minutes ago": "{minutes} minuuttia sitten"
+  "In {count} hours": {
+    "one": "{count} tunnin kuluttua",
+    "other": "{count} tunnin kuluttua"
+  }
 }

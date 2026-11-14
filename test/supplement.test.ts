@@ -1030,3 +1030,17 @@ test('changing entities drops a stored supplement before the replacement subscri
   assert.equal(asked.mock.calls.length, 1);
   forecasts.stop();
 });
+
+test('an answer keeps the quarter hours ahead, each ending at its time with what falls before it', () => {
+  const at = Date.UTC(2026, 10, 13, 6),
+    seconds = at / 1000,
+    body = {
+      hourly: { time: [seconds], temperature_2m: [10] },
+      daily: { time: [seconds], temperature_2m_max: [12] },
+      minutely_15: { time: [seconds + 900, seconds + 1800, seconds + 2700], precipitation: [0, 0.4, null] },
+    };
+  assert.deepEqual(parseSupplement(body, at)?.quarters, [
+    { time: at + 900_000, precipitation: 0 },
+    { time: at + 1_800_000, precipitation: 0.4 },
+  ]);
+});
