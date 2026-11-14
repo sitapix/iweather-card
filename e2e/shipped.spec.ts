@@ -85,16 +85,20 @@ test.describe('with motion on', () => {
 test.describe('with radar motion on', () => {
   test.use({ config: { ...MAP, weather_animation: true, weather_scene: false } });
 
-  test('the unopened precipitation map plays by default and honors its toggle and reduced motion', async ({
+  test('the unopened precipitation map plays its radar on from now while it rains, and honors its toggle and reduced motion', async ({
     card,
     page,
   }) => {
     const map = card.locator('.tile[data-tile=map] .radar'),
       frames = map.locator('canvas.radar-layer.frame'),
-      shown = () => map.locator('canvas[data-on]').getAttribute('data-frame');
-    await expect(frames).toHaveCount(10);
-    const first = await shown();
-    await expect.poll(shown).not.toBe(first);
+      hours = map.locator('canvas.map-hour'),
+      when = map.locator('.map-when'),
+      ahead = () => when.textContent(),
+      played = () => frames.count();
+    // Rain falls now, so the latest frame plays on fifty minutes, ten at a time, never the past.
+    await expect.poll(played).toBeGreaterThanOrEqual(6);
+    await expect(hours).toHaveCount(0);
+    await expect.poll(ahead).toMatch(/^In \d+ minutes$/u);
     await expect(card.locator('dialog[open]')).toHaveCount(0);
     await expect(map.locator('.wind-time')).toHaveCount(0);
 
@@ -103,21 +107,21 @@ test.describe('with radar motion on', () => {
       host?.setConfig({ ...host.config, map_precipitation_animation: false });
     });
     await expect(frames).toHaveCount(1);
-    await expect(map.locator('canvas[data-on]')).toHaveAttribute('data-frame', '9');
+    await expect(when).toHaveText('');
     await page.waitForTimeout(SETTLED);
-    await expect(map.locator('canvas[data-on]')).toHaveAttribute('data-frame', '9');
+    await expect(frames).toHaveCount(1);
 
     await page.evaluate(() => {
       const host = document.querySelector('iweather-card');
       host?.setConfig({ ...host.config, map_precipitation_animation: true });
     });
-    await expect(frames).toHaveCount(10);
+    await expect.poll(played).toBeGreaterThanOrEqual(6);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await expect(frames).toHaveCount(1);
-    await expect(map.locator('canvas[data-on]')).toHaveAttribute('data-frame', '9');
+    await expect(when).toHaveText('');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await expect(frames).toHaveCount(10);
-    await expect.poll(shown).not.toBe('9');
+    await expect.poll(played).toBeGreaterThanOrEqual(6);
+    await expect.poll(ahead).toMatch(/^In \d+ minutes$/u);
   });
 });
 

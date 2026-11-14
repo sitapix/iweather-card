@@ -59,6 +59,15 @@ test('the height of the cloud comes from the hour, beside the entity’s own cov
   );
   assert.equal(now.attrs.cloud_coverage, 90);
   assert.equal(now.attrs.cloud_altitude, 'high');
+  assert.equal(
+    readingsNow(inputs({}, { second: { cloud_altitude: 'mid' }, hour: hour({ cloud_altitude: 'high' }) })).attrs
+      .cloud_altitude,
+    'mid',
+  );
+  assert.equal(
+    readingsNow(inputs({ cloud_altitude: 'low' }, { hour: hour({ cloud_altitude: 'high' }) })).attrs.cloud_altitude,
+    'low',
+  );
   assert.equal(readingsNow(inputs({ cloud_coverage: 90 })).attrs.cloud_altitude, undefined);
 });
 

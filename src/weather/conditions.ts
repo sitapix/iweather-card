@@ -9,7 +9,15 @@ import {
   SUN_ENTITY,
 } from '../card/home-assistant.ts';
 import { type Sun, forecasts } from './forecast-items.ts';
-import { type SceneInputs, moonAltitude, moonHourAt, moonPhase, moonTilt, windMetersPerSecond } from '../sky/sky.ts';
+import {
+  type SceneInputs,
+  moonAltitude,
+  moonHourAt,
+  moonAppearance,
+  moonPhase,
+  moonTilt,
+  windMetersPerSecond,
+} from '../sky/sky.ts';
 import { hourUnderWay } from './now.ts';
 import { solarHour } from '../sky/presets.ts';
 import { convertUnit, UNITS } from './units.ts';
@@ -145,25 +153,46 @@ export function sceneInputs(
     sunAttrs = sun?.attributes;
   const hour = hourUnderWay(forecasts(hourly), now),
     dewPoint = attrs?.dew_point;
-  // Solar time places the sun on its path; the moon uses its own rise-to-set
-  // progress on the same path, from its hour angle.
+  // The light follows solar elevation while the sun's path follows the daylight interval.
+  const { latitude, longitude } = location;
   const parse = (key: 'next_rising' | 'next_setting') => Date.parse(sunAttrs?.[key] ?? ''),
-    moonNow = moonAltitude(now, location.latitude, location.longitude);
+    moonNow = moonAltitude(now, latitude, longitude),
+    appearance = moonAppearance(now),
+    located = finite(latitude) && finite(longitude),
+    events = located ? sunEvents(now, latitude, longitude) : undefined,
+    elevation = finite(sunAttrs?.elevation)
+      ? sunAttrs.elevation
+      : located
+        ? solarElevation(now, latitude, longitude)
+        : undefined,
+    rising =
+      typeof sunAttrs?.rising === 'boolean'
+        ? sunAttrs.rising
+        : located
+          ? solarElevation(now + MINUTE, latitude, longitude) > (elevation ?? 0)
+          : true;
   const moonHour = finite(moonNow) && moonNow > 0 ? moonHourAt(now, location.latitude, location.longitude) : undefined;
   return {
     ...sceneCondition(state, sun),
+    // A known polar day has solar lighting but no daily disc path. Integrations with
+    // missing events can still use an estimate from the reported elevation.
+    sunPathAvailable: !events || (events.sunrise !== null && events.sunset !== null),
     solarHour: solarHour(now, {
       nextRising: parse('next_rising'),
       nextSetting: parse('next_setting'),
-      elevation: sunAttrs?.elevation,
-      rising: sunAttrs?.rising !== false,
+      sunrise: events?.sunrise ?? undefined,
+      sunset: events?.sunset ?? undefined,
+      elevation,
+      rising,
     }),
     moonHour,
     moonAltitude: moonNow,
-    moonTilt: moonTilt(now, location.latitude, location.longitude),
+    moonTilt: moonTilt(now, latitude, longitude),
+    moonLimbAngle: appearance.limb,
+    moonPhaseAngle: appearance.angle,
     moonPhase: moonPhase(now),
-    elevation: finite(sunAttrs?.elevation) ? sunAttrs.elevation : undefined,
-    rising: sunAttrs?.rising !== false,
+    elevation,
+    rising,
     cloudCover: finite(attrs?.cloud_coverage) ? attrs.cloud_coverage : undefined,
     cloudAltitude: attrs?.cloud_altitude,
     windSpeed: windMetersPerSecond(attrs?.wind_speed, attrs?.wind_speed_unit),

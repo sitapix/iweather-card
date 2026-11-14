@@ -1,5 +1,6 @@
 // Bakes the cloud sprites into seven grey images, assets/clouds-0.avif to clouds-6.avif, each a
 // grid of every sprite: 0–5 hold the light from +x, −x, +y, −y, +z and −z, and 6 the coverage.
+// The daylight storm uses its downward plane for diffuse sky light (see lightStorm).
 // Grey images keep a lossy encoder from bleeding one map into another, as its colour subsampling
 // would. AVIF at quality 70 keeps every map closer to the bake than WebP at quality 90 did, at 37%
 // of the size. They are seven files rather than one tall one so each decodes on its own, small
@@ -11,6 +12,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { deflateSync } from 'node:zlib';
+import { lightStorm } from './storm-light.ts';
 import {
   ATLAS_WIDTH,
   BLANKETS,
@@ -62,7 +64,9 @@ const width = ATLAS_WIDTH,
 // The singles, then the overcast blankets below them.
 [...CLOUD_SPRITES, ...BLANKETS].forEach(([kind, seed], index) => {
   const { left, top, width: w, height: h } = spriteRect(index),
-    { maps } = bakeCloud(kind, seed, w, h, spriteDepth(kind));
+    sprite = bakeCloud(kind, seed, w, h, spriteDepth(kind));
+  if (kind === 'isolatedStorm') lightStorm(sprite);
+  const { maps } = sprite;
   for (const [k, image] of planes.entries())
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) image[(top + y) * width + left + x] = (maps[(y * w + x) * 7 + k] ?? 0) * 255;

@@ -825,5 +825,8 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "Inställningen {key} måste ge var och en av {kinds} en https-URL med {z}, {x} och {y}.",
   "Choose a valid IANA time zone for {key}, for example {example}.": "Välj en giltig IANA-tidszon för {key}, till exempel {example}.",
   "In {minutes} minutes": "Om {minutes} minuter",
-  "{minutes} minutes ago": "För {minutes} minuter sedan"
+  "In {count} hours": {
+    "one": "Om {count} timme",
+    "other": "Om {count} timmar"
+  }
 }

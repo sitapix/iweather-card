@@ -2,46 +2,52 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { lightingFor, skyGradientFor, skyKind, skyPreset, sunDirection } from '../src/sky/presets.ts';
 import { dropletTier, dropletsFor } from '../src/sky/droplets.ts';
-import { WeatherScene } from '../src/sky/scene.ts';
-import { blanketSprite } from '../src/sky/cloud-decks.ts';
-import { scenePreset, type SceneInputs } from '../src/sky/sky.ts';
+import { scenePreset } from '../src/sky/sky.ts';
 
-test('conditions map to kinds of sky, with cloud cover at its thresholds', () => {
-  assert.equal(skyKind('partlycloudy'), 'partlyCloudyMidAltitude');
-  assert.equal(skyKind('sunny', { cloudCover: 5 }), 'clear');
-  assert.equal(skyKind('sunny', { cloudCover: 30 }), 'mostlyClear');
-  assert.equal(skyKind('cloudy', { cloudCover: 70 }), 'mostlyCloudyMidAltitude');
-  assert.equal(skyKind('cloudy'), 'cloudyHighAltitude', 'a full overcast is the high sky of soft mottling');
+test('named clear and cloud conditions retain their kind across cover values', () => {
+  for (const cloudCover of [0, 12.5, 37.5, 62.5, 87.5, 100, Number.NaN]) {
+    assert.equal(skyKind('sunny', { cloudCover }), 'clear');
+    assert.equal(skyKind('clear-night', { cloudCover }), 'clear');
+    assert.equal(skyKind('partlycloudy', { cloudCover }), 'partlyCloudyLowAltitude');
+    assert.equal(skyKind('cloudy', { cloudCover }), 'cloudyLowAltitude');
+  }
   assert.equal(skyKind('rainy', { precipitation: 0.2 }), 'drizzle');
   assert.equal(skyKind('pouring'), 'heavyRain');
 });
 
-test('a cover refines the condition and never overrules it, wherever the cover came from', () => {
-  assert.equal(skyKind('clear-night', { cloudCover: 95 }), 'mostlyClear', 'clear stays at most mostly clear');
-  assert.equal(skyKind('sunny', { cloudCover: 70 }), 'mostlyClear');
-  assert.equal(skyKind('partlycloudy', { cloudCover: 5 }), 'mostlyClear');
-  assert.equal(skyKind('partlycloudy', { cloudCover: 50 }), 'partlyCloudyMidAltitude');
-  assert.equal(skyKind('partlycloudy', { cloudCover: 100 }), 'mostlyCloudyMidAltitude', 'never overcast');
-  assert.equal(skyKind('cloudy', { cloudCover: 10 }), 'mostlyCloudyMidAltitude', 'never more than broken');
-  assert.equal(skyKind('cloudy', { cloudCover: 90 }), 'cloudyHighAltitude');
+test('wind coverage selects each cloud band at its lower endpoint', () => {
+  const bands = [
+    [0, 'clear'],
+    [12.499, 'clear'],
+    [12.5, 'mostlyClear'],
+    [37.499, 'mostlyClear'],
+    [37.5, 'partlyCloudyLowAltitude'],
+    [62.499, 'partlyCloudyLowAltitude'],
+    [62.5, 'mostlyCloudyLowAltitude'],
+    [87.499, 'mostlyCloudyLowAltitude'],
+    [87.5, 'cloudyLowAltitude'],
+    [100, 'cloudyLowAltitude'],
+  ] as const;
+  for (const condition of ['windy', 'windy-variant', 'Breezy'])
+    for (const [cloudCover, kind] of bands) assert.equal(skyKind(condition, { cloudCover }), kind);
+  assert.equal(skyKind('windy'), 'mostlyClear');
+  assert.equal(skyKind('windy-variant'), 'mostlyCloudyLowAltitude');
+  assert.equal(skyKind('windy', { cloudCover: Number.NaN }), 'mostlyClear');
+  assert.equal(skyKind('windy-variant', { cloudCover: Number.POSITIVE_INFINITY }), 'mostlyCloudyLowAltitude');
 });
 
-test('a cloudy sky is drawn at the height of its cloud, where that is known', () => {
-  assert.equal(skyKind('partlycloudy', { cloudAltitude: 'high' }), 'partlyCloudyHighAltitude');
-  assert.equal(skyKind('partlycloudy', { cloudCover: 50, cloudAltitude: 'low' }), 'partlyCloudyLowAltitude');
-  assert.equal(skyKind('partlycloudy', { cloudCover: 70, cloudAltitude: 'high' }), 'mostlyCloudyHighAltitude');
-  assert.equal(skyKind('cloudy', { cloudCover: 80, cloudAltitude: 'low' }), 'mostlyCloudyLowAltitude');
-  assert.equal(skyKind('cloudy', { cloudCover: 100, cloudAltitude: 'low' }), 'cloudyLowAltitude');
-  assert.equal(skyKind('cloudy', { cloudCover: 100, cloudAltitude: 'mid' }), 'cloudyMidAltitude');
-  const muggy = { temperature: 20, dewPoint: 18 };
-  assert.equal(skyKind('cloudy', { ...muggy, cloudAltitude: 'high' }), 'cloudyHighAltitude', 'the height known wins');
-  assert.equal(skyKind('cloudy', muggy), 'cloudyLowAltitude');
-  assert.equal(skyKind('windy-variant', { cloudAltitude: 'low' }), 'mostlyCloudyLowAltitude');
-  assert.equal(
-    skyKind('sunny', { cloudCover: 30, cloudAltitude: 'high' }),
-    'mostlyClear',
-    'clear skies have no height',
-  );
+test('named cloud conditions follow the available cloud height', () => {
+  for (const [cloudAltitude, suffix] of [
+    ['low', 'LowAltitude'],
+    ['mid', 'MidAltitude'],
+    ['high', 'HighAltitude'],
+  ] as const) {
+    assert.equal(skyKind('partlycloudy', { cloudAltitude, cloudCover: 90 }), `partlyCloudy${suffix}`);
+    assert.equal(skyKind('cloudy', { cloudAltitude, cloudCover: 10 }), `cloudy${suffix}`);
+    assert.equal(skyKind('Mostly Cloudy', { cloudAltitude, cloudCover: 5 }), `mostlyCloudy${suffix}`);
+    assert.equal(skyKind('windy', { cloudAltitude, cloudCover: 70 }), `mostlyCloudy${suffix}`);
+  }
+  assert.equal(skyKind('sunny', { cloudCover: 30, cloudAltitude: 'high' }), 'clear');
   assert.equal(skyPreset('mostlyCloudyHighAltitude').sky, 'default_high');
 });
 
@@ -76,149 +82,90 @@ test('mist that has lifted shows the sky above it, a low deck when that is full 
   const lifted = { visibility: 8 };
   assert.equal(skyKind('fog', lifted), 'cloudyLowAltitude');
   assert.equal(skyKind('fog', { ...lifted, cloudCover: 100 }), 'cloudyLowAltitude');
-  assert.equal(skyKind('fog', { ...lifted, cloudCover: 75 }), 'mostlyCloudyMidAltitude');
-  assert.equal(skyKind('fog', { ...lifted, cloudCover: 40 }), 'partlyCloudyMidAltitude');
+  assert.equal(skyKind('fog', { ...lifted, cloudCover: 75 }), 'mostlyCloudyLowAltitude');
+  assert.equal(skyKind('fog', { ...lifted, cloudCover: 40 }), 'partlyCloudyLowAltitude');
   assert.equal(skyKind('fog', { ...lifted, cloudCover: 5 }), 'clear');
 });
 
-test('a full overcast is soft mottling in the upper sky, with no heaps and no lid', () => {
-  const { decks, wideDecks, blanket } = skyPreset(skyKind('cloudy'));
-  for (const deck of [...decks, ...wideDecks]) {
-    assert.ok(deck && ['stratus', 'wispy'].includes(deck[0]), 'nothing here stops at a scalloped edge');
-    assert.ok(deck[3] >= 10, 'it hangs in the upper half of the frame, and thins out above the page');
-    assert.ok((deck[7] ?? 0) > 1, 'its puffs are rounder than the bake leaves them');
-  }
-  assert.equal(blanket?.[0], 'cirrus', 'a cirrus blanket counts as overcast but draws no lid');
-  assert.deepEqual(
-    scenePreset({ condition: 'cloudy', elevation: 30 }).sky,
-    skyGradientFor('cloudyHighAltitude', 30).slice(0, 3),
-    'with no lid to lighten it, the sky is its gradient',
-  );
-});
-
-test('clouds in each deck of an overcast or rain sky drift at their own speeds, so they pass one another', () => {
-  for (const kind of ['cloudyHighAltitude', 'cloudyMidAltitude', 'cloudyLowAltitude', 'rain'] as const) {
-    const { decks, wideDecks, day } = skyPreset(kind);
-    for (const deck of [...decks, ...wideDecks, ...(day?.decks ?? []), ...(day?.wideDecks ?? [])]) {
-      if (!deck) continue;
-      const [low, high] = deck[4];
-      assert.ok(high >= low * 2, `${kind}: the fastest ${deck[0]} go at least twice as fast as the slowest`);
-    }
-  }
-});
-
-test('a full overcast takes fine fibres while the sun is up, and keeps its soft mottling after dark', () => {
-  const { day, decks } = skyPreset(skyKind('cloudy'));
-  assert.equal(day?.decks[3]?.[0], 'cirrus');
-  assert.deepEqual(day.decks.slice(0, 2), decks.slice(0, 2), 'the soft sky behind them is the same');
-  assert.deepEqual(scenePreset({ condition: 'cloudy', night: false, elevation: 30 }).look.decks, day.decks);
-  assert.deepEqual(scenePreset({ condition: 'cloudy', night: true, elevation: -20 }).look.decks, decks);
-});
-
-test('a wide overcast is a soft layered field, not a few solid clouds', () => {
+test('cloud altitude selects the blanket and four depth groups', () => {
   const low = skyPreset('cloudyLowAltitude'),
+    mid = skyPreset('cloudyMidAltitude'),
     high = skyPreset('cloudyHighAltitude');
-  for (const look of [low.wideDecks, high.day?.wideDecks ?? [], skyPreset('cloudyMidAltitude').wideDecks])
-    for (const deck of look) assert.ok((deck?.[6] ?? 1) <= 0.6, 'each deck is thin enough to read as part of a field');
-  assert.ok((low.wideDecks[1]?.[3] ?? 0) > 8, 'the main deck sits in the top of the sky, with plain sky below it');
-  assert.notDeepEqual(low.wideDecks, low.decks, 'a narrow card keeps its own decks');
+  const art = (look: typeof low) => look.decks.map(deck => [deck?.[6], deck?.[1]]);
+  assert.equal(low.blanket?.[3], 'Stratus_Blanket');
+  assert.equal(mid.blanket?.[3], 'Altostratus_Blanket');
+  assert.equal(high.blanket?.[3], 'Altostratus_Blanket');
+  assert.deepEqual(art(low), [
+    ['Altostratus_SingleL', 4],
+    ['Cumulus_SingleL', 6],
+    ['Cumulus_SingleM', 4],
+    ['Wispy_Single', 6],
+  ]);
+  assert.deepEqual(art(mid), [
+    ['Altostratus_SingleL', 6],
+    ['Altostratus_SingleL', 6],
+    ['Altostratus_SingleS', 4],
+    ['Wispy_Single', 6],
+  ]);
+  assert.deepEqual(art(high), [
+    ['Altostratus_SingleL', 6],
+    ['Cirrostratus_SingleL', 6],
+    ['Cirrus_SingleS', 4],
+    ['Wispy_Single', 6],
+  ]);
+  assert.deepEqual(
+    low.decks.map(deck => deck?.[4]),
+    [
+      [0.3, 0.9],
+      [0.2, 0.6],
+      [0.2, 0.8],
+      [0.5, 1],
+    ],
+  );
 });
 
-test('overcast and rain by day show their gradient as it is', () => {
-  for (const [condition, kind, weather] of [
-    ['cloudy', 'cloudyLowAltitude', { temperature: 3, dewPoint: 2 }],
-    ['cloudy', 'cloudyHighAltitude', {}],
-    ['rainy', 'rain', {}],
+test('the layout selects emitter geometry while time selects its lighting', () => {
+  const inputs = { condition: 'cloudy', cloudAltitude: 'low', elevation: 60 } as const;
+  const day = scenePreset(inputs),
+    night = scenePreset({ ...inputs, night: true, elevation: -18 }),
+    wide = scenePreset({ ...inputs, windowClass: 'landscapeRegular' });
+  assert.deepEqual(day.look.decks, night.look.decks);
+  assert.equal(wide.look, skyPreset('cloudyLowAltitude', 'landscapeRegular'));
+  assert.notDeepEqual(day.look.decks, wide.look.decks);
+  assert.deepEqual([day.light.sunIntensity, day.light.ambientIntensity], [1000, 1]);
+  assert.deepEqual([night.light.sunIntensity, night.light.ambientIntensity], [200, 0.1]);
+  assert.equal(day.light.cloudAlpha[0], 0.25);
+  assert.equal(day.light.cloudAlpha[3], 0.5);
+});
+
+test('high sun uses the three sky colors underneath each cloud band', () => {
+  for (const [cloudAltitude, colors] of [
+    ['low', ['#7b8796', '#65717e', '#5a6570']],
+    ['mid', ['#85bce0', '#a9d4e6', '#b9cdcc']],
+    ['high', ['#bfd0e4', '#a7b8ca', '#90a0b0']],
   ] as const) {
-    const { sky } = scenePreset({ condition, elevation: 30, night: false, ...weather });
-    assert.deepEqual(sky, skyGradientFor(kind, 30, true).slice(0, 3), kind);
+    assert.deepEqual(scenePreset({ condition: 'cloudy', elevation: 60, cloudAltitude }).sky, colors);
   }
+  assert.deepEqual(scenePreset({ condition: 'mostly cloudy', cloudAltitude: 'low', elevation: 60 }).sky, [
+    '#064b8e',
+    '#3679ba',
+    '#62a3e5',
+  ]);
 });
 
-test('a full overcast by day has a deck darker than the sky, deepest when the sun is low', () => {
-  const dark = (elevation: number) => lightingFor('cloudyHighAltitude', elevation).brightness[1] ?? 1,
-    white = (elevation: number) => lightingFor('cloudyHighAltitude', elevation).brightness[0] ?? 0;
-  assert.ok(dark(60) < white(60) / 2, 'one deck darkens the sky while another lightens it');
-  assert.ok(dark(12) < dark(60), 'a low sun leaves more of it in shadow');
-});
-
-test('air at its dew point means low cloud: a heaped sky, which only a full overcast shows', () => {
-  const low = { temperature: 3, dewPoint: 2 };
-  assert.equal(skyKind('cloudy', low), 'cloudyLowAltitude');
-  assert.equal(skyKind('cloudy', { temperature: 3, dewPoint: -1.5 }), 'cloudyLowAltitude', 'at 4.5 °C it still counts');
-  assert.equal(skyKind('cloudy', { temperature: 15.5, dewPoint: 10.5 }), 'cloudyHighAltitude', '5 °C apart is high');
-  assert.equal(skyKind('cloudy', { temperature: 3 }), 'cloudyHighAltitude', 'with no dew point to go on, it is high');
-  assert.equal(skyKind('cloudy', { ...low, cloudCover: 70 }), 'mostlyCloudyMidAltitude', 'broken cloud is not low');
-  for (const deck of skyPreset('cloudyLowAltitude').decks.slice(0, 3)) assert.equal(deck?.[0], 'cumulus');
-});
-
-test('a mostly clear sky stays clear under a veil of cirrus as opaque as its preset says, and a high overcast stays overcast', () => {
-  const day = { night: false, elevation: 30 },
-    mostly = { condition: 'sunny', cloudCover: 25, ...day },
-    sky = scenePreset(mostly);
-  assert.equal(sky.kind, 'mostlyClear');
-  assert.equal(sky.overcastSky, false);
-  assert.equal(sky.blanket, 0.45);
-  assert.deepEqual(sky.sky, scenePreset({ condition: 'sunny', cloudCover: 0, ...day }).sky, 'as blue as a clear sky');
-  const scene = new WeatherScene(null);
-  scene.prepare(mostly);
-  assert.equal(scene.blanket?.sprite, blanketSprite('cirrus'));
-  const overcast = { condition: 'cloudy', cloudCover: 100, ...day };
-  assert.equal(scenePreset(overcast).kind, 'cloudyHighAltitude');
-  assert.equal(scenePreset(overcast).overcastSky, true);
-  scene.prepare(overcast);
-  assert.equal(scene.blanket, null, 'its soft mottling is all decks');
-});
-
-test("in the dark the night's light shades cloud with sky between it, at twice its share; twilight and a full overcast keep a third", () => {
-  const sun = (inputs: SceneInputs) => {
-    const scene = new WeatherScene(null);
-    scene.prepare(inputs);
-    const [, deck] = scene.tints;
-    assert.ok(deck);
-    return deck.sun[3];
-  };
-  const share = (inputs: SceneInputs) => Math.min(0.95, scenePreset(inputs).light.sunIntensity / 900);
-  const dark = { condition: 'partlycloudy', night: true, elevation: -40, cloudCover: 50 },
-    dusk = { ...dark, elevation: -3 },
-    overcast = { condition: 'cloudy', night: true, elevation: -40, cloudCover: 100 };
-  assert.ok(Math.abs(sun(dark) - share(dark) * 2) < 1e-9, 'night');
-  assert.ok(Math.abs(sun(dusk) - share(dusk) * 0.35) < 1e-9, 'twilight');
-  assert.ok(Math.abs(sun(overcast) - share(overcast) * 0.35) < 1e-9, 'a full overcast');
-});
-
-test("rain at night keeps its blue; a dry overcast's cloud is near neutral over a blue sky; others keep their light", () => {
-  const lit = (inputs: SceneInputs) => {
-    const scene = new WeatherScene(null);
-    scene.prepare(inputs);
-    const [, deck] = scene.tints;
-    assert.ok(deck);
-    return deck;
-  };
-  const blue = ([red, , blue]: readonly number[]) => (blue ?? 0) - (red ?? 0);
-  const rain = lit({ condition: 'rainy', night: true, elevation: -60, cloudCover: 100 });
-  assert.equal(rain.ambient[3], 2, 'the floor under a night overcast');
-  assert.ok(blue(rain.ambient) >= 16, `ambient light stays blue, ${rain.ambient.join()}`);
-  assert.ok(blue(rain.sun) <= 12, `the moon's light stays near grey, ${rain.sun.join()}`);
-  const dry = lit({ condition: 'cloudy', night: true, elevation: -60, cloudCover: 100 });
-  assert.ok(blue(dry.ambient) <= 12, `cloud adds grey to the blue sky, which stays blue, ${dry.ambient.join()}`);
-  // Days are as they were. In the dark, cloud with sky between it stands on a lower floor, as the night's light shades it.
-  const ambient = (inputs: SceneInputs) => lit(inputs).ambient;
-  assert.deepEqual(
-    ambient({ condition: 'clear-night', night: true, elevation: -40, cloudCover: 25 }),
-    [69, 75, 108, 1.1],
-  );
-  assert.deepEqual(
-    ambient({ condition: 'partlycloudy', night: true, elevation: -40, cloudCover: 50 }),
-    [56, 60, 92, 1.1],
-  );
-  // Mist is its own light, in its own colour: none of it comes from the sun or moon.
-  assert.deepEqual(ambient({ condition: 'fog', night: true, elevation: -40 }), [40, 60, 70, 1]);
-  assert.equal(lit({ condition: 'fog', night: true, elevation: -40 }).sun[3], 0);
-  assert.deepEqual(
-    ambient({ condition: 'rainy', night: false, elevation: 40, cloudCover: 100 }),
-    [106, 113, 125, 1.15],
-  );
+test('missing cloud height uses low cloud independently of surface humidity', () => {
+  for (const readings of [
+    {},
+    { temperature: 3, dewPoint: 2 },
+    { temperature: 15.5, dewPoint: 10.5 },
+    { temperature: 3 },
+  ]) {
+    assert.equal(skyKind('cloudy', readings), 'cloudyLowAltitude');
+    assert.equal(skyKind('partlycloudy', readings), 'partlyCloudyLowAltitude');
+  }
+  assert.equal(skyKind('cloudy', { temperature: 3, dewPoint: 2, cloudAltitude: 'high' }), 'cloudyHighAltitude');
+  // Custom entity attributes arrive as JSON and can contain a height the card doesn't know.
+  assert.equal(skyKind('cloudy', { cloudAltitude: '900 m' }), 'cloudyLowAltitude');
 });
 
 test('sky gradients and light interpolate the keyframes by sun elevation', () => {
@@ -231,7 +178,7 @@ test('sky gradients and light interpolate the keyframes by sun elevation', () =>
 });
 
 test('presets drive the scene: decks, layers and precipitation', () => {
-  const partly = scenePreset({ condition: 'partlycloudy', elevation: 30 });
+  const partly = scenePreset({ condition: 'partlycloudy', cloudAltitude: 'mid', elevation: 30 });
   assert.deepEqual(
     partly.look.decks.map(deck => deck?.[0] ?? null),
     skyPreset('partlyCloudyMidAltitude').decks.map(deck => deck?.[0] ?? null),
@@ -297,6 +244,11 @@ test("lightning without rain, and drizzle from the current hour's amount", async
   const { sceneInputs } = await import('../src/weather/conditions.ts');
   const storm = scenePreset({ condition: 'lightning', elevation: 20 });
   assert.equal(storm.kind, 'isolatedThunderstorms');
+  assert.equal(storm.look.blanket?.[3], 'Cumulonimbus_BlanketS');
+  assert.deepEqual(
+    scenePreset({ condition: 'lightning', elevation: -20, night: true }).look.blanket,
+    storm.look.blanket,
+  );
   assert.equal(storm.lightning, true);
   assert.equal(storm.rain, 0);
   assert.ok(scenePreset({ condition: 'lightning-rainy', elevation: 20 }).rain > 0);
@@ -397,7 +349,7 @@ test('exceptional weather is told apart by its wind and air', () => {
     'humid air carries no dust',
   );
   assert.equal(skyKind('exceptional'), 'hurricane', 'nothing to go on');
-  assert.equal(skyKind('exceptional', { windSpeed: 3 }), 'cloudyMidAltitude', 'a calm is no storm');
+  assert.equal(skyKind('exceptional', { windSpeed: 3 }), 'cloudyLowAltitude', 'a calm is no storm');
 });
 
 test("an integration's own words draw the nearest sky, refined by the readings as a condition is", () => {
@@ -411,27 +363,84 @@ test("an integration's own words draw the nearest sky, refined by the readings a
   assert.equal(skyKind('heavy intensity rain'), 'heavyRain');
   assert.equal(skyKind('Freezing Rain'), 'freezingRain');
   assert.equal(skyKind('Drizzle'), 'drizzle');
+  assert.equal(skyKind('rain', { cloudCover: 10, temperature: -1, precipitation: 0.2 }), 'rain');
+  assert.equal(skyKind('foggy', { visibility: 10 }), 'foggy');
+  assert.equal(skyKind('thunderstorms', { cloudCover: 10, precipitation: 10 }), 'thunderstorms');
+  assert.equal(skyKind('StrongStorms'), 'strongStorms');
+  assert.equal(skyKind('SunFlurries'), 'sunFlurries');
+  assert.equal(skyKind('Hot'), 'hot');
+  assert.equal(skyKind('Frigid'), 'frigid');
   assert.equal(skyKind('Sleet'), 'sleet');
   assert.equal(skyKind('Rain and Snow'), 'wintryMix');
   assert.equal(skyKind('Snow Showers'), 'snow', 'showers of snow are snow');
-  assert.equal(skyKind('snow', { windSpeed: 16 }), 'blizzard');
+  assert.equal(skyKind('snow', { windSpeed: 16 }), 'snow');
   assert.equal(skyKind('Chance Flurries'), 'flurries');
   assert.equal(skyKind('Mist', { visibility: 3, humidity: 95 }), 'foggy');
   assert.equal(skyKind('Haze'), 'haze');
   assert.equal(skyKind('Smoke'), 'smoky');
   assert.equal(skyKind('Dust Storm'), 'blowingDust', 'a dust storm is no thunderstorm');
   assert.equal(skyKind('Windy'), 'mostlyClear');
-  assert.equal(skyKind('Breezy and Mostly Cloudy'), 'mostlyCloudyMidAltitude');
+  assert.equal(skyKind('Breezy and Mostly Cloudy'), 'mostlyCloudyLowAltitude');
+  assert.equal(
+    skyKind('Breezy and Mostly Cloudy', { cloudCover: 5, cloudAltitude: 'high' }),
+    'mostlyCloudyHighAltitude',
+  );
+  assert.equal(skyKind('Breezy and Mostly Sunny', { cloudCover: 95 }), 'mostlyClear');
   assert.equal(skyKind('Windstorm'), 'mostlyClear');
-  assert.equal(skyKind('Overcast clouds'), 'cloudyHighAltitude');
-  assert.equal(skyKind('Mostly Cloudy'), 'mostlyCloudyMidAltitude');
-  assert.equal(skyKind('Mixed sun and cloud'), 'partlyCloudyMidAltitude');
-  assert.equal(skyKind('Dark_LightCloud'), 'partlyCloudyMidAltitude');
+  assert.equal(skyKind('Overcast clouds'), 'cloudyLowAltitude');
+  assert.equal(skyKind('Mostly Cloudy'), 'mostlyCloudyLowAltitude');
+  assert.equal(skyKind('Mixed sun and cloud'), 'partlyCloudyLowAltitude');
+  assert.equal(skyKind('Dark_LightCloud'), 'partlyCloudyLowAltitude');
   assert.equal(skyKind('Mostly Sunny'), 'mostlyClear');
-  assert.equal(skyKind('Clear sky', { cloudCover: 30 }), 'mostlyClear');
+  assert.equal(skyKind('Clear sky', { cloudCover: 30 }), 'clear');
   assert.equal(skyKind('Hurricane'), 'hurricane');
-  assert.equal(skyKind('Frost'), 'cloudyMidAltitude', 'words that name no weather keep the overcast sky');
-  assert.equal(skyKind('Bewölkt'), 'cloudyMidAltitude', 'only English is read');
+  assert.equal(skyKind('Frost'), 'cloudyLowAltitude', 'words that name no weather keep the overcast sky');
+  assert.equal(skyKind('Bewölkt'), 'cloudyLowAltitude', 'only English is read');
+});
+
+test('explicit provider conditions keep their named preset through conflicting readings', () => {
+  const readings = {
+    cloudCover: 100,
+    cloudAltitude: 'high',
+    precipitation: 10,
+    windSpeed: 40,
+    visibility: 20,
+    temperature: -5,
+  } as const;
+  for (const condition of [
+    'blizzard',
+    'blowingDust',
+    'blowingSnow',
+    'clear',
+    'drizzle',
+    'flurries',
+    'foggy',
+    'freezingDrizzle',
+    'freezingRain',
+    'frigid',
+    'hail',
+    'haze',
+    'heavyRain',
+    'heavySnow',
+    'hot',
+    'hurricane',
+    'isolatedThunderstorms',
+    'mostlyClear',
+    'rain',
+    'scatteredThunderstorms',
+    'sleet',
+    'smoky',
+    'snow',
+    'strongStorms',
+    'sunFlurries',
+    'sunShowers',
+    'thunderstorms',
+    'tropicalStorm',
+    'wintryMix',
+  ])
+    assert.equal(skyKind(condition, readings), condition);
+  assert.equal(skyKind('mostlyCloudy', readings), 'mostlyCloudyHighAltitude');
+  assert.equal(skyKind('partlyCloudy', readings), 'partlyCloudyHighAltitude');
 });
 
 test("an integration's own words take the nearest condition's scene, and no condition takes none", async () => {

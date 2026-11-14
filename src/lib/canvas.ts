@@ -31,6 +31,13 @@ export const CHANNEL_MAX = 255;
 const HEX = 16,
   DIGITS = 2,
   CHANNELS = [0, 1, 2] as const;
+const ALPHA_START = 1 + CHANNELS.length * DIGITS;
+export const colorAlpha = (color: string): number =>
+  color.length === ALPHA_START + DIGITS ? Number.parseInt(color.slice(ALPHA_START), HEX) / CHANNEL_MAX : 1;
+export const alphaHex = (alpha: number): string =>
+  Math.round(Math.max(0, Math.min(1, alpha)) * CHANNEL_MAX)
+    .toString(HEX)
+    .padStart(DIGITS, '0');
 export const rgb = (color: string): RGB => {
   const [red, green, blue] = CHANNELS.map(channel =>
     Number.parseInt(color.slice(1 + channel * DIGITS, 1 + (channel + 1) * DIGITS), HEX),

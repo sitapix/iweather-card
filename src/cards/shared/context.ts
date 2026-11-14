@@ -1,3 +1,4 @@
+import type { RainOutlook } from '../../weather/rain-outlook.ts';
 import type { EntityAttributes, EntityState, HomeAssistant } from '../../card/home-assistant.ts';
 import type { TimedEntry, DailyItem } from '../../weather/forecast-items.ts';
 import type { CardConfig } from '../../card/config.ts';
@@ -58,6 +59,9 @@ export interface TileContext {
   airAwaited?: boolean;
   // The next-hour panel is showing precipitation on its way.
   nextHour?: boolean;
+  // How soon precipitation comes, from the minute forecast and then the hourly (see rainOutlook);
+  // undefined while the minute forecast is on its way.
+  rainOutlook?: RainOutlook | undefined;
   // The last weeks' precipitation, day by day to yesterday (see openMeteoRecentRain).
   recentRain?: RecentRain | null | undefined;
   climate: Climate | null | undefined;

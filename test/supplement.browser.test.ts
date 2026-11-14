@@ -149,10 +149,13 @@ test('changing a setting rebuilds the preview with its known cloud cover from th
   const partly = body();
   partly.hourly.cloud_cover = partly.hourly.time.map(() => 75);
   asked.mockImplementation(() => Promise.resolve({ ok: true, json: () => Promise.resolve(partly) }));
-  const hass = hassWith(hoursOf(48), daysOf(6)),
+  const fixture = hassWith(hoursOf(48), daysOf(6)),
+    home = fixture.states['weather.home'];
+  if (!home) throw new Error('No weather entity.');
+  const hass = { ...fixture, states: { ...fixture.states, 'weather.home': { ...home, state: 'windy' } } },
     first = page(hass, { weather_animation: true });
   await vi.waitFor(() => {
-    expect(first.scene.preset?.kind).toBe('mostlyCloudyMidAltitude');
+    expect(first.scene.preset?.kind).toBe('mostlyCloudyLowAltitude');
     expect(first.scene.outgoing).toBeNull();
   });
   const painted: { kind: string | undefined; transitioning: boolean }[] = [];
@@ -171,17 +174,15 @@ test('changing a setting rebuilds the preview with its known cloud cover from th
     next.setConfig({ ...next.config, show_name: false });
     await settled();
     expect(next.animating).toBe(true);
-    expect(next.scene.preset?.kind).toBe('mostlyCloudyMidAltitude');
+    expect(next.scene.preset?.kind).toBe('mostlyCloudyLowAltitude');
     expect(painted.length).toBeGreaterThan(0);
-    expect(painted.filter(frame => frame.kind !== 'mostlyCloudyMidAltitude' || frame.transitioning)).toEqual([]);
+    expect(painted.filter(frame => frame.kind !== 'mostlyCloudyLowAltitude' || frame.transitioning)).toEqual([]);
     latest = next;
   }
   expect(forecastCalls()).toBe(1);
   // A real weather change still transitions while the scene animates.
-  const home = hass.states['weather.home'];
-  if (!home) throw new Error('No weather entity.');
   latest.hass = { ...hass, states: { ...hass.states, 'weather.home': { ...home, state: 'rainy' } } };
-  expect(latest.scene.preset?.kind).not.toBe('mostlyCloudyMidAltitude');
+  expect(latest.scene.preset?.kind).not.toBe('mostlyCloudyLowAltitude');
   expect(latest.scene.outgoing).not.toBeNull();
 });
 

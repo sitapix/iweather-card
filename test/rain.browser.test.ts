@@ -52,6 +52,63 @@ test('rain responds immediately to resized cards, changed winds and a new kind o
   }
 });
 
+test('rain keeps its direction and thins out as fog moves in', () => {
+  const rain = scene({ condition: 'rainy', cloudCover: 95, windSpeed: 5.36 });
+  const ink = (phase: number) => {
+    rain.advance(phase);
+    const pixels = draw(rain, phase);
+    let alpha = 0;
+    for (let i = 3; i < pixels.length; i += 4) alpha += pixels[i] ?? 0;
+    return alpha;
+  };
+  const full = ink(1000),
+    { front, back } = rain.rainFields;
+  expect(full).toBeGreaterThan(0);
+
+  rain.prepare({ condition: 'fog', visibility: 0.5, windSpeed: 1.34 }, { animate: true });
+  const first = ink(1016);
+  expect(first).toBeGreaterThan(full * 0.8);
+  expect(rain.rainFields.front).toBe(front);
+  expect(rain.rainFields.back).toBe(back);
+  const fading = ink(1516);
+  expect(fading).toBeGreaterThan(0);
+  expect(fading).toBeLessThan(first / 2);
+
+  rain.prepare({ condition: 'sunny' }, { animate: true });
+  expect(ink(2016)).toBeLessThan(fading);
+  expect(rain.rainFields.front).toBe(front);
+  expect(ink(0)).toBe(0);
+  expect(rain.rainFields).toEqual({});
+});
+
+test('individual rain streaks span the lighting colors even when both ends are equally opaque', () => {
+  const rain = scene({ condition: 'rainy' });
+  if (!rain.canvas || !rain.preset) throw new Error('No rain scene.');
+  const redToBlue = ['#ff0000ff', '#0000ffff'] as const;
+  const original = rain.preset.light.precipitation;
+  rain.preset.light = {
+    ...rain.preset.light,
+    precipitation: { ...original, rain: { front: redToBlue, back: redToBlue } },
+  };
+  const ctx = context2d(rain.canvas);
+  rain.canvas.width = SIZE.width;
+  rain.canvas.height = SIZE.height;
+  for (const near of [true, false]) {
+    rain.paintRain(ctx, SIZE.width, SIZE.height, 8000, near);
+    const pixels = ctx.getImageData(0, 0, SIZE.width, SIZE.height).data;
+    let red = 0,
+      blue = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      if ((pixels[i + 3] ?? 0) < 12) continue;
+      const difference = (pixels[i] ?? 0) - (pixels[i + 2] ?? 0);
+      if (difference > 80) red++;
+      if (difference < -80) blue++;
+    }
+    expect(Math.min(red, blue)).toBeGreaterThan(0);
+    ctx.clearRect(0, 0, SIZE.width, SIZE.height);
+  }
+});
+
 test('dry and hidden skies release the cached drops', () => {
   const cached = scene(CASES[0] ?? {});
   draw(cached, 8000);

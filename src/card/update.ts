@@ -46,6 +46,8 @@ import { sensorReadings } from '../weather/sources.ts';
 import { isHome, weatherPlace } from './place.ts';
 import { type Credits, creditsOf } from './credits.ts';
 import { airNow } from '../cards/air-quality/rules.ts';
+import { minuteSpans, rainOutlook } from '../weather/rain-outlook.ts';
+import type { Quarter } from '../weather/open-meteo.ts';
 // What one update of the card works out, as plain data, before anything is drawn: every panel and
 // sheet then draws from this and nothing else, so what is drawn first can't change what follows.
 export interface Update {
@@ -106,6 +108,9 @@ export interface UpdateSources {
   awaited: boolean;
   // When the supplemental forecast was retrieved, retained with its response.
   supplementAt?: number | undefined;
+  // Its quarter hours ahead (see rainOutlook), and whether any are still to come.
+  quarters?: readonly Quarter[] | undefined;
+  quartersComing?: boolean;
   // A nowcast weather entity's own forecast.
   nowcast: readonly ForecastEntry[] | undefined;
   timeZone: string | undefined;
@@ -177,6 +182,8 @@ export function workOut({
   supplied,
   awaited,
   supplementAt,
+  quarters,
+  quartersComing = false,
   nowcast,
   timeZone,
   prefersDark,
@@ -226,7 +233,10 @@ export function workOut({
   // As the page's headline it is capitalised as one, in English.
   const sky = available ? skyKind(inputs.condition ?? '', inputs) : undefined,
     refined =
-      sky !== undefined && isCondition(inputs.condition)
+      sky !== undefined &&
+      isCondition(inputs.condition) &&
+      inputs.condition !== CONDITION.windy &&
+      inputs.condition !== CONDITION.windyVariant
         ? (inputs.night && NIGHT_LABELS[sky]) || KIND_LABELS[sky]
         : undefined,
     // Fog that has thinned to nothing leaves the sky it lay under to name the weather.
@@ -333,6 +343,11 @@ export function workOut({
       airSupply,
       airAwaited: records.airAwaited ?? false,
       nextHour: Boolean(nextHour.data),
+      // Undecided while the minute forecast is still on its way.
+      rainOutlook:
+        quartersComing && !nextHour.data
+          ? undefined
+          : rainOutlook(minuteSpans(nextHour.data?.series, quarters, now), hourly, now),
       recentRain: records.recentRain?.rain,
       climate:
         records.climate && records.climateUnits

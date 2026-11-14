@@ -91,6 +91,11 @@ function supplement() {
       sunrise: days.map(time => time + 12 * 3600),
       sunset: days.map(time => time + 23 * 3600),
     },
+    // Raining as the hours say, a quarter hour at a time from the one under way.
+    minutely_15: {
+      time: Array.from({ length: 12 }, (_, i) => SECONDS - (SECONDS % 900) + (i + 1) * 900),
+      precipitation: Array.from({ length: 12 }, () => 0.2),
+    },
   };
 }
 // Air quality filled in where no sensor is set: a moderate index now, with yesterday's hours.

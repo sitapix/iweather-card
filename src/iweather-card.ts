@@ -28,8 +28,13 @@ import { safely } from './lib/safely.ts';
 import { STRATEGY, WeatherDashboardStrategy } from './card/strategy.ts';
 import { suggestWeatherEntity } from './card/weather-entity.ts';
 import { WeatherScene } from './sky/scene.ts';
+import { skyWindowClass } from './sky/presets.ts';
+import { listTextScale } from './sky/cloud-camera.ts';
+import type { WindowClass } from './sky/presets-data.ts';
 import type { Panel } from './sky/droplets.ts';
 import { CloudAtlas } from './sky/cloud-decks.ts';
+import { CLOUD_MAPS } from './sky/cloud-maps.ts';
+import { loadEffectArt } from './sky/effect-art.ts';
 import { weatherText, type TextKey, type WeatherText } from './weather/i18n.ts';
 import { loadWords, phrase, say } from './weather/words.ts';
 import { TILE_CARDS, opensSheet, tileEntities, tileMarkup, tileOrder } from './cards/index.ts';
@@ -40,7 +45,7 @@ import { lightTitle, tileText } from './cards/shared/tile.ts';
 import { LINE_MIDDLE, WORDS, addedLight } from './cards/shared/light.ts';
 import { esc, PERCENT } from './lib/html.ts';
 import type { TileContext } from './cards/shared/context.ts';
-import { drawMoon, loadMoon, skyMoon } from './sky/moon.ts';
+import { drawMoon, loadSkyMoon, skyMoon } from './sky/moon.ts';
 import { pressMotion } from './lib/press.ts';
 import { targetOf, setText } from './lib/dom.ts';
 import { bindForecastSwitch, placeThumb } from './cards/forecast/switch.ts';
@@ -79,16 +84,6 @@ const LANDSCAPE = 1.3;
 // A night sky with at least this share of its stars showing reads as clear (see the compact card's styles).
 const STARRY = 0.5;
 // The full layout's daily list spans a grid row for every 3.4 days, two at least.
-// The cloud maps beside the card (see scripts/clouds.ts), named in full so the build emits each.
-const CLOUD_MAPS = [
-  new URL('../assets/clouds-0.avif', import.meta.url).href,
-  new URL('../assets/clouds-1.avif', import.meta.url).href,
-  new URL('../assets/clouds-2.avif', import.meta.url).href,
-  new URL('../assets/clouds-3.avif', import.meta.url).href,
-  new URL('../assets/clouds-4.avif', import.meta.url).href,
-  new URL('../assets/clouds-5.avif', import.meta.url).href,
-  new URL('../assets/clouds-6.avif', import.meta.url).href,
-];
 const DAYS_PER_ROW = 3.4;
 const MIN_DAILY_ROWS = 2;
 // A scrolling page paints the sky to the screen's height, and at least 220px past the hero.
@@ -248,6 +243,7 @@ export class IWeatherCard extends HTMLElement {
   visible = true;
   animating = false;
   private _wide: boolean | undefined;
+  private _windowClass: WindowClass | undefined;
   // Too narrow for the forecast's switch (see NARROW): the forecast shows conditions.
   private _narrow: boolean | undefined;
   // Shorter than an expanded card needs (see SHORT).
@@ -328,7 +324,7 @@ export class IWeatherCard extends HTMLElement {
     // The GPU takes the maps itself, so they are decoded for the 2D drawing only if it can't.
     WeatherScene.atlas ??= new CloudAtlas(CLOUD_MAPS, { now: !WeatherScene.gpuClouds });
     // The moon's photograph, given to the scene as the cloud atlas is.
-    WeatherScene.moon ??= { load: loadMoon, sprite: skyMoon };
+    WeatherScene.moon ??= { load: loadSkyMoon, sprite: skyMoon };
     void WeatherScene.atlas.ready.then(() => this.paint());
     // A browser can drop what a canvas holds, as on a wall tablet whose screen sleeps, and hand it
     // back blank: the layers kept for it went too.
@@ -638,9 +634,17 @@ export class IWeatherCard extends HTMLElement {
         wide = this.config?.weather_layout !== 'page' && box.width > box.height * LANDSCAPE;
       const { width, height } = this.box(this, this.measureZoom()),
         narrow = width < NARROW,
-        short = height < SHORT;
-      if (wide !== this._wide || narrow !== this._narrow || short !== this._short) {
+        short = height < SHORT,
+        windowClass =
+          width > 0 && height > 0 ? skyWindowClass(width, height, Math.max(screen.width, screen.height)) : undefined;
+      if (
+        wide !== this._wide ||
+        narrow !== this._narrow ||
+        short !== this._short ||
+        windowClass !== this._windowClass
+      ) {
         this._wide = wide;
+        this._windowClass = windowClass;
         this._narrow = narrow;
         this._short = short;
         this.render();
@@ -812,6 +816,8 @@ export class IWeatherCard extends HTMLElement {
         data: this.forecasts.data,
         supplied: this.forecasts.supplement !== undefined,
         supplementAt: this.forecasts.supplement?.raw.at,
+        quarters: this.forecasts.supplement?.raw.quarters,
+        quartersComing: !this.records.supplementSettled,
         awaited: this.records.supplementAwaited,
         nowcast: this.nowcast.data.hourly?.forecast,
         timeZone: this.timeZone,
@@ -946,11 +952,36 @@ export class IWeatherCard extends HTMLElement {
     parts.forecast.hidden = !forecast;
   }
   // The sky. A running animation fades between scenes; still renders cut straight over.
-  drawScene({ inputs }: Update) {
-    const sceneKey = this.scene.key;
-    this.scene.prepare(inputs, { animate: this.animating, wide: this._wide ?? false });
-    const preset = this.scene.preset;
-    if (this.scene.key !== sceneKey && preset) {
+  drawScene({ inputs, config, ctx }: Update) {
+    const sceneKey = this.scene.key,
+      tile = config.weather_layout === 'compact' || config.weather_layout === 'strip';
+    this.scene.prepare(
+      { ...inputs, tile, windowClass: this._windowClass },
+      {
+        animate: this.animating,
+        wide: this._wide ?? false,
+        textScale: tile ? listTextScale(parseFloat(getComputedStyle(document.documentElement).fontSize)) : 1,
+        location: JSON.stringify([config.entity, config.zone, ctx.latitude, ctx.longitude]),
+      },
+    );
+    const preset = this.scene.preset,
+      background = this.scene.background;
+    if (preset) {
+      const art = [
+        preset.wind ? 'wind' : undefined,
+        preset.look.layers.includes('nearParticles') ? 'near' : undefined,
+        preset.snow || preset.sleet || preset.hail ? 'falling' : undefined,
+        preset.rain ? 'rain' : undefined,
+        preset.fog ? 'noise' : undefined,
+        preset.fringe ? 'fringe' : undefined,
+      ] as const;
+      const requests = art.flatMap(kind => (kind && loadEffectArt(kind)) ?? []);
+      if (requests.length)
+        void Promise.all(requests).then(loaded => {
+          if (loaded.some(Boolean)) this.paint();
+        });
+    }
+    if (this.scene.key !== sceneKey && preset && background) {
       // Panels take their tint from the sky.
       const weather = this.parts.weather;
       // Panels carry no tint: the material blurs and saturates what is behind them and
@@ -958,10 +989,10 @@ export class IWeatherCard extends HTMLElement {
       // bright skies darker ones.
       // The material carries no tint of its own: the luminance curve alone sets the panels.
       weather.style.setProperty('--panel-bg', 'transparent');
-      preset.sky.forEach((color, index) => {
+      background.colors.forEach((color, index) => {
         weather.style.setProperty(`--sky-${index}`, color);
       });
-      weather.style.setProperty('--sky-stop', String(preset.skyStop));
+      weather.style.setProperty('--sky-stop', String(background.middleStop));
       weather.dataset['starry'] = String(preset.stars >= STARRY);
       this.paint();
       this.syncEffects();
@@ -1259,22 +1290,25 @@ export class IWeatherCard extends HTMLElement {
     if (!glassFirst) this.glass.paint(phase);
   }
   syncEffects() {
+    const wasAnimating = this.animating;
     clock.remove(this);
     this.animating = false;
     if (!this.isConnected || !this.config) return;
     this.maps.draw();
-    const visible = this.visible && !document.hidden;
+    const detail = this.sheets.detail,
+      fullMap = detail?.id === 'map' && detail.dialog.open && detail.dialog.hasAttribute('data-full'),
+      visible = this.visible && !document.hidden;
     if (!this.config.weather_scene || this.config.low_power) this.glass.clearDrops();
     // A sky out of sight lets go of its largest layers until it is drawn again.
     if (!visible) {
       this.scene.release();
       this.glass.release();
     }
-    if (visible && this.config.weather_scene && this.config.weather_animation && !this.motion?.matches) {
+    if (visible && !fullMap && this.config.weather_scene && this.config.weather_animation && !this.motion?.matches) {
       // Precipitation and lightning need smooth motion; calm skies only drift.
       clock.add(this);
       this.animating = true;
-    } else if (visible && this._paintPending) this.paint();
+    } else if (visible && (wasAnimating || this._paintPending)) this.paint();
   }
   // The element showing a part of the card, when it is showing (see EditPreview). The tiles as a
   // whole are where they begin: their box lays out its tiles but has none of its own.

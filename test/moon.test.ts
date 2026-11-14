@@ -1,8 +1,99 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
-import { arcX, MOON_ARC, moonHeight, moonPlace, type Rect } from '../src/sky/scene.ts';
+import { arcX, moonAcross, moonHeight, moonPlace, type Rect } from '../src/sky/scene.ts';
+import { solarHour, sunPathAt } from '../src/sky/presets.ts';
+import { scenePreset, skyMoonPhase, moonAltitude, moonHourAt } from '../src/sky/sky.ts';
+import { sceneInputs } from '../src/weather/conditions.ts';
 import { sheetDim } from '../src/sky/moon-gpu.ts';
 import { tickAt, tickFeel } from '../src/cards/moon/timeline.ts';
+
+test('the sun path uses the chosen window, its daylight interval and whole iris particles', () => {
+  for (const layout of ['compact', 'compactLandscape', 'portraitRegular', 'landscapeRegular', 'ultrawide'] as const) {
+    const noon = sunPathAt(12, layout);
+    assert.equal(noon.x, 0.5);
+    assert.ok(noon.alpha > 0);
+    assert.equal(sunPathAt(0, layout).alpha, 0);
+  }
+  assert.equal(sunPathAt(12).y, 0);
+  assert.ok(Math.abs(sunPathAt(12, 'ultrawide').y - 0.28) < 1e-6);
+  assert.equal(sunPathAt(7.25).ghosts, 7);
+  assert.equal(sunPathAt(12.001).ghosts, 6);
+  const hour = 3600000,
+    start = Date.UTC(2026, 2, 8, 13);
+  assert.equal(solarHour(start + 2 * hour, { sunrise: start, sunset: start + 8 * hour }), 9);
+  const missing = { elevation: 22, rising: false };
+  assert.equal(
+    solarHour(start, { ...missing, nextSetting: start + 40 * 24 * hour, nextRising: start + 60 * 24 * hour }),
+    solarHour(start, missing),
+  );
+});
+
+test('lunar lighting, disc, and direct sun have separate gates', () => {
+  const inputs = { condition: 'sunny', elevation: 9, moonAltitude: 9.01, moonPhase: 0.25 };
+  const up = scenePreset(inputs),
+    list = scenePreset({ ...inputs, tile: true });
+  assert.ok(up.moon && !list.moon && !up.sun);
+  assert.deepEqual(up.light, list.light);
+  assert.ok(!up.rays && !up.ghosts && !up.rainbow);
+  assert.equal(scenePreset({ ...inputs, moonAltitude: 9 }).moon, false);
+  assert.equal(scenePreset({ ...inputs, moonPhase: 0 }).moon, false);
+  const day = scenePreset({ ...inputs, elevation: 9.01 });
+  assert.ok(day.sun && day.rays && !day.moon);
+  assert.equal(skyMoonPhase(0.25, 179.99), 21 / 28);
+  assert.equal(skyMoonPhase(0.25, 180), 7 / 28);
+});
+
+test('the lunar path uses an independent rise-to-set interval and crosses the middle once', () => {
+  assert.equal(moonAcross(0), 0.1);
+  assert.equal(moonAcross(0.5), 0.35);
+  assert.ok(moonAcross(0.50001) > 0.65);
+  assert.ok(Math.abs(moonAcross(1) - 0.9) < 1e-9);
+  const start = Date.UTC(2026, 9, 26),
+    latitude = 41.88,
+    longitude = -87.63;
+  let count = 0,
+    previous = 0;
+  for (let i = 0; i < 12; i++) {
+    const time = start + i * 3600000,
+      elevation = moonAltitude(time, latitude, longitude);
+    if (elevation === undefined || elevation <= 9) continue;
+    const hour = moonHourAt(time, latitude, longitude);
+    assert.ok(hour !== undefined && hour > 6 && hour < 18 && hour > previous);
+    previous = hour;
+    count++;
+  }
+  assert.ok(count >= 3);
+  const withoutSun = sceneInputs(undefined, undefined, { latitude, longitude }, start);
+  assert.ok(Number.isFinite(withoutSun.elevation) && Number.isFinite(withoutSun.solarHour));
+  const polar = sceneInputs(
+    { state: 'sunny', attributes: {} },
+    undefined,
+    { latitude: 69.65, longitude: 18.96 },
+    Date.UTC(2026, 5, 21, 11),
+  );
+  assert.ok((polar.elevation ?? 0) > 9);
+  assert.equal(polar.sunPathAvailable, false);
+  assert.equal(scenePreset(polar).sun, false);
+  assert.equal(scenePreset({ condition: 'sunny', elevation: 30 }).sun, true);
+});
+
+test('the phase texture follows the illuminated limb while the face turns with the observer', () => {
+  const place = { latitude: 41.8781, longitude: -87.6298 };
+  for (const [day, hour, expected] of [
+    [3, 8, 21],
+    [10, 8, 0],
+    [17, 12, 6],
+    [26, 4, 14],
+    [28, 12, 15],
+  ] as const) {
+    const at = Date.UTC(2026, 9, day, hour),
+      inputs = sceneInputs(undefined, undefined, place, at);
+    assert.equal(scenePreset(inputs).moonPicture, expected / 28);
+    const other = sceneInputs(undefined, undefined, { latitude: -33.87, longitude: 151.21 }, at);
+    assert.equal(scenePreset(other).moonPicture, expected / 28);
+    assert.notEqual(inputs.moonTilt, other.moonTilt);
+  }
+});
 
 // Cards from a one-row strip to a tall panel, a block of text across the middle of each,
 // the sun nowhere or at a few places in the sky, at every altitude and every point of the
@@ -74,12 +165,10 @@ test('the moon sits at a share of the card’s width, moving aside only to clear
     }
   }
   // The sun's arc spans the middle half of the card, rising a quarter of the way in and
-  // setting a quarter from the far edge; the moon's spans three quarters.
+  // setting a quarter from the far edge.
   assert.equal(arcX(0), 0.25);
   assert.equal(arcX(0.5), 0.5);
   assert.equal(arcX(1), 0.75);
-  assert.equal(arcX(0, MOON_ARC), 0.125);
-  assert.equal(arcX(1, MOON_ARC), 0.875);
   // High in the middle of a wide card, the moon sits beside the centred conditions on its own
   // side, at its own height, rather than behind them.
   const text: Rect = { x: 434, y: 65, width: 180, height: 200 },
@@ -99,10 +188,10 @@ test('the moon’s height is a share of the card’s height by its altitude, and
   }
   // High (40° and up) it sits 7.5% from the top; lower, 0.7% of the height lower per degree,
   // about a third of the way down at the horizon.
-  assert.equal(moonHeight(90), 0.075);
-  assert.equal(moonHeight(40), 0.075);
-  assert.ok(Math.abs(moonHeight(26) - 0.173) < 1e-9);
-  assert.ok(Math.abs(moonHeight(0) - 0.355) < 1e-9);
+  assert.ok(Math.abs(moonHeight(90) - 0.075) < 1e-9);
+  assert.ok(Math.abs(moonHeight(45) - 0.075) < 1e-9);
+  assert.ok(Math.abs(moonHeight(26, 0.1) - 0.17) < 1e-9);
+  assert.ok(Math.abs(moonHeight(0, 0.5) - 0.15) < 1e-9);
   for (let degrees = 1; degrees <= 90; degrees++) assert.ok(moonHeight(degrees) <= moonHeight(degrees - 1));
   // The same share on a card of any shape: a wide, short card shows the moon as a tall one does.
   const open = (width: number, height: number): Rect => ({ x: 0, y: 0, width, height });

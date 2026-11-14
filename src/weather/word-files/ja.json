@@ -774,5 +774,5 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "設定 {key} では、{kinds} のそれぞれに {z}、{x}、{y} を含む https の URL を指定してください。",
   "Choose a valid IANA time zone for {key}, for example {example}.": "設定 {key} には有効な IANA タイムゾーンを選択してください（例: {example}）。",
   "In {minutes} minutes": "{minutes}分後",
-  "{minutes} minutes ago": "{minutes}分前"
+  "In {count} hours": "{count}時間後"
 }

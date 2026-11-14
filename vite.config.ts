@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { defineConfig, type Plugin } from 'vite';
 import { MAPLIBRE_DEV, buildVersion, packageVersion } from './scripts/build-constants.ts';
+import { cloudPack } from './scripts/cloud-pack.ts';
 import { withoutComments } from './scripts/style-comments.ts';
 
 // MapLibre is as large as the card and only a map needs it, so it stands beside the card as files of
@@ -48,7 +49,7 @@ function styleComments(): Plugin {
 // Every dashboard loads the card's file, so what stands beside it must stay out of it, and it grows
 // only on purpose: past CARD_BYTES the build fails, and the number is raised by hand, by a little.
 const CARD = 'iweather-card.js',
-  CARD_BYTES = 940_000,
+  CARD_BYTES = 1_020_000,
   WORD_FILES = 'src/weather/word-files/',
   // The longest sentences of each language, which the card's file must not hold.
   SENTENCES_EACH = 3;
@@ -97,7 +98,7 @@ export default defineConfig(({ command }) => ({
     __CARD_VERSION__: JSON.stringify(buildVersion()),
     __MAPLIBRE__: JSON.stringify(command === 'build' ? { script: `./${script}`, style: `./${style}` } : MAPLIBRE_DEV),
   },
-  plugins: [mapLibre(), styleComments(), cardFileGuard()],
+  plugins: [cloudPack(), mapLibre(), styleComments(), cardFileGuard()],
   server: { host: '127.0.0.1', port: 4174, strictPort: true },
   build: {
     target: 'es2022',

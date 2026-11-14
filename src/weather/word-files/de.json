@@ -825,5 +825,8 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "Die Einstellung {key} muss {kinds} jeweils eine https-URL mit {z}, {x} und {y} zuordnen.",
   "Choose a valid IANA time zone for {key}, for example {example}.": "Wähle für {key} eine gültige IANA-Zeitzone, zum Beispiel {example}.",
   "In {minutes} minutes": "In {minutes} Minuten",
-  "{minutes} minutes ago": "Vor {minutes} Minuten"
+  "In {count} hours": {
+    "one": "In {count} Stunde",
+    "other": "In {count} Stunden"
+  }
 }

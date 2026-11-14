@@ -825,5 +825,8 @@
   "The setting {key} must give each of {kinds} an https tile URL with {z}, {x} and {y}.": "Indstillingen {key} skal give hver af {kinds} en https-URL med {z}, {x} og {y}.",
   "Choose a valid IANA time zone for {key}, for example {example}.": "Vælg en gyldig IANA-tidszone til {key}, for eksempel {example}.",
   "In {minutes} minutes": "Om {minutes} minutter",
-  "{minutes} minutes ago": "For {minutes} minutter siden"
+  "In {count} hours": {
+    "one": "Om {count} time",
+    "other": "Om {count} timer"
+  }
 }

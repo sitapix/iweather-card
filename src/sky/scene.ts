@@ -5,34 +5,37 @@ import {
   moonPhase,
   scenePreset,
   skyMoonPhase,
+  skyMoonTint,
   type BoltLine,
   type Point,
   type SceneInputs,
   type ScenePreset,
 } from './sky.ts';
 import { clamp } from './clouds.ts';
+import { cloudCamera } from './cloud-camera.ts';
 import {
   DECK_COUNT,
   FRAME,
-  blanketSprite,
+  cloudPicks,
+  cloudPosition,
   frameUnit,
   frameY,
   deckClouds,
   type CloudAtlas,
-  FALLBACK_SCALE,
   type DeckCloud,
   type Direction,
   type Tint,
 } from './cloud-decks.ts';
-import { BLANKET_HEIGHT, BLANKET_WIDTH } from './clouds.ts';
-import { type CloudDraw, cloudPainter, noiseRepeat, type CloudPainter } from './clouds-gl.ts';
-import { solarHour as estimateHour, sunPathAt, type SunPosition } from './presets.ts';
+import { spriteSize } from './clouds.ts';
+import { type CloudDraw, cloudPainter, type CloudPainter } from './clouds-gl.ts';
+import { solarHour as estimateHour, skyGradientFor, sunPathAt, type SunPosition } from './presets.ts';
 import { RainPath } from './rain-path.ts';
+import { effectImage } from './effect-art.ts';
 import { sharedGlass, type GlassRain } from './glass-gl.ts';
 import { FAR_BANDS, FAR_PIECES, type RainSky } from './rain-gpu.ts';
 import type { RainFall, SkyKind } from './presets-data.ts';
 import { finite } from '../lib/values.ts';
-import { context2d, hash, mix, rgb, type RGB } from '../lib/canvas.ts';
+import { alphaHex, colorAlpha, context2d, hash, mix, rgb } from '../lib/canvas.ts';
 
 // These dense rain fields benefit from bounded raster surfaces. The other fields
 // retain their single paths; tiling the sideways storm streaks adds upload work.
@@ -72,13 +75,19 @@ const stops = (colors: readonly string[]): RGBStops => {
   return [top, middle, bottom];
 };
 type RGBStops = readonly [top: string, middle: string, bottom: string];
+interface SceneGradient {
+  colors: RGBStops;
+  middleStop: number;
+}
+function sceneGradient(preset: ScenePreset, tile: boolean): SceneGradient {
+  if (!tile) return { colors: stops(preset.sky), middleStop: preset.skyStop };
+  const [top, middle, bottom, middleStop] = skyGradientFor(preset.kind, preset.elevation, preset.rising, true);
+  return { colors: [top, middle, bottom], middleStop };
+}
 // Flare ghosts: position along sun→centre, radius (share of the short side),
 // shape, tint and opacity.
-// Crossfade length after a condition change, and the time constant for values
-// easing toward a new preset (about 95% there after three of them): a condition
-// change settles in about a second (clouds in ~0.3 s, the gradient and rain right
-// after).
-const FADE = 1000,
+// The condition-change window lasts 0.8 seconds. Falling particle counts ease separately.
+const FADE = 800,
   RAMP = 500;
 type GhostKind = 'disc' | 'iris' | 'etched' | 'chromatic';
 // Ghosts are round, soft and nearly colourless.
@@ -99,37 +108,34 @@ const CHROMATIC = [
   [0.82, 0.5, 0.22, ['#c86bff', '#7a4dff00']],
 ] as const;
 
-// How far an overcast's lights go toward neutral, and how far its ambient light does at night.
-const GREY = 0.7,
-  NIGHT_AMBIENT_GREY = 0.45;
-// Through twilight the low sun's strong light reaches the clouds at a third of its strength. As the
-// sky darkens, from 6° to 18° down, the night's light, a tenth of the day's or less, comes to light
-// the tops of clouds with open sky between them at twice its strength, so their billows show rather
-// than one flat tone, and the floor under a clear night's cloud drops from `twilight` to `dark` to
-// leave those billows their shade. A full overcast, with no sky showing, keeps twilight's share.
-const NIGHT_LIGHT = { from: -6, to: -18, twilight: 0.35, dark: 2 } as const;
-const NIGHT_FLOOR = { twilight: 1.45, dark: 1.1 } as const;
-// A deck's lighting for relighting its sprites: sun and ambient tints.
+// These quads use half-size coordinates. Each original texture pixel spans
+// 0.02 scene units at scale one, making a 1560-pixel blanket 31.2 units wide.
+const CLOUD_PIXEL = 0.02;
+// Tint and illumination for one deck of cloud sprites.
 interface Tints {
+  opacity: number;
+  direction: Direction;
   sun: Tint;
+  fill: Tint;
   ambient: Tint;
 }
 type Decks = readonly (readonly DeckCloud[] | null)[];
 interface Blanket {
   sprite: number;
   tints: Tints;
-  thin: boolean;
+  z: number;
   size: number;
   rise: number;
+  drift: number;
 }
 // The look fading out after a condition change; `start` is set by the first frame that sees it.
 interface Outgoing {
   sky: readonly string[];
+  skyStop: number;
   decks: Decks;
   tints: readonly Tints[];
   blanket: Blanket | null;
   blanketAlpha: number;
-  cloudSpeed: number;
   start: number | null | undefined;
 }
 export interface Rect {
@@ -171,7 +177,19 @@ interface Twinkler {
   quick: number;
   flash: number;
 }
-type Level = 'rain' | 'snow' | 'dust' | 'sleet' | 'hail' | 'stars' | 'fog' | 'fringe' | 'sun' | 'moon' | 'flare';
+type Level =
+  | 'rain'
+  | 'snow'
+  | 'dust'
+  | 'sleet'
+  | 'hail'
+  | 'wind'
+  | 'stars'
+  | 'fog'
+  | 'fringe'
+  | 'sun'
+  | 'moon'
+  | 'flare';
 // How far each appearing or vanishing part of the scene has eased in, 0 to its target.
 export type Levels = Record<Level, number>;
 export const LEVELS: readonly Level[] = [
@@ -180,6 +198,7 @@ export const LEVELS: readonly Level[] = [
   'dust',
   'sleet',
   'hail',
+  'wind',
   'stars',
   'fog',
   'fringe',
@@ -207,7 +226,8 @@ interface RainDrop {
   speed: number;
   reach: number;
   size: number;
-  alpha: number;
+  tintShare: number;
+  frame: number;
 }
 interface RainField {
   fall: RainFall;
@@ -220,7 +240,7 @@ interface RainField {
 // phase of it `size` pixels across (null until it has loaded).
 export interface MoonHooks {
   load: () => Promise<boolean>;
-  sprite: (size: number, phase: number, warm: number) => HTMLCanvasElement | null;
+  sprite: (size: number, phase: number, warm: number, tint?: string) => HTMLCanvasElement | null;
 }
 export interface PaintOptions {
   open?: Rect;
@@ -334,10 +354,6 @@ function drawBlurred(
   ctx.restore();
   if (!native) blur(canvas, sigma);
 }
-// How far the silhouette of a blanket feathers, in pixels of its baked image: the bake cuts its
-// ragged lower edge sharply, which reads as a paper cut-out as soon as the cloud is lit above the sky.
-// The 2D drawing's images are smaller (see FALLBACK_SCALE), and feather that much less.
-const FEATHER = 18;
 // What the low power setting gives up, for a screen that runs all day on little: 20 frames a
 // second at most, a third of the fall, and a sky of a million pixels however large the screen.
 const LOW_POWER = { frame: 50, fall: 0.35, pixels: 1_000_000 } as const;
@@ -419,53 +435,10 @@ const GRAINED: ReadonlySet<SkyKind> = new Set(['haze', 'foggy', 'smoky']);
 const GRAIN = { size: 128, depth: 4 } as const;
 // Four repeats per strip keep image drawing cheap without caching a second full sky.
 const GRAIN_STRIP = GRAIN.size * 4;
-// The share of a blanket's height its top takes to fade in: that stays above the card, or the sky
-// shows as a dark line along the card's top edge.
-const LID_FADE = 0.06;
-// How far the lid drifts in a second, in scene units: so little it reads as still, the farthest
-// layer of the sky, while the decks under it slide past at their own speeds.
-const LID_DRIFT = 0.005;
 // As the page scrolls over the still sky, each deck rises by this share of the scroll, the back
 // least and the front most, so the sky has depth; the lid rises with the back deck.
 const PARALLAX = [0.03, 0.05, 0.08, 0.12] as const;
-// A lid's own place in the cloud noise's depth (see clouds-gl.ts).
-const LID_SEED = 0.37;
-// `image` with its outline eased: each pixel keeps its colour and its share of its own neighbours'
-// cover, so only the edge thins, and the creases inside stay as sharp as they were. Once per lit image.
-// Copies of a blanket meet as mirror images, so its sides are blurred against their own reflections:
-// against nothing, they would lose half their cover and the sky would show down every join.
-export function feathered(image: HTMLCanvasElement, sigma = FEATHER * FALLBACK_SCALE): HTMLCanvasElement {
-  const { width, height } = image,
-    reach = sigma * 2,
-    sides = document.createElement('canvas'),
-    soft = document.createElement('canvas'),
-    out = document.createElement('canvas');
-  sides.width = soft.width = width + reach * 2;
-  sides.height = soft.height = out.height = height;
-  out.width = width;
-  const mirrored = context2d(sides);
-  for (const [scale, offset] of [
-    [1, reach],
-    [-1, reach],
-    [-1, reach + width * 2],
-  ] as const) {
-    mirrored.setTransform(scale, 0, 0, 1, offset, 0);
-    mirrored.drawImage(image, 0, 0);
-  }
-  drawBlurred(soft, sigma, [ctx => ctx.drawImage(sides, 0, 0)]);
-  const ctx = context2d(out);
-  ctx.drawImage(image, 0, 0);
-  ctx.globalCompositeOperation = 'destination-in';
-  ctx.drawImage(soft, -reach, 0);
-  return out;
-}
-const FEATHERED = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
-function featheredOnce(image: HTMLCanvasElement): HTMLCanvasElement {
-  const known = FEATHERED.get(image) ?? feathered(image);
-  FEATHERED.set(image, known);
-  return known;
-}
-// Gradients that run straight down (the sky, its veil, fog) are drawn once into a strip
+// Gradients that run straight down (the sky and fog) are drawn once into a strip
 // this many device pixels wide and copied across the canvas (see WeatherScene.bands).
 // The browser dithers a gradient in a pattern that repeats every 8 pixels, so the copies
 // line up with it.
@@ -504,9 +477,8 @@ const SPIKES = { from: 9, to: 10 } as const;
 // A body's share of the way across the card from its place on the sky arc (`along`: the
 // arc's x, 0 where it rises, 1 where it sets, past either end just after rising and before
 // setting), at `spread`: the sun's arc spans the middle half of the card, rising a quarter
-// of the way in; the moon's spans three quarters.
+// of the way in.
 export const SUN_ARC = 0.5;
-export const MOON_ARC = 0.75;
 export const arcX = (along: number, spread = SUN_ARC): number => 0.5 + (along - 0.5) * spread;
 // The sun may sit this share of the card's width above its top edge, cut off, its glow
 // still spilling in.
@@ -514,10 +486,17 @@ const SUN_ABOVE = 0.05;
 // The sun keeps this many of its radii between its centre and the conditions' text: its
 // core, then as much open sky, so the brightest of its bloom stays off the words.
 export const SUN_CLEAR = 2;
-// The moon's height on the card for its altitude in `degrees`, as a share of the card's
-// height: 7.5% from the top anywhere from 40° up, then 0.7% lower per degree, to about a
-// third of the way down at the horizon.
-export const moonHeight = (degrees: number): number => 0.075 + 0.007 * clamp(40 - degrees, 0, 40);
+// Altitude supplies the height, with a shallow arc under the middle of the track.
+export const moonHeight = (degrees: number, across = 0.5): number => {
+  const arc = 30 * Math.sin(Math.PI * across) ** 4,
+    elevation = clamp(Math.max(degrees, arc) / 45);
+  return 0.5 - (0.4 + 0.45 * elevation) * 0.5;
+};
+// The moon keeps its own rise-to-set path. The centre gap leaves the heading readable.
+export const moonAcross = (progress: number): number => {
+  const share = clamp(progress);
+  return 0.1 + 0.5 * share + (share > 0.5 ? 0.3 : 0);
+};
 // Where the moon sits on a card `width` × `height`: `across` is its share of the card's
 // width (on its arc, see arcX; without a location, a fixed spot), and its altitude in
 // `degrees` sets its height (see moonHeight), never below the middle of the card or the
@@ -537,7 +516,7 @@ export function moonPlace(
   sun?: SunSpot,
 ): Glow {
   let x = width * (across ?? 0.75),
-    y = Math.min(height * moonHeight(degrees), Math.max(sky.y + sky.height, height * 0.5) - r);
+    y = Math.min(height * moonHeight(degrees, across ?? 0.75), Math.max(sky.y + sky.height, height * 0.5) - r);
   if (text && x + r > text.x && x - r < text.x + text.width && y + r > text.y && y - r < text.y + text.height) {
     const left = text.x - r * 1.4,
       right = text.x + text.width + r * 1.4,
@@ -557,6 +536,41 @@ const wrapX = (x: number, width: number): number => {
   return (((x % loop) + loop) % loop) - 8;
 };
 
+// Distant particles share a path; their two lighting endpoints supply its mean color and opacity.
+function particleTint([start, end]: readonly [string, string]): string {
+  return mix(start, end, 0.5) + alphaHex((colorAlpha(start) + colorAlpha(end)) / 2);
+}
+
+// Frame rectangles in the falling-particle sheet: origin, tile size, columns and rows.
+const FALLING_SPRITES = {
+  sleet: [0, 0, 92, 320, 4, 1],
+  nearSnow: [0, 320, 60, 60, 4, 2],
+  farSnow: [0, 440, 60, 60, 4, 2],
+  hail: [240, 320, 52, 52, 3, 3],
+} as const;
+type FallingSprite = keyof typeof FALLING_SPRITES;
+const FALL_TILE = 64;
+// Each sampled color gets a set of foreground streak shapes in the sprite strip.
+const RAIN_FRAMES = 4;
+const RAIN_TINTS = 16;
+
+interface TintedSheet {
+  color: string;
+  canvas: HTMLCanvasElement;
+}
+function tintSheet(image: HTMLImageElement, color: string, previous?: TintedSheet): TintedSheet {
+  if (previous?.color === color) return previous;
+  const canvas = previous?.canvas ?? document.createElement('canvas');
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const pen = context2d(canvas);
+  pen.drawImage(image, 0, 0);
+  pen.globalCompositeOperation = 'source-in';
+  pen.fillStyle = color;
+  pen.fillRect(0, 0, canvas.width, canvas.height);
+  return { color, canvas };
+}
+
 export class WeatherScene {
   // The cloud atlas and the moon's photograph, shared by every card's scene.
   static atlas: CloudAtlas | undefined;
@@ -568,11 +582,18 @@ export class WeatherScene {
   // ghosts, and the mottling and fringe puffs.
   static starSprites = new Map<string, HTMLCanvasElement>();
   static ghosts = new Map<string, HTMLCanvasElement>();
-  static sprites: Partial<Record<'noise' | 'fringe' | 'grain', HTMLCanvasElement>> = {};
+  static sprites: Partial<Record<'grain', HTMLCanvasElement>> = {};
+  private static airMasks: Partial<
+    Record<'noise' | 'fringe', { image: HTMLImageElement | undefined; canvas: HTMLCanvasElement }>
+  > = {};
   readonly canvas: HTMLCanvasElement | null;
   wide = false;
   lowPower = false;
   preset: ScenePreset | undefined;
+  background: SceneGradient | undefined;
+  private tile = false;
+  private textScale = 1;
+  private location: string | undefined;
   // The preset with its appearing and vanishing values eased (see advance).
   live: ScenePreset | undefined;
   key: string | undefined;
@@ -581,6 +602,8 @@ export class WeatherScene {
   tints: readonly Tints[] = [];
   blanket: Blanket | null = null;
   outgoing: Outgoing | null = null;
+  private artworkKey = '';
+  private artworkSeed = 1;
   cloudLight = '#ffffff';
   levels: Levels | undefined;
   lastPhase: number | undefined;
@@ -594,7 +617,12 @@ export class WeatherScene {
   sunPath: SunPosition | undefined;
   clouds: HTMLCanvasElement | undefined;
   flickerLayer: HTMLCanvasElement | undefined;
-  streak: HTMLCanvasElement | undefined;
+  private streak: { canvas: HTMLCanvasElement; key: string; cellWidth: number; frames: number } | undefined;
+  private windSheet: TintedSheet | undefined;
+  private nearSheet: TintedSheet | undefined;
+  private fallingSheets: Partial<Record<FallingSprite, TintedSheet>> = {};
+  // Drops keep the last rainy scene's motion, tint and emission rates while they thin out.
+  private rainPreset: ScenePreset | undefined;
   rainFields: Partial<Record<'front' | 'back', RainField>> = {};
   farRain: HTMLCanvasElement | undefined;
   rainTile: HTMLCanvasElement | undefined;
@@ -606,9 +634,12 @@ export class WeatherScene {
   noise: HTMLCanvasElement | undefined;
   grainStrip: HTMLCanvasElement | undefined;
   ring: { size: number; canvas: HTMLCanvasElement } | undefined;
-  fringeTint: { light: string; canvas: HTMLCanvasElement } | undefined;
+  private airTints: Partial<
+    Record<'noise' | 'fringe', { mask: HTMLCanvasElement; key: string; tiles: Map<string, HTMLCanvasElement> }>
+  > = {};
   // The latest strike (its number and when it fell) and its bolt, by strike and reach.
-  strikeClock: { index: number; at: number } | undefined;
+  strikeClock: { index: number; at: number; last: number } | undefined;
+  private stormStart: number | undefined;
   bolt: { key: string; lines: BoltLine[] } | undefined;
   // Layers that hold still between frames, drawn once and copied (see bands, paintGlow and
   // enlarge). The glow and the star layers are the canvas's size, so they are let go unused.
@@ -642,140 +673,134 @@ export class WeatherScene {
   // Lighting changes only retint; the cloud textures are baked ahead of time.
   // With `animate`, the outgoing sky, clouds and blanket are kept so paint()
   // can fade them out after a condition change.
-  prepare(inputs: SceneInputs, { animate = false, wide = false }: { animate?: boolean; wide?: boolean } = {}): void {
+  prepare(
+    inputs: SceneInputs,
+    {
+      animate = false,
+      wide = false,
+      location,
+      textScale = 1,
+    }: { animate?: boolean; wide?: boolean; location?: string; textScale?: number } = {},
+  ): void {
     this.wide = wide;
-    const preset = scenePreset(inputs),
-      previous = this.preset;
+    const preset = scenePreset({
+        ...inputs,
+        windowClass: inputs.windowClass ?? (wide ? 'landscapeRegular' : 'compact'),
+      }),
+      previous = this.preset,
+      tile = inputs.tile ?? false,
+      samePresentation = this.tile === tile && previous?.windowClass === preset.windowClass,
+      changed = previous?.kind !== preset.kind || previous.condition !== preset.condition || this.location !== location,
+      background = this.background;
+    this.tile = tile;
+    this.textScale = textScale;
+    this.location = location;
+    this.background = sceneGradient(preset, tile);
     const lightKey = JSON.stringify([
       wide,
+      tile,
+      location,
+      preset.windowClass,
+      preset.condition,
       preset.kind,
       preset.night,
       preset.clouds,
-      Math.round(preset.elevation),
+      preset.light,
       preset.sky,
     ]);
-    this.key = `${preset.kind}:${preset.condition}:${preset.night}:${Math.round(preset.elevation)}:${preset.clouds.map(value => value.toFixed(2)).join(',')}:${preset.moon && preset.moonAltitude !== undefined ? `${Math.round(preset.moonAltitude / 5)}:${Math.round((preset.moonTilt ?? 0) * 10)}` : '-'}`;
+    this.key = JSON.stringify([
+      lightKey,
+      textScale,
+      preset.condition,
+      preset.moon,
+      preset.moonAltitude,
+      preset.moonTilt,
+      inputs.moonPhase,
+      preset.solarHour,
+      preset.moonHour,
+      preset.wind,
+      preset.windAngle,
+      preset.effectKind,
+      preset.temperature,
+      preset.cloudSpeed,
+    ]);
+    if (!preset.lightning || previous?.kind !== preset.kind || !samePresentation) {
+      this.stormStart = undefined;
+      this.strikeClock = undefined;
+      this.bolt = undefined;
+    }
     this.preset = preset;
-    if (!TILED_RAIN.has(preset.kind)) this.rainTile = undefined;
-    if (!preset.rain) {
+    if (!preset.rain && (!animate || !samePresentation) && this.levels) this.levels.rain = 0;
+    if (preset.rain) this.rainPreset = preset;
+    else if ((this.levels?.rain ?? 0) === 0) this.rainPreset = undefined;
+    if (!this.rainPreset) {
       this.rainFields = {};
       this.farRain = undefined;
-      this.rainTile = undefined;
     }
+    if (!this.rainPreset || !TILED_RAIN.has(this.rainPreset.kind)) this.rainTile = undefined;
     if (!GRAINED.has(preset.kind)) this.grainStrip = undefined;
     // The moon's photograph loads before the moon is due, so it never pops in.
     if (preset.moon) void WeatherScene.moon?.load();
+    if (!animate || !samePresentation) this.outgoing = null;
     if (this.lightKey === lightKey) return;
     this.lightKey = lightKey;
-    // A change arriving mid-fade keeps whichever look still dominates.
-    if (animate && previous && this.decks && !(this.outgoing && this.fadeProgress() < 0.5))
+    // Another change during the same 0.8-second transition uses the remaining time.
+    if (animate && changed && samePresentation && background && this.decks && this.outgoing === null)
       this.outgoing = {
-        sky: previous.sky,
+        sky: background.colors,
+        skyStop: background.middleStop,
         decks: this.decks,
         tints: this.tints,
         blanket: this.blanket,
         blanketAlpha: previous.blanket,
-        cloudSpeed: previous.cloudSpeed,
         start: null,
       };
-    else if (!animate) this.outgoing = null;
-    const [, middle, bottom] = stops(preset.sky),
-      lit = preset.lit,
-      storm = preset.overcastAmount > 0.7;
-    let light = preset.night ? mix('#6c7894', middle, 0.3) : mix('#ffffff', bottom, storm ? 0.55 : 0.22);
-    if (preset.golden > 0) light = mix(light, '#ffc9a0', preset.golden * 0.65);
-    light = mix(mix('#4a5470', middle, 0.4), light, Math.max(lit, preset.night ? 0.35 : 0));
-    this.cloudLight = light;
-    // Cloud sprites on four decks: the back deck takes the back layer's
-    // coverage, the two middle decks the middle, the front deck the front.
-    // Landscape cards get the wide decks: lower, broader rain clouds.
-    this.decks = deckClouds(wide ? preset.look.wideDecks : preset.look.decks, preset.kind.length, {
-      storm: preset.precipitating,
-    });
-    // Sun (or moon) light and the sky's fill, as [r, g, b, intensity] for relighting.
-    // The preset's keyframed light for this sun elevation: sun, ambient and fill, with each
-    // deck's own tint and brightness. Its intensities are in scene units: sun light
-    // runs to about 1300 at noon, fill to 1600 at the horizon, ambient 0–1.
-    const L = preset.light,
-      fill = clamp(L.fillIntensity / 2000) * 0.45,
-      scale = (hex: string, k: number): RGB => {
-        const [r, g, b] = rgb(hex);
-        return [r * k, g * k, b * k];
+    const L = preset.light;
+    this.cloudLight = L.ambient;
+    const artworkKey = JSON.stringify([
+      location,
+      ...preset.look.decks.map(deck => (deck ? [deck[6], deck[10]] : null)),
+      preset.look.blanket ? [preset.look.blanket[3], preset.look.blanket[7]] : null,
+    ]);
+    if (artworkKey !== this.artworkKey) {
+      this.artworkKey = artworkKey;
+      this.artworkSeed = Math.floor(Math.random() * 0x7fffffff);
+    }
+    this.decks = deckClouds(preset.look.decks, this.artworkSeed);
+    const tint = (index: number, lighting: boolean): Tints => {
+      const color = rgb(L.clouds[index] ?? '#ffffff'),
+        alpha = L.cloudAlpha[index] ?? 1,
+        gain = 0.6 * (L.brightness[index] ?? 1) * alpha;
+      const light = (tone: string, intensity: number): Tint => {
+        const [r, g, b] = rgb(tone);
+        return [(r * color[0]) / 255, (g * color[1]) / 255, (b * color[2]) / 255, gain * intensity];
       };
-    // At night the preset's ambient term is tiny (0.1); clouds should stay a dim
-    // blue-grey a shade lighter than the sky, so they get a floor in the sky's tone. Under
-    // an overcast they are most of what shows, so the floor is higher, which gives the sky
-    // its contrast; a clear or foggy night keeps its faint cloud as it is.
-    // Under a dry overcast, heaps read lighter than the sky behind them.
-    // Overcast clouds should read near-neutral grey; blue sun, ambient and
-    // layer tints multiplied together compound, so overcast tones lose most of their tint.
-    // A night overcast keeps more of its ambient colour: that is nearly all the light it
-    // has, and greyed as far as the rest, thicker cloud turns warm against the blue sky.
-    const grey = (hex: string, amount = GREY) => {
-      if (!preset.overcastSky) return hex;
-      const [r, g, b] = rgb(hex);
-      return mix(hex, mix('#000000', '#ffffff', (r * 0.3 + g * 0.59 + b * 0.11) / 255), amount);
+      return {
+        direction: L.direction,
+        sun: light(L.sun, lighting ? L.sunIntensity / 1000 : 0),
+        fill: light(L.fill, lighting ? L.fillIntensity / 1000 : 0),
+        ambient: light(lighting ? L.ambient : '#ffffff', lighting ? L.ambientIntensity : 1),
+        opacity: alpha * alpha,
+      };
     };
-    const night = preset.night,
-      overcastNight = night && preset.overcastSky && preset.overcastAmount > 0,
-      ambientTone = rgb(
-        night
-          ? grey(mix(mix(L.ambient, middle, 0.5), '#9aa6c0', 0.35), overcastNight ? NIGHT_AMBIENT_GREY : GREY)
-          : grey(mix(L.ambient, L.fill, fill)),
-      );
-    const open = preset.look.layers.includes('stars'),
-      dark = open ? clamp((NIGHT_LIGHT.from - preset.elevation) / (NIGHT_LIGHT.from - NIGHT_LIGHT.to)) : 0,
-      sunTone = rgb(grey(L.sun)),
-      nightLight = NIGHT_LIGHT.twilight + (NIGHT_LIGHT.dark - NIGHT_LIGHT.twilight) * dark,
-      sunLevel = Math.min(0.95, Math.min(0.95, L.sunIntensity / 900) * (night ? nightLight : 1)),
-      ambientLevel = Math.max(
-        night
-          ? overcastNight
-            ? 2
-            : NIGHT_FLOOR.twilight + (NIGHT_FLOOR.dark - NIGHT_FLOOR.twilight) * dark
-          : preset.overcastSky
-            ? preset.precipitating
-              ? 1.15
-              : 1.5
-            : 0,
-        Math.min(1.25, L.ambientIntensity * 1.3 + fill * 0.6),
-      );
-    const tinted = (tone: RGB, [r, g, b]: RGB, level: number): Tint => [
-      Math.round(tone[0] * r),
-      Math.round(tone[1] * g),
-      Math.round(tone[2] * b),
-      level,
-    ];
-    this.tints = L.clouds.slice(0, 4).map((color, index) => {
-      if (preset.look.selfLit) {
-        const own: RGB = [rgb(color)[0] / 255, rgb(color)[1] / 255, rgb(color)[2] / 255];
-        return { sun: tinted([255, 255, 255], own, 0), ambient: tinted([255, 255, 255], own, 1) };
-      }
-      // Deck tints at partial strength: multiplied straight in, a slate tint reads as a band.
-      const tint = scale(grey(mix(color, '#ffffff', 0.45)), (L.brightness[index] ?? 0) / 255);
-      return { sun: tinted(sunTone, tint, sunLevel), ambient: tinted(ambientTone, tint, ambientLevel) };
-    });
-    // The overcast blanket: a baked texture of its family (storm heaps for a
-    // cumulonimbus blanket, a stratus lid otherwise), lit as the back deck is. A
-    // cirrus blanket is left to the cirrus decks. A veil takes the blanket's place: cirrus
-    // streaks stretched across the sky. Size and height are in scene units.
-    const { blanket, veil } = preset.look,
-      back = this.tints[1];
-    this.blanket =
-      veil && back
-        ? { sprite: blanketSprite('cirrus'), tints: back, thin: false, size: veil[0], rise: veil[1] }
-        : blanket && blanket[0] !== 'cirrus' && back
-          ? {
-              sprite: blanketSprite(blanket[0]),
-              tints: back,
-              thin: blanket[0] === 'altostratus',
-              size: blanket[1],
-              rise: blanket[2],
-            }
-          : null;
+    this.tints = preset.look.decks.map((deck, i) => tint(i, deck?.[9] ?? false));
+    const blanket = preset.look.blanket;
+    if (blanket) {
+      const [, size, rise, art, drift, offsetZ, , variants] = blanket;
+      this.blanket = {
+        sprite: cloudPicks(art, variants, 1, this.artworkSeed)[0] ?? 0,
+        tints: tint(4, blanket[6]),
+        size,
+        rise,
+        z: -125 + offsetZ,
+        drift,
+      };
+    } else {
+      this.blanket = null;
+    }
     this.stars = null;
   }
-  // Frame rates by kind of sky (60 fps falling or storming, 30 clouds and fog, 25
+  // Frame rates by kind of sky (48 fps falling or storming, 30 clouds and fog, 25
   // clear); at 10 fps a drifting deck visibly stepped. Transitions get every frame. Stars
   // only twinkle, so they need less; a sky with nothing moving barely needs repainting.
   get frameInterval(): number {
@@ -786,9 +811,7 @@ export class WeatherScene {
     if (!p) return 100;
     // Mid-transition every frame; otherwise the frame rate for the kind of sky.
     if (this.outgoing || this.ramping) return 16;
-    if (p.rain || p.snow || p.dust || p.sleet || p.hail || p.lightning || this.decks?.some(Boolean) || this.blanket)
-      return 1000 / p.fps;
-    return p.stars > 0.5 ? 33 : 100;
+    return 1000 / p.fps;
   }
   private get fallShare(): number {
     return this.lowPower ? LOW_POWER.fall : 1;
@@ -814,6 +837,7 @@ export class WeatherScene {
       dust: p.dust,
       sleet: p.sleet,
       hail: p.hail,
+      wind: p.wind,
       stars: p.stars,
       fog: p.fog,
       fringe: p.fringe,
@@ -833,6 +857,10 @@ export class WeatherScene {
       else this.ramping = true;
       levels[key] = value;
     }
+    if (!levels.rain && this.rainPreset) {
+      this.rainPreset = undefined;
+      this.rainFields = {};
+    }
     if (!phase) this.outgoing = null;
     if (this.outgoing && this.fadeProgress(phase) >= 1) this.outgoing = null;
     this.live = {
@@ -842,6 +870,7 @@ export class WeatherScene {
       dust: levels.dust,
       sleet: levels.sleet,
       hail: levels.hail,
+      wind: levels.wind,
       stars: levels.stars,
       fog: levels.fog,
       fringe: levels.fringe,
@@ -891,27 +920,29 @@ export class WeatherScene {
       this.gpuSky = null;
     }
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    const [top, middle, bottom] = stops(p.sky);
+    const background = this.background ?? sceneGradient(p, this.tile),
+      [top, middle, bottom] = background.colors;
     this.bands(ctx, 'sky', 0, height, [
       [0, top],
-      [p.skyStop, middle],
+      [background.middleStop, middle],
       [1, bottom],
     ]);
     if (out) {
       const [oldTop, oldMiddle, oldBottom] = stops(out.sky),
         old = ctx.createLinearGradient(0, 0, 0, height);
       old.addColorStop(0, oldTop);
-      old.addColorStop(0.55, oldMiddle);
+      old.addColorStop(out.skyStop, oldMiddle);
       old.addColorStop(1, oldBottom);
       ctx.globalAlpha = 1 - ease;
       ctx.fillStyle = old;
       ctx.fillRect(0, 0, width, height);
       ctx.globalAlpha = 1;
     }
-    this.paintNoise(ctx, width, height, phase);
+    if (p.fog > 0.005) this.paintNoise(ctx, width, height, phase);
     if (p.stars > 0.005) {
       this.paintStars(ctx, width, height, phase, covered);
-      if (phase && p.stars > 0.5) this.paintShootingStar(ctx, width, height, phase, covered);
+      if (phase && p.stars > 0.5 && p.look.layers.includes('shootingStar'))
+        this.paintShootingStar(ctx, width, height, phase, covered);
     } else this.enlarged.clear();
     const sun = fade.sun > 0.005 ? this.sunSpot(width, height, text) : undefined;
     if (!sun) this.glow = undefined;
@@ -921,77 +952,68 @@ export class WeatherScene {
       ctx.globalAlpha = 1;
     }
     if (sun) this.paintSun(ctx, width, height, phase, sun, fade.sun);
-    const strike = p.lightning && phase ? this.strike(phase, width, height) : null,
-      flicker = p.cloudFlash && phase ? this.cloudFlicker(ctx, phase, width, height) : null;
-    // The blanket at the preset's size and height, in scene units of the frame's
-    // height: centred `rise` units above its middle, its top edge always above the
-    // card, running off the top of the frame. The textures carry their cloud in their top
-    // half, so a blanket at the very top of the frame still hangs into the card. It hangs all but
-    // still behind the decks: copies alternate with mirror images so the joins never show.
-    const unit = height / FRAME;
+    if (p.lightning && phase && (this.stormStart === undefined || phase < this.stormStart)) this.stormStart = phase;
+    const stormTime = phase - (this.stormStart ?? phase),
+      strike = p.lightning && phase ? this.strike(stormTime) : null,
+      flicker = p.cloudFlash && phase ? this.cloudFlicker(ctx, stormTime, width, height) : null;
     const painter = this.painter();
-    const lid = (blanket: Blanket, alpha: number, speed: number, on = ctx) => {
-      // A thin (altostratus) lid is a pale haze, lit from the front so its creases never go dark.
-      const atlas = WeatherScene.atlas,
-        light: Direction = blanket.thin ? [0, 0.3, 0.95] : [0.1, 0.82, 0.56];
+    const lid = (blanket: Blanket, alpha: number, on = ctx) => {
+      const atlas = WeatherScene.atlas;
       if (alpha <= 0.005 || (!painter && !atlas?.loaded)) return;
-      const w = Math.max(width, blanket.size * unit),
-        h = (w * BLANKET_HEIGHT) / BLANKET_WIDTH,
-        y =
-          Math.max(-h * 0.12, Math.min(-h * LID_FADE, height - (FRAME / 2 + blanket.rise) * unit - h / 2)) -
-          scroll * PARALLAX[0];
-      // The blanket hangs all but still while the clouds under it drift left.
-      const travel = -(phase / 1000) * LID_DRIFT * unit * speed,
-        offset = ((travel % (w * 2)) + w * 2) % (w * 2),
-        strength = alpha * (blanket.thin ? 0.4 : 1);
-      // The copies meet on whole pixels: two that shared one would each cover part of it,
-      // and the sky behind would show through as a line down the join.
-      const pixels = on === ctx ? ratio : Math.min(ratio, 1),
-        edge = (at: number) => Math.round(at * pixels) / pixels;
-      const copies = [-1, 0, 1].map(k => {
-        const x = k * w * 2 + offset - w;
-        return [edge(x), edge(x + w), edge(x + w * 2)] as const;
-      });
-      if (painter) {
-        // One noise for every copy, travelling with the lid, so the detail runs on across the joins.
-        const repeat = noiseRepeat(blanket.sprite),
-          anchor = [((travel % repeat) + repeat) % repeat, y] as const,
-          lit = { sprite: blanket.sprite, y, height: h, light, sun: blanket.tints.sun, ambient: blanket.tints.ambient },
-          draws = copies.flatMap(([start, join, end]): CloudDraw[] => [
-            { ...lit, x: start, width: join - start, flip: false, alpha: strength, seed: LID_SEED, anchor },
-            { ...lit, x: join, width: end - join, flip: true, alpha: strength, seed: LID_SEED, anchor },
-          ]);
-        if (painter.paint(on, draws, phase / 1000, !this.lowPower)) return;
+      const camera = cloudCamera(p, width, height, this.tile, this.textScale),
+        depth = camera.z - blanket.z;
+      if (depth <= 1) return;
+      const projection = camera.focalPixels / depth;
+      const size = spriteSize(blanket.sprite);
+      const fit = Math.max(0.3 * blanket.size, width / projection / 2 / 15.6);
+      const w = size.width * CLOUD_PIXEL * fit * projection,
+        h = size.height * CLOUD_PIXEL * fit * projection;
+      const worldY = Math.max(7.9 + blanket.rise, camera.y + camera.centerY / projection + 0.5);
+      // The blanket is pinned by its top edge. Individual cloud sprites use a centered pivot.
+      const y = camera.centerY - (worldY - camera.y) * projection + h * 0.005 - scroll * PARALLAX[0];
+      const travel = (((phase / 1000) * blanket.drift) % 1) * w;
+      const origin = camera.centerX - w / 2 - travel;
+      const draws: CloudDraw[] = [];
+      for (let x = origin - w; x < width + w; x += w) {
+        const draw: CloudDraw = {
+          sprite: blanket.sprite,
+          x,
+          y,
+          width: w,
+          height: h,
+          flip: false,
+          light: blanket.tints.direction,
+          sun: blanket.tints.sun,
+          ambient: blanket.tints.ambient,
+          fill: blanket.tints.fill,
+          opacity: blanket.tints.opacity,
+          alpha,
+        };
+        draws.push(draw);
       }
-      if (!atlas?.loaded) return;
-      const lit = atlas.lit(blanket.sprite, false, light, blanket.tints.sun, blanket.tints.ambient),
-        turned = lit && atlas.lit(blanket.sprite, true, light, blanket.tints.sun, blanket.tints.ambient);
-      if (!lit || !turned) return;
-      const image = featheredOnce(lit),
-        mirror = featheredOnce(turned);
-      on.globalAlpha = strength;
-      for (const [start, join, end] of copies) {
-        on.drawImage(image, start, y, join - start, h);
-        on.drawImage(mirror, join, y, end - join, h);
-      }
+      if (painter?.paint(on, draws)) return;
+      const image = atlas?.lit(
+        blanket.sprite,
+        false,
+        blanket.tints.direction,
+        blanket.tints.sun,
+        blanket.tints.ambient,
+        blanket.tints.fill,
+        blanket.tints.opacity,
+      );
+      if (!image) return;
+      on.globalAlpha = alpha;
+      for (const draw of draws) on.drawImage(image, draw.x, draw.y, draw.width, draw.height);
       on.globalAlpha = 1;
     };
-    // At night a blanket shows as much as its own tint is light: a storm's slate blanket
-    // (its tint times brightness about .34) is all but lost against the dark sky, which shows
-    // as its gradient alone, while a white one (.8, plain overcast) stays a grey lid. Between
-    // them it fades part way, to as little as a fifth, as the sun goes from 6° to 18° down.
-    // The flicker behind it still lights all of it, so lightning shows its shape.
-    const tint = rgb(this.preset.light.clouds[4] ?? '#ffffff'),
-      shade = ((tint[0] * 0.2126 + tint[1] * 0.7152 + tint[2] * 0.0722) / 255) * (this.preset.light.brightness[4] ?? 1),
-      lost = 0.8 * (1 - clamp((shade - 0.34) / 0.46)) * clamp((-6 - this.preset.elevation) / 12);
-    if (out?.blanket) lid(out.blanket, out.blanketAlpha * (1 - ease), out.cloudSpeed);
-    if (this.blanket) lid(this.blanket, p.blanket * ease * (1 - lost), p.cloudSpeed);
+    if (out?.blanket) lid(out.blanket, out.blanketAlpha * (1 - ease));
+    if (this.blanket) lid(this.blanket, p.blanket * ease);
     // A flicker behind the clouds lights the blanket where it hangs: the blanket again, on its
     // own layer, gives the shape the light adds to (see addFlicker).
     if (flicker && (out?.blanket || this.blanket)) {
       const layer = this.cloudCanvas(width, height, Math.min(ratio, 1));
-      if (out?.blanket) lid(out.blanket, out.blanketAlpha * (1 - ease), out.cloudSpeed, layer);
-      if (this.blanket) lid(this.blanket, p.blanket * ease, p.cloudSpeed, layer);
+      if (out?.blanket) lid(out.blanket, out.blanketAlpha * (1 - ease), layer);
+      if (this.blanket) lid(this.blanket, p.blanket * ease, layer);
       this.addFlicker(ctx, layer, flicker, width, height);
     }
     const falling = p.rain + p.snow + p.dust + p.sleet + p.hail > 0.5;
@@ -1003,14 +1025,14 @@ export class WeatherScene {
     // soft and stretched several times over, so a sharper canvas adds no detail, only
     // fill. Under the moon, that canvas also lets moonlight brighten only the cloud
     // near it.
-    const moonlit = p.night && fade.moon > 0.005 ? this.moonPoint : undefined,
+    const moonlit = p.light.moonIntensity > 0 && fade.moon > 0.005 ? this.moonPoint : undefined,
       layered = Boolean(moonlit) || Boolean(flicker) || ratio > 1,
       target = layered ? this.cloudCanvas(width, height, Math.min(ratio, 1)) : ctx;
     let drawn = false;
     // On the GPU, each run of decks is gathered and drawn at once, before the layer is used.
     const queue: CloudDraw[] | undefined = painter ? [] : undefined;
     const flush = () => {
-      if (painter && queue && queue.length > 0) painter.paint(target, queue.splice(0), phase / 1000, !this.lowPower);
+      if (painter && queue && queue.length > 0) painter.paint(target, queue.splice(0));
       if (!layered || !drawn) return;
       drawn = false;
       if (moonlit) this.paintMoonlight(target, moonlit, fade.moon);
@@ -1019,7 +1041,6 @@ export class WeatherScene {
       target.clearRect(0, 0, width, height);
     };
     // Outgoing clouds keep drifting as they fade.
-    const light = fade.sun > 0.3 && this.sunPoint ? p.light.direction : fade.moon > 0.3 ? this.moonPoint : undefined;
     for (let index = 0; index < DECK_COUNT; index++) {
       const lift = scroll * (PARALLAX[index] ?? 0);
       if (index === 2 && falling) {
@@ -1030,37 +1051,29 @@ export class WeatherScene {
         const deck = out.decks[index],
           tints = out.tints[index];
         if (deck && tints) {
-          this.paintDeck(target, width, height, phase, deck, tints, out.cloudSpeed, 1 - ease, light, queue, lift);
+          this.paintDeck(target, width, height, phase, deck, tints, 1 - ease, queue, lift);
           drawn = true;
         }
       }
       const deck = this.decks?.[index],
         tints = this.tints[index];
       if (deck && tints) {
-        this.paintDeck(target, width, height, phase, deck, tints, p.cloudSpeed, ease, light, queue, lift);
+        this.paintDeck(target, width, height, phase, deck, tints, ease, queue, lift);
         drawn = true;
       }
     }
     flush();
     if (GRAINED.has(this.preset.kind)) this.paintGrain(ctx);
-    if (p.fringe > 0.005) this.paintFringe(ctx, width, height, phase, this.cloudLight);
+    if (p.fringe > 0.005) this.paintFringe(ctx, width, height, phase);
     if (falling) {
       this.paintPrecipitation(ctx, width, height, phase, 'front');
       this.paintImpacts(ctx, width, height, phase, edges);
     }
-    const front = p.clouds[2];
-    if (fade.sun > 0.5 && phase && front !== undefined && front < 0.35) this.paintMotes(ctx, width, height, phase);
+    if (p.wind > 0.005) this.paintWind(ctx, width, height, phase);
+    if (p.look.layers.includes('nearParticles')) this.paintNearParticles(ctx, width, height, phase);
     if (strike) this.paintBolt(ctx, width, height, strike);
     if (p.fog > 0.005) this.paintFog(ctx, height);
     if (fade.sun > 0.005 && fade.flare > 0.005) this.paintFlare(ctx, width, height, phase, fade.sun * fade.flare);
-    // Quiet center and darker base keep white labels legible over cloud highlights.
-    // Overcast skies keep their own light lower sky.
-    if (!p.night && !p.blanket)
-      this.bands(ctx, 'veil', 0, height, [
-        [0, '#05234400'],
-        [0.35, '#05234418'],
-        [1, '#071d3e40'],
-      ]);
     // A strike's flash whitens everything, the bolt included.
     if (strike && strike.screen > 0) {
       ctx.fillStyle = `rgba(255,255,255,${strike.screen})`;
@@ -1068,6 +1081,16 @@ export class WeatherScene {
     }
     this.gpuSky?.finish(canvas, this.gpuSky.background);
     this.gpuSky = null;
+    // List text sits above a 7% black scrim over the completed weather picture.
+    if (this.tile) {
+      const surface = context2d(canvas);
+      surface.save();
+      surface.setTransform(1, 0, 0, 1, 0, 0);
+      surface.globalAlpha = 0.07;
+      surface.fillStyle = '#000000';
+      surface.fillRect(0, 0, canvas.width, canvas.height);
+      surface.restore();
+    }
     // A still frame is likely the last for a while, so the canvas-sized layers go with it.
     if (!phase) {
       this.glow = undefined;
@@ -1127,7 +1150,8 @@ export class WeatherScene {
     phase: number,
     covered: readonly Panel[],
   ): void {
-    const key = `${Math.round(width)}x${Math.round(height)}`;
+    const counts = this.preset?.look.stars ?? [3500, 100, 1000, 0.04],
+      key = `${Math.round(width)}x${Math.round(height)}:${counts.join(',')}`;
     if (!this.stars || this.starsKey !== key) {
       const canvas = document.createElement('canvas');
       this.stars = canvas;
@@ -1147,7 +1171,10 @@ export class WeatherScene {
           // Star clouds at 4% opacity: a hint of the Milky Way, no more.
           const d = across(x * 4, y * 4),
             n = fbm(((x * 4) / width) * 5, ((y * 4) / height) * 4, 5, 29, 5),
-            a = Math.exp(-((d / 0.15) ** 2)) * (0.35 + clamp((n - 0.3) * 2) * 0.65) * 0.09,
+            a =
+              Math.exp(-((d / 0.15) ** 2)) *
+              (0.35 + clamp((n - 0.3) * 2) * 0.65) *
+              (counts[2] > 0 ? counts[3] * 2.25 : 0),
             q = (y * haze.width + x) * 4;
           haze.data[q] = 190 + n * 40;
           haze.data[q + 1] = 196 + n * 30;
@@ -1161,7 +1188,8 @@ export class WeatherScene {
       hazeCanvas.height = haze.height;
       context2d(hazeCanvas).putImageData(haze, 0, 0);
       // Density: 3,500 faint stars and 100–200 bright ones to a phone screen.
-      const faint = Math.round(Math.min(3500, (width * height) / 95)),
+      const area = clamp((width * height) / (393 * 852), 0, 2),
+        faint = Math.round(Math.min(7000, counts[0] * area)),
         twinklers: Twinkler[] = [];
       for (let i = 0; i < faint; i++) {
         let x = hash(i, 17) * width,
@@ -1200,7 +1228,7 @@ export class WeatherScene {
       }
       // Bright stars: about 60 to every 100,000 pt of sky, each a soft dot some 1-2 pt across in
       // a tint of its own.
-      const count = Math.round(clamp((width * height) / 1650, 16, 220));
+      const count = Math.round(Math.min(400, counts[1] * area));
       for (let i = 0; i < count; i++) {
         const m = hash(i, 158);
         twinklers.push({
@@ -1425,40 +1453,32 @@ export class WeatherScene {
     sky: Rect,
     text?: Rect,
     sun?: SunSpot,
-    phase = moonPhase(),
+    phase = this.preset?.moonPhase ?? moonPhase(),
     radius = clamp(Math.max(width, height) * 0.027, 12, 48),
   ): void {
     const p = this.preset;
     if (!p) return;
-    // Its height on the card follows the moon's real altitude. Low over the
-    // horizon it warms and looks larger.
+    // The horizon tint fades through 10°, while the disk reaches its high-altitude size at 30°.
     const degrees = p.moonAltitude ?? 45,
-      warm = Math.round(clamp(1 - degrees / 18) * 10) / 10,
-      r = radius * (1 + warm * 0.18);
-    // On the sky arc by its own rise-to-set progress; the old fixed spot without a location.
+      warm = Math.round(clamp(1 - degrees / 10) * 100) / 100,
+      [high, low] = p.look.moonScale,
+      scale = low + (high - low) * clamp(degrees / 30),
+      r = radius * (scale / 23.65);
+    // A missing lunar track leaves a stable position with its measured altitude.
     const hour = p.moonHour,
-      arc = finite(hour) ? sunPathAt(hour, this.wide) : null;
-    const { x, y } = moonPlace(
-      width,
-      height,
-      sky,
-      text,
-      degrees,
-      arc ? clamp(arcX(arc.x, MOON_ARC), 0.06, 0.94) : null,
-      r,
-      sun,
-    );
+      across = finite(hour) ? moonAcross((hour - 6) / 12) : null;
+    const { x, y } = moonPlace(width, height, sky, text, degrees, across, r, sun);
     // The sprite is drawn north up, lit from the right while waxing and the left while
     // waning; with a location it turns with the Moon's axis as seen from there.
-    const step = skyMoonPhase(phase),
+    const step = p.moonPicture ?? skyMoonPhase(phase),
       tilt = p.moonTilt;
     const lit = (1 - Math.cos(phase * Math.PI * 2)) / 2,
-      tone = mix('#d6e0ff', '#ffd2a6', warm);
+      tone = skyMoonTint(p.light.moonColor, p.light.moonHorizon, warm);
     this.moonPoint = { x, y, r, lit, tone };
     // The phase photograph is screened over the moon's own colour:
     // its black unlit side comes out as a solid disc in that colour, hiding the stars
     // behind it, and the lit side and halo brighten whatever is under them.
-    const sprite = WeatherScene.moon?.sprite(Math.round(r * 2 * Math.min(devicePixelRatio || 1, 2)), step, warm);
+    const sprite = WeatherScene.moon?.sprite(Math.round(r * 2 * Math.min(devicePixelRatio || 1, 2)), step, warm, tone);
     if (!sprite) return;
     const [top, middle, bottom] = stops(p.sky),
       t = clamp(y / height),
@@ -1495,15 +1515,14 @@ export class WeatherScene {
   // The page's GPU painter for clouds, once it is ready; null for the 2D drawing.
   painter(): CloudPainter | null {
     const atlas = WeatherScene.atlas;
-    if (WeatherScene.gpuClouds) return cloudPainter(atlas, image => feathered(image, FEATHER));
+    if (WeatherScene.gpuClouds) return cloudPainter(atlas);
     atlas?.restore();
     return null;
   }
-  // One deck of cloud sprites, drifting and wrapping. In sunshine every cloud is lit from the
-  // one direction the preset gives for the hour (`light` is that direction). Under the moon
-  // (`light` is its place) each cloud is lit from the moon's place relative to it: from the side
-  // when far, from behind when near, so clouds by the moon glow at their rims. With no light in
-  // view they are lit from above.
+  // One deck of cloud sprites, drifting and wrapping. Each cloud is lit from the
+  // sun's (or moon's) place relative to it: from the side when far, from behind
+  // when near, so clouds by the sun glow at their rims. With no
+  // light in view they are lit from above.
   paintDeck(
     target: CanvasRenderingContext2D,
     width: number,
@@ -1511,77 +1530,55 @@ export class WeatherScene {
     phase: number,
     clouds: readonly DeckCloud[],
     tints: Tints,
-    speed: number,
     alpha: number,
-    light: Glow | Direction | undefined,
     queue?: CloudDraw[],
     lift = 0,
   ): void {
     const p = this.preset,
       atlas = WeatherScene.atlas;
     if (!p || alpha < 0.005 || (!queue && !atlas?.loaded)) return;
-    // Sizes, heights and drift are in scene units on the frame (see frameUnit); drift
-    // is in units per second, gentle by design, and leftward, as the stars and haze go.
-    const unit = frameUnit(width, height);
+    const camera = cloudCamera(p, width, height, this.tile, this.textScale);
     for (const cloud of clouds) {
-      // The sprites leave margins, so they are drawn larger to cover their sky.
-      // Each cloud wraps only once it is wholly off the card, so none pops in or out.
-      const w = Math.min(cloud.scale * FRAME * unit * 1.8, width * 2.4),
-        h = w * 0.4375 * cloud.tall,
-        span = width + w * 2;
-      // Heights are shares of the frame, placed as the frame is: on a card wider than it
-      // the high cirrus runs off the top and the decks below rise into view, as the
-      // landscape decks (wideDecks) are set lower for.
-      const x = ((((cloud.x * span - (phase / 1000) * cloud.speed * unit * speed) % span) + span) % span) - w,
-        y = frameY(cloud.y, height, unit) - h / 2 - lift;
-      let direction: Direction = [0.15, 1, 0.35];
-      if (light && 'x' in light) {
-        const dx = ((light.x - (x + w / 2)) / width) * 1.6,
-          dy = ((y + h / 2 - light.y) / height) * 1.6,
-          reach = Math.hypot(dx, dy);
-        const behind = Math.exp(-reach * 2.2),
-          z = 0.35 - 1.25 * behind,
-          length = Math.hypot(dx, dy + 0.25, z) || 1;
-        direction = [dx / length, (dy + 0.25) / length, z / length];
-      } else if (light) direction = light;
-      // Heaps are seen through falling rain or snow as thin haze.
-      // Low clouds under the lid are further into the rain than high ones, so fainter.
-      const veiled =
-        p.precipitating && (cloud.family === 'cumulus' || cloud.family === 'nimbus')
-          ? cloud.y > 0.35
-            ? 0.13
-            : 0.6
-          : 1;
+      const depth = camera.z - cloud.z;
+      if (depth <= 1) continue;
+      const projection = camera.focalPixels / depth;
+      const size = spriteSize(cloud.sprite);
+      const w = size.width * CLOUD_PIXEL * cloud.scale * projection,
+        h = size.height * CLOUD_PIXEL * cloud.scale * projection;
+      const [worldX, fade] = cloudPosition(cloud, phase / 1000);
+      const x = camera.centerX + worldX * projection - w / 2,
+        y = camera.centerY - (cloud.y - camera.y) * projection - h / 2 - lift;
+      if (x + w <= 0 || x >= width || y + h <= 0 || y >= height || fade <= 0) continue;
+      const draw: CloudDraw = {
+        x,
+        y,
+        width: w,
+        height: h,
+        sprite: cloud.sprite,
+        flip: false,
+        light: tints.direction,
+        sun: tints.sun,
+        ambient: tints.ambient,
+        fill: tints.fill,
+        opacity: tints.opacity,
+        alpha: alpha * fade,
+      };
       if (queue) {
-        queue.push({
-          x,
-          y,
-          width: w,
-          height: h,
-          sprite: cloud.sprite,
-          flip: cloud.flip,
-          light: direction,
-          sun: tints.sun,
-          ambient: tints.ambient,
-          alpha: alpha * cloud.alpha * veiled,
-          seed: hash(Math.round(cloud.x * 1e4), Math.round(cloud.y * 1e4)),
-        });
+        queue.push(draw);
         continue;
       }
-      if (!atlas?.loaded) return;
-      // With nothing to follow the light never turns, so one image serves; crossfading four
-      // of them only thinned the cloud, each letting the sky through the others.
-      const still = light ? null : atlas.lit(cloud.sprite, cloud.flip, direction, tints.sun, tints.ambient),
-        images = light
-          ? atlas.litBlend(cloud.sprite, cloud.flip, direction, tints.sun, tints.ambient)
-          : still && ([[still, 1]] as const);
-      if (!images) continue;
-      // The two nearest cached light directions, crossfaded, so shading turns smoothly.
-      for (const [image, weight] of images) {
-        if (weight < 0.01) continue;
-        target.globalAlpha = alpha * cloud.alpha * veiled * weight;
-        target.drawImage(image, x, y, w, h);
-      }
+      const image = atlas?.lit(
+        cloud.sprite,
+        false,
+        tints.direction,
+        tints.sun,
+        tints.ambient,
+        tints.fill,
+        tints.opacity,
+      );
+      if (!image) continue;
+      target.globalAlpha = draw.alpha;
+      target.drawImage(image, x, y, w, h);
     }
     target.globalAlpha = 1;
   }
@@ -1673,9 +1670,10 @@ export class WeatherScene {
   // Moonlight silvers cloud within a few moon radii, scaled by the lit fraction.
   paintMoonlight(clouds: CanvasRenderingContext2D, moon: MoonPoint, visible = 1): void {
     const { x, y, r, tone } = moon,
-      lit = moon.lit * visible,
+      lit = clamp((this.preset?.light.moonIntensity ?? 0) / 100) * moon.lit * visible,
       [gr, gg, gb] = rgb(tone),
-      reach = r * (6 + lit * 6);
+      reach = r * (this.preset?.light.moonRadius ?? 15) * 0.5;
+    if (reach <= r || lit <= 0) return;
     const glow = clouds.createRadialGradient(x, y, r, x, y, reach);
     glow.addColorStop(0, `rgba(${gr},${gg},${gb},${0.55 * lit})`);
     glow.addColorStop(0.35, `rgba(${gr},${gg},${gb},${0.2 * lit})`);
@@ -1698,7 +1696,7 @@ export class WeatherScene {
     const p = this.preset;
     if (!p) return undefined;
     const r = Math.max(9, Math.max(width, height) * 0.045),
-      path = sunPathAt(p.solarHour ?? estimateHour(0, { elevation: p.elevation, rising: p.rising }), this.wide);
+      path = sunPathAt(p.solarHour ?? estimateHour(0, { elevation: p.elevation, rising: p.rising }), p.windowClass);
     this.sunPath = path;
     const x = width * arcX(path.x),
       room = r * SUN_CLEAR;
@@ -1869,7 +1867,9 @@ export class WeatherScene {
     if (!rays) return;
     // The lean comes from the sun's path: 45° toward the middle after sunrise, straight
     // down at noon, -45° before sunset.
-    const [, color, count, [shortest, longest], spread] = rays,
+    const [, presetColor, count, [shortest, longest], spread] = rays,
+      color = this.sunPath?.color ?? presetColor.slice(0, 7),
+      rayAlpha = this.sunPath?.alpha ?? colorAlpha(presetColor),
       angle = Math.abs(this.sunPath?.rayAngle ?? 30),
       inward = (this.sunPath?.rayAngle ?? 0) > 0 ? -1 : 1;
     // Soft-edged, as light through haze: the beams are blurred `soft` pixels of the
@@ -1880,7 +1880,7 @@ export class WeatherScene {
       canvas = ctx.canvas,
       scale = ctx.getTransform().a,
       k = scale * RAYS,
-      key = JSON.stringify([rays, angle, inward, frame, scale]);
+      key = JSON.stringify([rays, color, angle, inward, frame, scale]);
     if (this.beams?.key !== key) {
       const sprites = [];
       for (let i = 0; i < count; i++) {
@@ -1953,7 +1953,7 @@ export class WeatherScene {
     if (sw <= 0 || sh <= 0) return;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = visible * 0.45;
+    ctx.globalAlpha = visible * 0.45 * clamp(rayAlpha / 0.22);
     ctx.drawImage(layer, sx, sy, sw, sh, sx / k, sy / k, sw / k, sh / k);
     ctx.restore();
   }
@@ -2011,23 +2011,26 @@ export class WeatherScene {
     ctx.globalAlpha = p.ghosts ? 0.16 * strength : 0;
     ctx.drawImage(glow, -length / 2, -length / 4, length, length / 2);
     ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
-    // Iris: a few aperture ghosts (three, at 15%) only where enabled.
-    const ghosts = p.ghosts;
-    if (ghosts)
-      for (const [t, size, kind, color, alpha] of FLARE_GHOSTS.slice(
-        0,
-        Math.min(FLARE_GHOSTS.length, this.sunPath?.ghosts ?? ghosts[1]),
-      )) {
-        const radius = unit * size,
-          x = sun.x + dx * t,
-          y = sun.y + dy * t;
+    // The iris follows its own count, reach and breathing along the sun path.
+    const ghosts = p.ghosts,
+      path = this.sunPath;
+    if (ghosts && path) {
+      const reach = path.irisLength / 15,
+        scale = 1 + (path.irisAmplitude / 100) * Math.sin((phase / 1000) * 2 * Math.PI * path.irisFrequency);
+      for (let i = 0; i < path.ghosts; i++) {
+        const ghost = FLARE_GHOSTS[i % FLARE_GHOSTS.length];
+        if (!ghost) continue;
+        const [at, size, kind, color, alpha] = ghost,
+          t = (at + Math.floor(i / FLARE_GHOSTS.length) * 0.12) * reach,
+          radius = unit * size * scale;
         ctx.save();
-        ctx.translate(x, y);
+        ctx.translate(sun.x + dx * t, sun.y + dy * t);
         ctx.rotate(0.3 + t + phase / 80000);
         ctx.globalAlpha = alpha * strength * clamp(ghosts[0] / 0.15, 0, 1.5);
         ctx.drawImage(this.ghost(kind, color), -radius, -radius, radius * 2, radius * 2);
         ctx.restore();
       }
+    }
     ctx.restore();
     this.gpuSky?.layer(ctx, 'screen');
   }
@@ -2108,44 +2111,82 @@ export class WeatherScene {
     ghosts.set(key, canvas);
     return canvas;
   }
-  // Soft procedural sprites, made once: mottled "noise" blobs and wispy fringe puffs.
-  sprite(kind: 'noise' | 'fringe'): HTMLCanvasElement {
-    const sprites = WeatherScene.sprites,
-      cached = sprites[kind];
-    if (cached) return cached;
-    const size = 160,
+  // The sheets encode coverage in grayscale. Keep their cells as small alpha masks so
+  // every card can use the same source while applying its own daylight or moonlight.
+  private airMask(kind: 'noise' | 'fringe'): HTMLCanvasElement {
+    const image = effectImage(kind),
+      cached = WeatherScene.airMasks[kind];
+    if (cached && cached.image === image) return cached.canvas;
+    const columns = kind === 'noise' ? 2 : 3,
+      tile = 128,
       canvas = document.createElement('canvas');
-    canvas.width = canvas.height = size;
-    const c = context2d(canvas),
-      image = c.createImageData(size, size);
-    for (let y = 0; y < size; y++)
-      for (let x = 0; x < size; x++) {
-        const dx = x / size - 0.5,
-          dy = y / size - 0.5,
-          falloff = clamp(1 - Math.hypot(dx, dy) * 2),
-          n = fbm((x / size) * 4, (y / size) * 4, 4, kind === 'noise' ? 83 : 97, 5);
-        const alpha = kind === 'noise' ? falloff * falloff * (0.45 + n * 0.7) : clamp((n - 0.42) * 3.2) * falloff;
-        const offset = (y * size + x) * 4;
-        image.data[offset] = image.data[offset + 1] = image.data[offset + 2] = 255;
-        image.data[offset + 3] = clamp(alpha) * 255;
+    canvas.width = columns * tile;
+    canvas.height = 2 * tile;
+    const pen = context2d(canvas);
+    if (image) pen.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const pixels = pen.getImageData(0, 0, canvas.width, canvas.height);
+    for (let y = 0; y < canvas.height; y++)
+      for (let x = 0; x < canvas.width; x++) {
+        const i = 4 * (y * canvas.width + x);
+        if (image) pixels.data[i + 3] = pixels.data[i] ?? 0;
+        else {
+          const u = (x % tile) / tile,
+            v = (y % tile) / tile,
+            frame = Math.floor(x / tile) + Math.floor(y / tile) * columns,
+            edge = clamp(1 - 2 * Math.hypot(u - 0.5, v - 0.5)),
+            n = fbm(u * 4, v * 4, 4, (kind === 'noise' ? 83 : 97) + frame, 5);
+          pixels.data[i + 3] = 255 * (kind === 'noise' ? edge * (0.35 + n * 0.65) : edge * clamp((n - 0.45) * 1.5));
+        }
+        pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = 255;
       }
-    c.putImageData(image, 0, 0);
-    sprites[kind] = canvas;
+    pen.putImageData(pixels, 0, 0);
+    WeatherScene.airMasks[kind] = { image, canvas };
     return canvas;
   }
-  // Large, very faint mottled blobs that drift and turn, giving the sky depth.
+  private airSprite(kind: 'noise' | 'fringe', frame: number, color: string, key: string): HTMLCanvasElement {
+    const mask = this.airMask(kind);
+    let cache = this.airTints[kind];
+    if (!cache || cache.mask !== mask || cache.key !== key)
+      cache = this.airTints[kind] = { mask, key, tiles: new Map() };
+    const tileKey = `${frame}${color}`,
+      existing = cache.tiles.get(tileKey);
+    if (existing) return existing;
+    const columns = kind === 'noise' ? 2 : 3,
+      tile = mask.width / columns,
+      canvas = document.createElement('canvas');
+    canvas.width = canvas.height = tile;
+    const pen = context2d(canvas);
+    pen.drawImage(mask, (frame % columns) * tile, Math.floor(frame / columns) * tile, tile, tile, 0, 0, tile, tile);
+    pen.globalCompositeOperation = 'source-in';
+    pen.fillStyle = color;
+    pen.fillRect(0, 0, tile, tile);
+    cache.tiles.set(tileKey, canvas);
+    return canvas;
+  }
+  // A continuous emitter. Launches are spaced by the rate and each retains its
+  // chosen size, rotation, texture frame and tint until the end of its life.
   paintNoise(ctx: CanvasRenderingContext2D, width: number, height: number, phase: number): void {
-    const p = this.preset;
-    if (!p) return;
-    const blob = this.sprite('noise'),
-      unit = Math.max(width, height),
-      strength = p.night ? 0.035 : 0.05;
-    // The blobs are soft and drawn several times their sprite's size, so they go on a layer
-    // at NOISE pixels to the CSS pixel, enlarged onto the sky in one copy.
-    this.noise ??= document.createElement('canvas');
-    const layer = this.noise,
+    const p = this.live;
+    if (!p?.look.layers.includes('fog') || p.fog <= 0) return;
+    const field = p.look.noise,
+      rate = field.count,
+      life = field.life,
+      [start, end] = p.light.air.noise,
+      startAlpha = colorAlpha(start),
+      endAlpha = colorAlpha(end);
+    if (rate <= 0 || life <= 0 || Math.max(startAlpha, endAlpha) <= 0) return;
+    const unit = frameUnit(width, height),
+      seconds = phase / 1000,
+      head = Math.floor(seconds * rate),
+      angle = this.slant(phase),
+      dx = Math.sin(angle),
+      dy = Math.cos(angle),
+      extent = Math.ceil(life * rate),
       w = Math.ceil(width * NOISE),
-      h = Math.ceil(height * NOISE);
+      h = Math.ceil(height * NOISE),
+      key = start + end;
+    this.noise ??= document.createElement('canvas');
+    const layer = this.noise;
     if (layer.width !== w || layer.height !== h) {
       layer.width = w;
       layer.height = h;
@@ -2153,55 +2194,159 @@ export class WeatherScene {
     const c = context2d(layer);
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, w, h);
-    c.setTransform(NOISE, 0, 0, NOISE, 0, 0);
-    c.globalAlpha = strength;
-    for (let i = 0; i < 5; i++) {
-      // Each blob wraps only once wholly off the card, so it never jumps.
-      const size = unit * (0.55 + hash(i, 41) * 0.45),
-        span = width + size,
-        x = ((((hash(i, 42) * span + phase * 0.0015 * (hash(i, 43) - 0.5) * 60) % span) + span) % span) - size / 2,
-        y = hash(i, 44) * height * 0.8;
-      c.save();
-      c.translate(x, y);
-      c.rotate(phase / (90000 + hash(i, 45) * 60000) + i);
-      c.drawImage(blob, -size / 2, -size / 2, size, size);
-      c.restore();
+    for (let slot = 0; slot < extent; slot++) {
+      const id = head - slot,
+        age = seconds - id / rate;
+      if (age >= life) continue;
+      const size = (field.size[0] + hash(id, 41) * (field.size[1] - field.size[0])) * unit,
+        launch = (hash(id, 42) - 0.5) * (width + size),
+        distance = age * field.speed * unit - (height + size) / 2,
+        x = width / 2 + launch * dy + distance * dx,
+        y = height / 2 - launch * dx + distance * dy;
+      if (x < -size || x > width + size || y < -size || y > height + size) continue;
+      const fraction = hash(id, 43),
+        // Sixteen RGB samples keep a slowly changing light's small sprite cache bounded.
+        color = mix(start, end, Math.round(fraction * 15) / 15),
+        frame = Math.floor(hash(id, 44) * 4),
+        turn =
+          hash(id, 45) * 2 * Math.PI +
+          (age * (field.spin[0] + hash(id, 46) * (field.spin[1] - field.spin[0])) * Math.PI) / 180;
+      c.setTransform(NOISE, 0, 0, NOISE, x * NOISE, y * NOISE);
+      c.rotate(turn);
+      c.globalAlpha = p.fog * (startAlpha + (endAlpha - startAlpha) * fraction);
+      c.drawImage(this.airSprite('noise', frame, color, key), -size / 2, -size / 2, size, size);
     }
-    ctx.drawImage(layer, 0, 0, w / NOISE, h / NOISE);
+    ctx.drawImage(layer, 0, 0, width, height);
   }
-  // Wispy puffs drifting along the top of overcast skies.
-  paintFringe(ctx: CanvasRenderingContext2D, width: number, height: number, phase: number, light: string): void {
+  // The fringe is one persistent burst. The particles wrap through the emitter,
+  // turn and pulse in size while the light track controls their material.
+  paintFringe(ctx: CanvasRenderingContext2D, width: number, height: number, phase: number): void {
     const p = this.live;
-    if (!p) return;
-    const puff = this.sprite('fringe'),
-      strength = p.fringe;
-    let tint = this.fringeTint;
-    if (!tint || tint.light !== light) {
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = puff.width;
-      const c = context2d(canvas);
-      c.drawImage(puff, 0, 0);
-      c.globalCompositeOperation = 'source-in';
-      c.fillStyle = light;
-      c.fillRect(0, 0, canvas.width, canvas.height);
-      tint = this.fringeTint = { light, canvas };
+    if (!p?.look.layers.includes('fringe') || p.fringe <= 0) return;
+    const field = p.look.fringe,
+      color = p.light.air.fringe,
+      alpha = colorAlpha(color) * p.fringe;
+    if (!alpha || field.count <= 0) return;
+    const camera = cloudCamera(p, width, height, this.tile, this.textScale),
+      seconds = phase / 1000,
+      [spreadX, spreadY, spreadZ] = field.emitter;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    for (let id = 0; id < field.count; id++) {
+      const phaseAtBirth = hash(id, 51) * 2 * Math.PI,
+        radius = field.size + field.amplitude * Math.sin(phaseAtBirth + seconds * field.frequency),
+        depth = (hash(id, 52) - 0.5) * spreadZ,
+        project = camera.focalPixels / Math.max(1, camera.z - depth),
+        size = radius * project,
+        span = Math.max(2 * spreadX, width / project + 2 * field.size),
+        offset = ((id + 0.5) / field.count) * span - seconds * field.speed,
+        x = camera.centerX + ((((offset % span) + span) % span) - span / 2) * project,
+        y = camera.centerY - (field.y + (hash(id, 53) - 0.5) * spreadY - camera.y) * project;
+      if (x < -size || x > width + size || y < -size || y > height + size) continue;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(phaseAtBirth + (seconds * field.spin * Math.PI) / 180);
+      ctx.drawImage(this.airSprite('fringe', id % 6, color.slice(0, 7), color), -size / 2, -size / 2, size, size);
+      ctx.restore();
     }
-    for (let i = 0; i < 8; i++) {
-      const size = width * (0.28 + hash(i, 51) * 0.22),
-        span = width + size,
-        x = ((hash(i, 52) * span + phase * (0.006 + hash(i, 53) * 0.006)) % span) - size / 2,
-        y = height * (-0.06 + hash(i, 54) * 0.16);
-      ctx.globalAlpha = strength * (0.35 + hash(i, 55) * 0.3);
-      ctx.drawImage(tint.canvas, x - size / 2, y - size / 2, size, size * 0.7);
-    }
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
   // Gusts swing the fall angle slowly.
   slant(phase: number): number {
     const p = this.live;
     if (!p) return 0;
-    const gust = Math.sin(phase / 2300) * Math.sin(phase / 5100) * 0.2;
-    return Math.tan(p.windAngle * (1 + gust));
+    const [amount, speed] = p.look.rainFall.sway;
+    return p.windAngle - (amount * Math.sin((speed * phase) / 1000) * Math.PI) / 180;
+  }
+  paintWind(ctx: CanvasRenderingContext2D, width: number, height: number, phase: number): void {
+    const p = this.live;
+    if (!p || p.wind <= 0.005) return;
+    const wind = p.look.wind,
+      unit = frameUnit(width, height),
+      seconds = phase / 1000,
+      meanSize = (wind.size[0] + wind.size[1]) / 2,
+      lifetime = meanSize / Math.max(0.1, wind.speed * 0.1),
+      count = Math.min(48, Math.ceil(wind.rate * lifetime * this.fallShare)),
+      image = effectImage('wind');
+    if (image) this.windSheet = tintSheet(image, wind.color, this.windSheet);
+    ctx.save();
+    ctx.strokeStyle = wind.color;
+    ctx.lineWidth = Math.max(0.6, unit * 0.035);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < count; i++) {
+      const size = wind.size[0] + (wind.size[1] - wind.size[0]) * hash(i, 701),
+        life = size / Math.max(0.1, wind.speed * 0.1),
+        clock = seconds + hash(i, 702) * life,
+        cycle = Math.floor(clock / life),
+        age = clock / life - cycle,
+        seed = i + cycle * 7919,
+        reach = Math.min(width * 0.55, (wind.x[0] + (wind.x[1] - wind.x[0]) * hash(seed, 703)) * size * unit * 0.2),
+        x = -reach + age * (width + reach * 2),
+        y = hash(seed, 704) * height,
+        bend = (wind.y[0] + (wind.y[1] - wind.y[0]) * hash(seed, 705)) * size * unit * 0.2;
+      if (image && this.windSheet) {
+        const frame = Math.min(39, Math.floor((1 - age) * 40)),
+          w = image.naturalWidth / 2,
+          h = image.naturalHeight / 20;
+        ctx.globalAlpha = p.wind;
+        ctx.drawImage(
+          this.windSheet.canvas,
+          (frame % 2) * w,
+          Math.floor(frame / 2) * h,
+          w,
+          h,
+          x - reach,
+          y - bend / 2,
+          reach,
+          bend,
+        );
+        continue;
+      }
+      ctx.globalAlpha = p.wind * 0.2 * Math.sin(age * Math.PI) ** 2;
+      ctx.beginPath();
+      ctx.moveTo(x - reach, y);
+      ctx.bezierCurveTo(x - reach * 0.65, y - bend, x - reach * 0.3, y + bend, x, y);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // Rotate and tint each frame once; particles only copy the resulting small tile.
+  private fallingSprite(kind: FallingSprite, tint: string, angle = 0): HTMLCanvasElement | undefined {
+    const image = effectImage('falling');
+    if (!image) return undefined;
+    const cached = this.fallingSheets[kind],
+      key = `${tint}:${angle.toFixed(3)}`;
+    if (cached?.color === key) return cached.canvas;
+    const [x, y, w, h, cols, rows] = FALLING_SPRITES[kind],
+      canvas = cached?.canvas ?? document.createElement('canvas'),
+      longest = Math.max(w, h),
+      shownW = (FALL_TILE * w) / longest,
+      shownH = (FALL_TILE * h) / longest;
+    canvas.width = cols * rows * FALL_TILE;
+    canvas.height = FALL_TILE;
+    const pen = context2d(canvas);
+    for (let frame = 0; frame < cols * rows; frame++) {
+      pen.save();
+      pen.translate((frame + 0.5) * FALL_TILE, FALL_TILE / 2);
+      pen.rotate(-angle);
+      pen.drawImage(
+        image,
+        x + (frame % cols) * w,
+        y + Math.floor(frame / cols) * h,
+        w,
+        h,
+        -shownW / 2,
+        -shownH / 2,
+        shownW,
+        shownH,
+      );
+      pen.restore();
+    }
+    pen.globalCompositeOperation = 'source-in';
+    pen.fillStyle = tint;
+    pen.fillRect(0, 0, canvas.width, canvas.height);
+    this.fallingSheets[kind] = { color: key, canvas };
+    return canvas;
   }
   paintPrecipitation(
     ctx: CanvasRenderingContext2D,
@@ -2216,54 +2361,83 @@ export class WeatherScene {
     // more or fewer, so the fall is equally dense on any card, its drops and flakes the same
     // size. A tiny card keeps a quarter and a huge one stops at four times.
     const front = depth === 'front',
-      scale = (front ? 0.4 : 0.6) * clamp((width * height) / 200000, 0.25, 4),
-      slant = this.slant(phase);
+      area = clamp((width * height) / 200000, 0.25, 4),
+      scale = (front ? 0.4 : 0.6) * area,
+      unit = frameUnit(width, height),
+      angle = this.slant(phase),
+      dx = Math.sin(angle),
+      dy = Math.cos(angle),
+      seconds = phase / 1000,
+      spriteBudget = this.lowPower ? 96 : 320;
+    // The near and far emission rates decide which layer gets the card's particle budget.
+    const countFor = (total: number, near: number, far: number): number =>
+      Math.round((total * area * this.fallShare * (front ? near : far / 10)) / (near + far / 10 || 1));
     if (p.rain) {
       if (front || this.gpuSky) this.paintRain(ctx, width, height, phase, front);
       else this.paintFarRain(ctx, width, height, phase);
     }
     if (p.sleet) {
-      // Ice pellets: short bright streaks, faster than snow and less steady than rain.
-      const count = Math.round(p.sleet * scale),
-        speed = front ? 0.75 : 0.45;
+      const [near, far] = p.look.sleet,
+        count = countFor(p.sleet, near[0], far[0]),
+        speed = (front ? near[1] : far[1]) * unit,
+        tint = particleTint(p.light.precipitation.sleet[depth]),
+        strip = this.fallingSprite('sleet', tint, angle),
+        stride = Math.max(1, Math.ceil(count / spriteBudget));
       ctx.beginPath();
       for (let i = 0; i < count; i++) {
         const seed = front ? i + 11000 : i + 10000,
           length = (front ? 6 : 4) * (0.7 + hash(seed, 6) * 0.6),
-          y =
-            ((hash(seed, 2) * (height + length) + phase * speed * (0.8 + hash(seed, 3) * 0.4)) % (height + length)) -
-            length;
-        const x = wrapX(
-          hash(seed, 1) * (width + 16) + y * slant + (noise(phase / 900 + seed * 0.37, 0, 1048576, 7) - 0.5) * 6,
-          width,
-        );
-        ctx.moveTo(x, y);
-        ctx.lineTo(x - length * slant * 0.6, y - length);
+          moved = seconds * speed * (0.65 + hash(seed, 3) * 0.35),
+          y = ((hash(seed, 2) * (height + length) + moved * dy) % (height + length)) - length,
+          x = wrapX(hash(seed, 1) * (width + 16) + moved * dx, width);
+        if (strip && i % stride === 0) {
+          const tile = Math.floor(hash(seed, 4) * 4) % 4;
+          ctx.drawImage(
+            strip,
+            tile * FALL_TILE,
+            0,
+            FALL_TILE,
+            FALL_TILE,
+            x - length / 2,
+            y - length / 2,
+            length,
+            length,
+          );
+        } else {
+          ctx.moveTo(x, y);
+          ctx.lineTo(x - length * dx, y - length * dy);
+        }
       }
-      ctx.strokeStyle = front ? '#f0f6ffb3' : '#e4eefc66';
+      ctx.strokeStyle = tint;
       ctx.lineWidth = front ? 1.8 : 1.1;
       ctx.lineCap = 'round';
       ctx.stroke();
       ctx.lineCap = 'butt';
     }
     if (p.snow) {
-      // Flakes wander on a turbulence field; strong wind drives them fast and flat.
-      const count = Math.round(p.snow * scale * this.fallShare),
-        fast = p.windAngle > 0.25 ? 1.8 : 1,
-        speed = (front ? 0.05 : 0.028) * fast;
+      const [near, far] = p.look.snow,
+        count = countFor(p.snow, near[0], far[0]),
+        [, speed, sizes] = front ? near : far,
+        tint = particleTint(p.light.precipitation.snow[depth]),
+        strip = this.fallingSprite(front ? 'nearSnow' : 'farSnow', tint),
+        stride = Math.max(1, Math.ceil(count / spriteBudget));
       ctx.beginPath();
       for (let i = 0; i < count; i++) {
         const seed = front ? i + 7000 : i + 3000,
-          r = (front ? 1.4 : 0.7) + hash(seed, 4) * (front ? 1.8 : 0.9);
-        const y = ((hash(seed, 2) * (height + 10) + phase * speed * (0.7 + hash(seed, 3) * 0.6)) % (height + 10)) - 5;
-        const drift = (noise(phase / 2600 + seed * 0.37, y / 140, 1048576, 5) - 0.5) * (front ? 44 : 26);
-        // Wraps beyond the edges, so a flake leaves fully before it returns; flakes start
-        // anywhere on that wider loop, or its empty stretch drifts onto the card.
-        const x = wrapX(hash(seed, 1) * (width + 16) + y * slant * fast + drift, width);
-        ctx.moveTo(x + r, y);
-        ctx.arc(x, y, r, 0, Math.PI * 2);
+          r = Math.max(0.45, unit * (sizes[0] + (sizes[1] - sizes[0]) * hash(seed, 4))),
+          moved = seconds * speed * unit * (0.5 + hash(seed, 3) * 0.5),
+          y = ((((hash(seed, 2) * (height + 10) + moved * dy) % (height + 10)) + height + 10) % (height + 10)) - 5,
+          drift = (noise(phase / 2600 + seed * 0.37, y / 140, 1048576, 5) - 0.5) * (front ? 44 : 26),
+          x = wrapX(hash(seed, 1) * (width + 16) + moved * dx + drift, width);
+        if (strip && i % stride === 0) {
+          const tile = Math.floor(hash(seed, 6) * 8) % 8;
+          ctx.drawImage(strip, tile * FALL_TILE, 0, FALL_TILE, FALL_TILE, x - r, y - r, r * 2, r * 2);
+        } else {
+          ctx.moveTo(x + r, y);
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+        }
       }
-      ctx.fillStyle = front ? '#ffffffd0' : '#ffffff80';
+      ctx.fillStyle = tint;
       ctx.fill();
     }
     if (p.dust) {
@@ -2282,26 +2456,29 @@ export class WeatherScene {
       ctx.fill();
     }
     if (p.hail) {
-      const count = Math.round(p.hail * scale),
-        speed = front ? 1.2 : 0.8;
+      const count = Math.round(p.hail * scale * this.fallShare),
+        [, speed, sizes] = p.look.hail,
+        tint = particleTint(p.light.precipitation.hail),
+        strip = this.fallingSprite('hail', tint),
+        stride = Math.max(1, Math.ceil(count / spriteBudget));
       ctx.beginPath();
       for (let i = 0; i < count; i++) {
         const seed = front ? i + 9000 : i + 8000,
-          r = (front ? 1.6 : 1) + hash(seed, 4) * 1.2;
-        // There are only a couple of hundred stones, so purely random columns clump and
-        // leave lasting gaps (a bare left side). Each stone keeps its own slice of the
-        // width and takes a new place in it every fall; the wind carries it across the
-        // edges, wrapping as snow does.
-        const fall = hash(seed, 2) * (height + 10) + phase * speed,
+          r = Math.max(0.6, (sizes[0] + hash(seed, 4) * (sizes[1] - sizes[0])) * unit),
+          moved = seconds * speed * unit * (0.5 + 0.5 * hash(seed, 3)),
+          fall = hash(seed, 2) * (height + 10) + moved * dy,
           lap = Math.floor(fall / (height + 10)),
-          y = (fall % (height + 10)) - 5;
-        // The slices span the whole wrap (the card and 8px off each side), or the empty
-        // stretch drifts onto the left edge with the wind.
-        const x = wrapX(((i + hash(seed + lap * 7919, 1)) / count) * (width + 16) + y * slant * 0.5, width);
-        ctx.moveTo(x + r, y);
-        ctx.arc(x, y, r, 0, Math.PI * 2);
+          y = (fall % (height + 10)) - 5,
+          x = wrapX(((i + hash(seed + lap * 7919, 1)) / count) * (width + 16) + moved * dx, width);
+        if (strip && i % stride === 0) {
+          const tile = Math.floor(hash(seed, 6) * 9) % 9;
+          ctx.drawImage(strip, tile * FALL_TILE, 0, FALL_TILE, FALL_TILE, x - r, y - r, r * 2, r * 2);
+        } else {
+          ctx.moveTo(x + r, y);
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+        }
       }
-      ctx.fillStyle = front ? '#f2f8ffcc' : '#e6f0ff80';
+      ctx.fillStyle = tint;
       ctx.fill();
     }
   }
@@ -2341,11 +2518,15 @@ export class WeatherScene {
   // and about eleven times as long, soft across, brightening over its first 60% and holding
   // to its leading end, where it stops short.
   paintRain(ctx: CanvasRenderingContext2D, width: number, height: number, phase: number, front: boolean): void {
-    const fall = this.preset?.look.rainFall,
-      p = this.live;
-    if (!fall || !p) return;
-    const [rate, speed, [thin, thick], [alpha0, alpha1], spread] = front ? fall.front : fall.back,
-      density = clamp(p.rain / ((this.preset?.rain ?? 0) || p.rain)),
+    const preset = this.rainPreset,
+      amount = this.live?.rain ?? 0;
+    if (!preset || amount === 0) return;
+    const fall = preset.look.rainFall;
+    const [rate, speed, [thin, thick], , spread] = front ? fall.front : fall.back,
+      [start, end] = front ? preset.light.precipitation.rain.front : preset.light.precipitation.rain.back,
+      alpha0 = colorAlpha(start),
+      alpha1 = colorAlpha(end),
+      density = clamp(amount / preset.rain),
       count = Math.round(rate * fall.life * density * this.fallShare),
       unit = frameUnit(width, height),
       seconds = phase / 1000,
@@ -2354,17 +2535,22 @@ export class WeatherScene {
       // Streak lengths as seen: about 2.8 times the drop sizes' own length ranges.
       [shortest, longest] = front ? [3.75 * 2.8, 4.25 * 2.8] : [3.15 * 2.8, 3.75 * 2.8],
       depth = front ? -4.5 : -30,
-      strongest = Math.max(alpha0, alpha1),
-      // The far streaks are softer, so as thin lines they show at a third of their opacity.
-      brightest = strongest * (front ? 1 : 0.33),
-      sprite = front ? this.rainStreak() : null,
+      sprite = front ? this.rainStreak(start, end) : null,
+      // Distant streaks batch by the same random fraction for tint and opacity.
+      palette = front
+        ? []
+        : Array.from({ length: FAR_BANDS }, (_, band) => {
+            const share = (band + 0.5) / FAR_BANDS;
+            return { rgb: rgb(mix(start, end, share)), alpha: (alpha0 + (alpha1 - alpha0) * share) * 0.33 };
+          }),
       bands = FAR_BANDS,
       parts = FAR_PIECES,
       base = ctx.getTransform(),
+      baseAlpha = ctx.globalAlpha,
       gpu = this.gpuSky,
       // The large changing paths stall sky export in this engine. Other engines
       // rasterize them efficiently and pay more for the extra tile copies.
-      tiled = navigator.userAgent.includes('Firefox/') && this.preset !== undefined && TILED_RAIN.has(this.preset.kind),
+      tiled = navigator.userAgent.includes('Firefox/') && TILED_RAIN.has(preset.kind),
       wide = ((thin + thick) / 2) * unit * 0.77,
       paths =
         sprite || gpu
@@ -2375,19 +2561,21 @@ export class WeatherScene {
                 ? new RainPath(base, ctx.canvas.width, ctx.canvas.height, Math.max(0.5, wide * swell))
                 : new Path2D();
             });
-    if (!count || brightest < 0.005) return;
-    if (gpu) {
-      gpu.layer(ctx);
+    if (!count || Math.max(alpha0, alpha1) < 0.005) return;
+    if (gpu) gpu.layer(ctx);
+    if (gpu && !front) {
       for (const [index, batch] of gpu.gpu.batches.entries()) {
-        const band = Math.floor(index / parts.length),
-          [, , shade] = parts[index % parts.length] ?? parts[0];
-        batch.opacity = Number((((band + 0.5) / bands) * brightest * shade).toFixed(3)) * ctx.globalAlpha;
+        const color = palette[Math.floor(index / parts.length)];
+        if (!color) continue;
+        const [, , shade] = parts[index % parts.length] ?? parts[0];
+        batch.opacity = color.alpha * shade * ctx.globalAlpha;
+        batch.tint = [color.rgb[0] / 255, color.rgb[1] / 255, color.rgb[2] / 255];
       }
     }
     const layer = front ? 'front' : 'back';
     let field = this.rainFields[layer];
-    if (field?.fall !== fall || field.width !== width || field.height !== height || field.angle !== p.windAngle) {
-      field = { fall, width, height, angle: p.windAngle, drops: [] };
+    if (field?.fall !== fall || field.width !== width || field.height !== height || field.angle !== preset.windAngle) {
+      field = { fall, width, height, angle: preset.windAngle, drops: [] };
       this.rainFields[layer] = field;
     }
     ctx.save();
@@ -2400,7 +2588,7 @@ export class WeatherScene {
       if (!cached || cached.cycle !== cycle) {
         const drop = slot + cycle * 104729,
           // The same launch time for every frame of this drop's life.
-          lean = (-(fall.angle + sway * Math.sin(swaying * (cycle * fall.life - lag))) * Math.PI) / 180 + p.windAngle,
+          lean = preset.windAngle - (sway * Math.sin(swaying * (cycle * fall.life - lag)) * Math.PI) / 180,
           turn = lean + ((hash(drop, 2) * 2 - 1) * spread * Math.PI) / 180,
           k = 100 / (100 - depth - (hash(drop, 3) * 2 - 1) * 4),
           across = (hash(drop, 4) * 2 - 1) * 30,
@@ -2417,12 +2605,13 @@ export class WeatherScene {
           speed: speed * (slowest + (1 - slowest) * hash(drop, 5)),
           reach: k * unit * length,
           size: (thin + (thick - thin) * hash(drop, 7)) * k * unit,
-          alpha: alpha0 + (alpha1 - alpha0) * hash(drop, 8),
+          tintShare: hash(drop, 8),
+          frame: front ? Math.min(RAIN_FRAMES - 1, Math.floor(hash(drop, 9) * RAIN_FRAMES)) : 0,
         };
         field.drops[i] = cached;
       }
       // Head on the card: from the line `offset` upwind of the centre, `across` along it.
-      const { dx, dy, turn, reach, size, alpha } = cached,
+      const { dx, dy, turn, reach, size, tintShare } = cached,
         travel = cached.speed * age,
         hx = width / 2 + cached.projection * (cached.x + travel * dx),
         hy = height / 2 + cached.projection * (cached.y + travel * dy),
@@ -2431,6 +2620,9 @@ export class WeatherScene {
       if ((hy < 0 && ty < 0) || (hy > height && ty > height) || (hx < 0 && tx < 0) || (hx > width && tx > width))
         continue;
       if (sprite) {
+        const alpha = (alpha0 + (alpha1 - alpha0) * tintShare) * baseAlpha,
+          color = Math.round(tintShare * (RAIN_TINTS - 1)),
+          cell = color * sprite.frames + (sprite.frames === 1 ? 0 : cached.frame);
         if (gpu) {
           const scale = gpu.scale;
           gpu.gpu.batches[0]?.quad(
@@ -2441,7 +2633,7 @@ export class WeatherScene {
             reach * scale,
             size * scale,
             alpha,
-            false,
+            cell,
           );
           continue;
         }
@@ -2450,11 +2642,21 @@ export class WeatherScene {
         ctx.translate(hx, hy);
         ctx.rotate(-turn);
         ctx.globalAlpha = alpha;
-        ctx.drawImage(sprite, -size, -reach, size * 2, reach);
+        ctx.drawImage(
+          sprite.canvas,
+          cell * sprite.cellWidth,
+          0,
+          sprite.cellWidth,
+          sprite.canvas.height,
+          -size,
+          -reach,
+          size * 2,
+          reach,
+        );
         continue;
       }
       // Far drops, too many for a sprite each: lines in three lengths of rising opacity.
-      const band = Math.min(bands - 1, Math.floor((alpha / strongest) * bands));
+      const band = Math.min(bands - 1, Math.floor(tintShare * bands));
       parts.forEach(([from, to], part) => {
         const path = paths[band * parts.length + part];
         const ax = tx + dx * reach * from,
@@ -2486,16 +2688,17 @@ export class WeatherScene {
     }
     ctx.restore();
     if (gpu) {
-      gpu.gpu.draw(gpu.color, sprite);
+      gpu.gpu.draw(gpu.color, sprite?.canvas ?? null, sprite ? sprite.frames * RAIN_TINTS : 1);
       return;
     }
     if (sprite) return;
-    // Far streaks share their layer's mean width, so they batch by opacity alone.
+    // Each path shares its width, color and opacity across distant drops.
     ctx.save();
     paths.forEach((path, index) => {
-      const band = Math.floor(index / parts.length),
-        [, , shade, swell] = parts[index % parts.length] ?? parts[0];
-      ctx.strokeStyle = `rgba(255,255,255,${(((band + 0.5) / bands) * brightest * shade).toFixed(3)})`;
+      const color = palette[Math.floor(index / parts.length)];
+      if (!color) return;
+      const [, , shade, swell] = parts[index % parts.length] ?? parts[0];
+      ctx.strokeStyle = `rgba(${color.rgb.join(',')},${color.alpha * shade})`;
       if (path instanceof RainPath) {
         this.rainTile ??= document.createElement('canvas');
         path.stroke(ctx, this.rainTile);
@@ -2506,34 +2709,44 @@ export class WeatherScene {
     });
     ctx.restore();
   }
-  // A near raindrop's streak, drawn once: twice as wide as the drop (soft across, half as
-  // bright at the drop's own width) and as long as the streak, rising evenly from nothing at
-  // its tail to 90% at 62% of the way down, on to full at 95%, then gone by the head. At its
-  // brightest it is a little over half opaque. A needle, as the far streaks are (see
-  // FAR_PIECES): 60% of the drop's width over the first 60%, then widening to the head.
-  rainStreak(): HTMLCanvasElement {
-    if (this.streak) return this.streak;
-    const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 256;
-    const c = context2d(canvas),
-      image = c.createImageData(canvas.width, canvas.height);
-    for (let y = 0; y < canvas.height; y++) {
-      const t = (y + 0.5) / canvas.height,
-        along = 0.55 * (t < 0.62 ? (0.9 * t) / 0.62 : t < 0.95 ? 0.9 + (0.1 * (t - 0.62)) / 0.33 : (1 - t) / 0.05),
-        taper = t < 0.6 ? 0.6 : Math.min(1, 0.6 + (0.4 * (t - 0.6)) / 0.35);
-      for (let x = 0; x < canvas.width; x++) {
-        const off = (x + 0.5 - canvas.width / 2) / ((canvas.width / 4) * taper),
-          at = (y * canvas.width + x) * 4;
-        image.data[at] = 255;
-        image.data[at + 1] = 255;
-        image.data[at + 2] = 255;
-        image.data[at + 3] = Math.round(255 * along * Math.exp(-Math.LN2 * off * off));
+  // Bake the tint ramp once per lighting change. The same colored silhouettes feed Canvas and WebGL.
+  private rainStreak(start: string, end: string) {
+    const art = effectImage('rain'),
+      frames = art ? RAIN_FRAMES : 1,
+      key = `${start}:${end}:${frames}`;
+    if (this.streak?.key === key) return this.streak;
+    const mask = document.createElement('canvas');
+    mask.width = art?.naturalWidth ?? 32;
+    mask.height = art?.naturalHeight ?? 256;
+    const pen = context2d(mask);
+    if (art) {
+      pen.drawImage(art, 0, 0);
+    } else {
+      // A soft procedural streak for builds without the optional rain artwork.
+      const image = pen.createImageData(mask.width, mask.height);
+      for (let y = 0; y < mask.height; y++) {
+        const t = (y + 0.5) / mask.height,
+          along = 0.55 * (t < 0.62 ? (0.9 * t) / 0.62 : t < 0.95 ? 0.9 + (0.1 * (t - 0.62)) / 0.33 : (1 - t) / 0.05),
+          taper = t < 0.6 ? 0.6 : Math.min(1, 0.6 + (0.4 * (t - 0.6)) / 0.35);
+        for (let x = 0; x < mask.width; x++) {
+          const off = (x + 0.5 - mask.width / 2) / ((mask.width / 4) * taper);
+          image.data[(y * mask.width + x) * 4 + 3] = Math.round(255 * along * Math.exp(-Math.LN2 * off * off));
+        }
       }
+      pen.putImageData(image, 0, 0);
     }
-    c.putImageData(image, 0, 0);
-    this.streak = canvas;
-    return canvas;
+    const canvas = document.createElement('canvas');
+    canvas.width = mask.width * RAIN_TINTS;
+    canvas.height = mask.height;
+    const colors = context2d(canvas);
+    pen.globalCompositeOperation = 'source-in';
+    for (let band = 0; band < RAIN_TINTS; band++) {
+      pen.fillStyle = mix(start, end, band / (RAIN_TINTS - 1));
+      pen.fillRect(0, 0, mask.width, mask.height);
+      colors.drawImage(mask, band * mask.width, 0);
+    }
+    this.streak = { canvas, key, cellWidth: mask.width / frames, frames };
+    return this.streak;
   }
   // Collisions on the panels' top edges (snow settles in front of the glass; see
   // paintSettledSnow). Rain only reaches the edges no other panel shelters: the first row,
@@ -2563,8 +2776,8 @@ export class WeatherScene {
             other.x + other.width > panel.x,
         ),
     );
-    if ((p.rain || p.sleet) && !p.hail) this.paintSplashes(ctx, width, height, phase, open);
-    if (!p.hail) return;
+    if (preset.look.collision === 'rain' && (p.rain || p.sleet)) this.paintSplashes(ctx, width, height, phase, open);
+    if (preset.look.collision !== 'hail' || !p.hail) return;
     for (const [index, rect] of open.entries()) {
       const inset = Math.min(rect.radius ?? 0, rect.width / 2),
         span = rect.width - inset * 2,
@@ -2691,32 +2904,67 @@ export class WeatherScene {
     });
     ctx.restore();
   }
-  // Foreground motes catching the sun, drifting on a slow noise field.
-  paintMotes(ctx: CanvasRenderingContext2D, width: number, height: number, phase: number): void {
-    const p = this.preset;
+  // Large, nearby drops and flakes cross the full scene before the glass and screen flash.
+  paintNearParticles(ctx: CanvasRenderingContext2D, width: number, height: number, phase: number): void {
+    const p = this.live;
     if (!p) return;
-    const light = p.golden > 0.2 ? '#ffd9a8' : '#fff6e0';
-    for (let i = 0; i < 14; i++) {
-      const life = 9000 + hash(i, 81) * 7000,
-        age = (phase + hash(i, 82) * life) % life,
-        t = age / life,
-        cycle = Math.floor((phase + hash(i, 82) * life) / life);
-      const x =
-          (hash(i * 13 + cycle, 83) * width + (noise(phase / 4000 + i * 0.7, 0, 1048576, 9) - 0.5) * 60 + t * 30) %
-          width,
-        y =
-          hash(i * 13 + cycle, 84) * height * 0.75 +
-          (noise(0, phase / 5000 + i * 0.7, 1048576, 11) - 0.5) * 40 -
-          t * 20;
-      const r = 1.2 + hash(i, 85) * 2.4,
-        glow = ctx.createRadialGradient(x, y, 0, x, y, r);
-      glow.addColorStop(0, `${light}aa`);
-      glow.addColorStop(1, `${light}00`);
-      ctx.globalAlpha = Math.sin(t * Math.PI) * 0.35;
-      ctx.fillStyle = glow;
-      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    const near = p.look.near,
+      unit = frameUnit(width, height),
+      total = Math.round(near.rate * near.life * this.fallShare),
+      sheet = effectImage('near'),
+      frame = Math.max(0, Math.min(7, near.image)),
+      [start, end] = p.light.air.near,
+      alpha = colorAlpha(start),
+      range = colorAlpha(end) - alpha,
+      tint = mix(start, end, 0.5),
+      t = phase / 1000,
+      [strength, frequency] = near.noise;
+    if (sheet) this.nearSheet = tintSheet(sheet, tint, this.nearSheet);
+    ctx.save();
+    ctx.fillStyle = tint;
+    for (let i = 0; i < total; i++) {
+      const clock = t + hash(i, 81) * near.life,
+        lap = Math.floor(clock / near.life),
+        age = clock - lap * near.life,
+        seed = i + lap * 7919,
+        angle = p.windAngle + ((hash(seed, 82) * 2 - 1) * near.spread * Math.PI) / 180,
+        dx = Math.sin(angle),
+        dy = Math.cos(angle),
+        distance =
+          age * near.speed * unit * (0.5 + hash(seed, 83) * 0.5) - (Math.abs(dx) * width + Math.abs(dy) * height) / 2,
+        across = (hash(seed, 84) - 0.5) * (Math.abs(dy) * width + Math.abs(dx) * height),
+        size = Math.max(0.5, (near.size[0] + (near.size[1] - near.size[0]) * hash(seed, 85)) * unit),
+        drift = strength * unit * 0.2 * Math.sin(age * frequency + hash(seed, 86) * Math.PI * 2),
+        x = width / 2 + distance * dx + (across + drift) * dy,
+        y = height / 2 + distance * dy - (across + drift) * dx;
+      if (x < -size || y < -size || x > width + size || y > height + size) continue;
+      ctx.globalAlpha = alpha + hash(seed, 87) * range;
+      if (sheet && this.nearSheet) {
+        const w = sheet.naturalWidth / 2,
+          h = sheet.naturalHeight / 4,
+          spin = near.spin[0] + (near.spin[1] - near.spin[0]) * hash(seed, 88);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle + (spin * age * Math.PI) / 180);
+        ctx.drawImage(
+          this.nearSheet.canvas,
+          (frame % 2) * w,
+          Math.floor(frame / 2) * h,
+          w,
+          h,
+          -size / 2,
+          -size / 2,
+          size,
+          size,
+        );
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.ellipse(x, y, size * 0.4, size * (frame === 1 ? 1.5 : 0.5), -angle, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
   // Lightning: the first strike 1.5 s in, then one every 6–9 seconds (the preset's
   // interval, drawn afresh each time, seeded so every frame agrees). A strike's bolt grows,
@@ -2724,19 +2972,20 @@ export class WeatherScene {
   // whitens the whole sky: faintly while the bolt
   // grows, to its full brightness (somewhere in the preset's range) the moment it lands,
   // held while it flashes, then evenly away over the screen flash's own fade.
-  strike(phase: number, width: number, height: number): Strike | null {
+  strike(phase: number): Strike | null {
     const p = this.preset;
     if (!p) return null;
     const L = p.strikes,
       [low, high] = L.strikeInterval;
     let clock = this.strikeClock;
-    if (!clock || clock.at > phase) clock = { index: 0, at: 1500 };
+    if (!clock || clock.last > phase) clock = { index: 0, at: 1500, last: phase };
     for (;;) {
       const next: number = clock.at + (low + (high - low) * hash(clock.index, 1)) * 1000;
       if (next > phase) break;
-      clock = { index: clock.index + 1, at: next };
+      clock = { index: clock.index + 1, at: next, last: phase };
     }
     this.strikeClock = clock;
+    clock.last = phase;
     const grow = L.growAmount * 1000,
       flash = L.flashAmount * 1000,
       fade = L.fadeAmount * 1000,
@@ -2744,7 +2993,7 @@ export class WeatherScene {
       age = phase - clock.at;
     if (age < 0 || age > grow + flash + Math.max(fade, whiten)) return null;
     // Bolts reach further out on a wide card than on a tall one.
-    const reach = width >= height ? 25 : 18,
+    const reach = L.reach,
       key = `${clock.index}:${reach}`;
     if (this.bolt?.key !== key)
       this.bolt = {

@@ -94,8 +94,7 @@ export interface EntityAttributes {
   temperature_unit?: string;
   humidity?: number;
   cloud_coverage?: number;
-  // The card's own, which no entity reports: the height of the cloud now, lent from the forecast's
-  // hour (see readingsNow).
+  // The cloud's dominant height, supplied explicitly or lent from the forecast hour.
   cloud_altitude?: CloudAltitude;
   uv_index?: number;
   pressure?: number;
@@ -181,6 +180,8 @@ export const FORECAST_READINGS = [
 export type ForecastReading = (typeof FORECAST_READINGS)[number];
 // The height that holds the most of the cloud: up to about 3 km, up to about 8 km, or above.
 export type CloudAltitude = 'low' | 'mid' | 'high';
+export const isCloudAltitude = (value: unknown): value is CloudAltitude =>
+  value === 'low' || value === 'mid' || value === 'high';
 // One forecast entry as the card holds it: a reading the integration doesn't give (or
 // gives as null) is missing or undefined, alike. `datetime` is an ISO time.
 export type ForecastEntry = Partial<Record<ForecastReading, number | undefined>> & {

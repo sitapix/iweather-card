@@ -340,10 +340,10 @@ test("a sheet heads a day with the symbol its row shows, and today's follows the
     shown({ ...today, daily: { ...clear, sky: { condition: 'clear-night', night: true } } }).includes(SYMBOLS.moon),
   );
   assert.ok(shown({ ...tomorrow, daily: { ...clear, sky: dayForm('clear-night') } }).includes(SYMBOLS.sun));
-  // Refined by the same readings as its row: today's cloud cover, a later day's own.
+  // Explicit partly-cloudy keeps its symbol even when today's measured cover is high.
   const covered = { ...sheet, attrs: { ...attrs, cloud_coverage: 85 } };
   const partly = { high: 60, low: 40, condition: 'partlycloudy', sky: dayForm('partlycloudy') };
-  assert.ok(conditionsBody(covered, { ...today, daily: partly }, 'temperature', inputs).includes(SYMBOLS.cloud));
+  assert.ok(conditionsBody(covered, { ...today, daily: partly }, 'temperature', inputs).includes(SYMBOLS['cloud-sun']));
   assert.ok(
     conditionsBody(covered, { ...tomorrow, daily: partly }, 'temperature', inputs).includes(SYMBOLS['cloud-sun']),
   );

@@ -1,7 +1,7 @@
 import { lightingFor, skyGradientFor, skyKind, skyPreset, type Lighting } from './presets.ts';
-import type { GradientName, Lightning, SkyKind, SkyLayer, SkyLook } from './presets-data.ts';
+import type { Lightning, SkyKind, SkyLayer, SkyLook, WindowClass } from './presets-data.ts';
 import { finite, clamp } from '../lib/values.ts';
-import { hash, mix } from '../lib/canvas.ts';
+import { CHANNEL_MAX, hash, rgb, toHex } from '../lib/canvas.ts';
 import { METERS_PER_SECOND, UNITS, beaufortSpeed, isBeaufort } from '../weather/units.ts';
 import { DAY, HOUR, HOURS_PER_DAY, MINUTE } from '../lib/time.ts';
 import { FULL_TURN, HALF_TURN } from '../lib/compass.ts';
@@ -20,8 +20,6 @@ interface BasePreset {
   clouds: readonly [back: number, middle: number, front: number];
   blanket?: boolean;
   overcastAmount?: number;
-  fog?: number;
-  windy?: boolean;
 }
 const UNAVAILABLE: BasePreset = { clouds: [0.4, 0.3, 0.2], overcastAmount: 0.7 };
 const PRESETS: Readonly<Record<string, BasePreset>> = {
@@ -29,7 +27,7 @@ const PRESETS: Readonly<Record<string, BasePreset>> = {
   'clear-night': { clouds: [0.06, 0.03, 0] },
   partlycloudy: { clouds: [0.42, 0.32, 0.2] },
   cloudy: { clouds: [0.75, 0.62, 0.48], blanket: true, overcastAmount: 0.75 },
-  fog: { clouds: [0.3, 0.2, 0], blanket: true, fog: 1, overcastAmount: 0.75 },
+  fog: { clouds: [0.3, 0.2, 0], blanket: true, overcastAmount: 0.75 },
   rainy: { clouds: [0.8, 0.7, 0.55], blanket: true, overcastAmount: 0.82 },
   pouring: { clouds: [0.9, 0.8, 0.65], blanket: true, overcastAmount: 0.82 },
   lightning: { clouds: [0.85, 0.72, 0.55], blanket: true, overcastAmount: 0.86 },
@@ -37,8 +35,8 @@ const PRESETS: Readonly<Record<string, BasePreset>> = {
   snowy: { clouds: [0.78, 0.62, 0.45], blanket: true, overcastAmount: 0.6 },
   'snowy-rainy': { clouds: [0.8, 0.68, 0.5], blanket: true, overcastAmount: 0.68 },
   hail: { clouds: [0.85, 0.72, 0.55], blanket: true, overcastAmount: 0.75 },
-  windy: { clouds: [0.35, 0.28, 0.18], windy: true },
-  'windy-variant': { clouds: [0.7, 0.58, 0.42], blanket: true, overcastAmount: 0.5, windy: true },
+  windy: { clouds: [0.35, 0.28, 0.18] },
+  'windy-variant': { clouds: [0.7, 0.58, 0.42], blanket: true, overcastAmount: 0.5 },
   exceptional: { clouds: [0.6, 0.5, 0.35], overcastAmount: 0.45 },
 };
 
@@ -53,6 +51,8 @@ export function windMetersPerSecond(speed: number | undefined, unit: string | un
 
 // What the scene is drawn from: the condition, the sun and moon, and the entity's readings.
 export interface SceneInputs {
+  windowClass?: WindowClass | undefined;
+  tile?: boolean | undefined;
   condition?: string;
   night?: boolean;
   elevation?: number | undefined;
@@ -64,9 +64,12 @@ export interface SceneInputs {
   moonTilt?: number | undefined;
   // The lunar phase now (0 new, .5 full), as moonPhase gives it.
   moonPhase?: number | undefined;
+  moonLimbAngle?: number | undefined;
+  moonPhaseAngle?: number | undefined;
   precipitation?: number | undefined;
   precipitationUnit?: string | undefined;
   solarHour?: number | undefined;
+  sunPathAvailable?: boolean | undefined;
   moonHour?: number | undefined;
   temperature?: number | undefined;
   dewPoint?: number | undefined;
@@ -76,8 +79,13 @@ export interface SceneInputs {
 // The scene for a sky: its kind and look, gradient and lighting, each layer's strength,
 // and how the clouds and precipitation move.
 export interface ScenePreset {
+  windowClass: WindowClass;
   condition: string;
   kind: SkyKind;
+  // Glass and wind keep the reported weather when cover selects a different scene.
+  effectKind: string | undefined;
+  temperature: number | undefined;
+  wind: number;
   look: SkyLook;
   light: Lighting;
   night: boolean;
@@ -104,6 +112,8 @@ export interface ScenePreset {
   blanket: number;
   stars: number;
   moon: boolean;
+  moonPhase: number | undefined;
+  moonPicture: number | undefined;
   moonAltitude: number | undefined;
   moonTilt: number | undefined;
   sun: boolean;
@@ -117,19 +127,7 @@ export interface ScenePreset {
   fps: number;
   cloudSpeed: number;
 }
-// A daytime sky with a lid is lifted toward pale blue-grey, by how dark its gradient is,
-// except these, which show their gradient as it is.
-const LIFT: Readonly<Partial<Record<GradientName, number>>> = {
-  rainheavy: 0.12,
-  snowheavy: 0.18,
-  hurricane: 0.08,
-  overcast_low: 0,
-  overcast_mid: 0,
-  rain: 0,
-  overcast_high: 0,
-};
-const FALLING: readonly SkyLayer[] = ['rain', 'snow', 'sleet', 'hail'],
-  STORMY: readonly SkyLayer[] = [...FALLING, 'lightning'];
+const FALLING: readonly SkyLayer[] = ['rain', 'snow', 'sleet', 'hail'];
 
 // The moon shows in the sky only while the sun is at most 9° up and the moon itself more than 9° up.
 const MOON_SHOWS = 9;
@@ -137,7 +135,36 @@ const MOON_SHOWS = 9;
 // Rain and snow lean 15° per 100 mph of wind, to 100 mph.
 const MILES_PER_HOUR = METERS_PER_SECOND[UNITS.milesPerHour] ?? 1;
 const LEAN = { mph: 100, degrees: 15 } as const;
+const WIND_STREAK_SPEED = 6.705;
+const WIND_STREAK_KINDS = new Set([
+  'blowingDust',
+  'blowingSnow',
+  'breezy',
+  'windy',
+  'clear',
+  'mostlyClear',
+  'foggy',
+  'frigid',
+  'haze',
+  'hot',
+  'smoky',
+]);
+
+// Positive angles travel right as they fall on the canvas.
+function fallAngle(kind: SkyKind, base: number, wind: number): number {
+  const share = clamp(wind / (MILES_PER_HOUR * LEAN.mph));
+  if (kind === 'blizzard' || kind === 'strongStorms' || kind === 'tropicalStorm')
+    return -(base + 20 * share - 10) * RAD;
+  if (
+    /^(drizzle|flurries|freezingDrizzle|freezingRain|hail|heavyRain|heavySnow|rain|scatteredThunderstorms|sleet|snow|sunFlurries|sunShowers|thunderstorms|wintryMix)$/.test(
+      kind,
+    )
+  )
+    return LEAN.degrees * share * RAD;
+  return -base * RAD;
+}
 export function scenePreset({
+  windowClass = 'compact',
   condition = 'unavailable',
   night = false,
   elevation,
@@ -148,9 +175,13 @@ export function scenePreset({
   moonAltitude,
   moonTilt,
   moonPhase: phase,
+  moonLimbAngle,
+  moonPhaseAngle,
+  tile = false,
   precipitation,
   precipitationUnit,
   solarHour,
+  sunPathAvailable = true,
   moonHour,
   temperature,
   dewPoint,
@@ -170,11 +201,19 @@ export function scenePreset({
       dewPoint,
       humidity,
     }),
-    preset = skyPreset(kind),
-    look = !night && preset.day ? { ...preset, ...preset.day } : preset,
+    look = skyPreset(kind, windowClass),
     layers = new Set(look.layers);
   // A condition in an integration's own words takes the values of the nearest condition.
-  const base = PRESETS[nearestCondition(condition) ?? condition] ?? UNAVAILABLE;
+  const reported = nearestCondition(condition),
+    effectKind =
+      reported === 'windy' || reported === 'windy-variant'
+        ? 'windy'
+        : reported === 'fog' && kind !== 'haze'
+          ? 'foggy'
+          : reported === undefined || (reported === 'exceptional' && kind.startsWith('cloudy'))
+            ? undefined
+            : kind,
+    base = PRESETS[reported ?? condition] ?? UNAVAILABLE;
   // Providers that report cloud cover refine the fair-weather presets.
   const cover = finite(cloudCover) && !base.blanket ? clamp(cloudCover / PERCENT) : null;
   const clouds =
@@ -183,19 +222,15 @@ export function scenePreset({
       : base.clouds.map((value, index) => Math.max(value * 0.5, clamp(cover * (1 - index * 0.22))));
   const fallback = night ? -25 : 40,
     sunElevation = finite(elevation) ? elevation : fallback;
-  // The moon appears wherever the preset has a moon layer, once it is clear of the horizon
-  // and the sun low enough (MOON_SHOWS), by day too (a pale moon over a dawn sky), and never
-  // as the new moon's dark picture. While it shows, it lights the sky (see lightingFor).
-  const moon =
-    layers.has('moon') &&
-    moonAltitude !== undefined &&
-    moonAltitude > MOON_SHOWS &&
-    sunElevation <= MOON_SHOWS &&
-    (phase === undefined || skyMoonPhase(phase) > 0);
+  const sunUp = sunElevation > MOON_SHOWS,
+    directSun = sunUp && sunPathAvailable,
+    moonPicture = finite(phase) ? skyMoonPhase(phase, moonLimbAngle, moonPhaseAngle) : undefined,
+    moonlit = layers.has('moon') && finite(moonAltitude) && moonAltitude > MOON_SHOWS && !sunUp && moonPicture !== 0;
+  // A list tile receives lunar lighting while its moon disc stays out of the frame.
+  const moon = moonlit && !tile;
   const [top, middle, bottom, skyStop] = skyGradientFor(kind, sunElevation, rising),
-    light = lightingFor(kind, sunElevation, rising, moon);
-  const lift = !night && look.blanket ? (LIFT[look.sky] ?? 0.28) : 0,
-    sky = [top, middle, bottom].map((color, i) => mix(color, '#c4cfe0', lift * (1 + i * 0.3)));
+    light = lightingFor(kind, sunElevation, rising, moonlit, windowClass);
+  const sky = [top, middle, bottom];
   // Preset particle counts fill a phone screen; these are per card, in proportion.
   const fall = ([front, back]: SkyLook['rain']) => (layers.has('rain') ? (front[0] + back[0] / 10) * 0.25 : 0);
   const overcastAmount = base.overcastAmount ?? 0,
@@ -205,6 +240,15 @@ export function scenePreset({
     overcastAmount,
     condition,
     kind,
+    effectKind,
+    temperature,
+    wind:
+      windSpeed >= WIND_STREAK_SPEED &&
+      effectKind !== undefined &&
+      (WIND_STREAK_KINDS.has(effectKind) || effectKind.toLowerCase().includes('cloudy'))
+        ? 1
+        : 0,
+    windowClass,
     look,
     light,
     night,
@@ -223,41 +267,31 @@ export function scenePreset({
     dust: layers.has('dust') ? look.snow[0][0] * 0.2 : 0,
     hail: layers.has('hail') ? look.hail[0] * 0.6 : 0,
     sleet: layers.has('sleet') ? (look.sleet[0][0] + look.sleet[1][0] / 10) * 0.5 : 0,
-    fog: layers.has('fog') ? 1 : (base.fog ?? 0),
+    fog: layers.has('fog') ? 1 : 0,
     lightning: layers.has('lightning'),
     cloudFlash: layers.has('cloudFlash'),
-    // The blanket is near opaque wherever a preset enables it, and a veil, drawn in its place, as
-    // opaque as the preset says.
     // Overcast for lighting: a blanket, or any falling precipitation under a grey sky.
     precipitating: FALLING.some(layer => layers.has(layer)),
     overcastSky: Boolean(look.blanket) || FALLING.some(layer => layers.has(layer)),
-    blanket: look.veil
-      ? look.veil[2]
-      : look.blanket
-        ? layers.has('rain') || layers.has('snow') || layers.has('lightning')
-          ? 0.85
-          : 0.6
-        : 0,
+    blanket: look.blanket ? 1 : 0,
     stars: layers.has('stars') ? light.stars : 0,
     moon,
+    moonPhase: phase,
+    moonPicture,
     moonAltitude,
     moonTilt,
-    sun: !night && layers.has('sunDisc') && sunElevation > -2,
+    sun: directSun && layers.has('sunDisc'),
     // Lens effects need a clear path to the sun; fringe edges overcast skies.
-    flare: !night && (layers.has('sunHalo') || layers.has('sunGhosts')) && sunElevation > -2,
+    flare: directSun && (layers.has('sunHalo') || layers.has('sunGhosts')),
     // Sun extras, each only where its preset enables it.
-    rays: !night && layers.has('sunBeams') ? look.rays : null,
-    ghosts: layers.has('sunGhosts') ? look.ghosts : null,
-    rainbow: layers.has('sunHalo') ? look.rainbow : null,
+    rays: directSun && layers.has('sunBeams') ? look.rays : null,
+    ghosts: directSun && layers.has('sunGhosts') ? look.ghosts : null,
+    rainbow: directSun && layers.has('sunHalo') ? look.rainbow : null,
     strikes: look.lightning,
-    fringe: base.blanket ? 0.45 + overcastAmount * 0.35 : 0,
-    // Fall angle: falling rain and snow lean 15°
-    // per 100 mph of wind, wind capped at 100 mph. windSpeed is in meters per second.
-    windAngle: ((Math.min(LEAN.mph, windSpeed / MILES_PER_HOUR) / LEAN.mph) * LEAN.degrees * Math.PI) / HALF_TURN,
-    // Frame rate for the kind of sky: 60 fps with anything falling or storming,
-    // 30 for clouds, fog and haze, 25 for clear, frigid and hot skies.
-    fps: STORMY.some(layer => layers.has(layer)) ? 60 : /^(clear|frigid|hot)$/.test(kind) ? 25 : 30,
-    cloudSpeed: 1 + clamp(windSpeed / 8, 0, 3) + (base.windy ? 1.5 : 0),
+    fringe: layers.has('fringe') ? 1 : 0,
+    windAngle: fallAngle(kind, look.fallAngle, windSpeed),
+    fps: look.fps,
+    cloudSpeed: 1,
   };
 }
 
@@ -272,13 +306,17 @@ export const PHASE_DIGITS = 4;
 const SKY_MOON_PICTURES = 28;
 const SKY_MOON_STEPS = [24, 38, 50, 58, 68, 76, 85, 95, 109, 123, 135, 140, 144, 156] as const;
 // The phase the sky's moon is drawn at for `phase` (0 new, .5 full).
-export function skyMoonPhase(phase: number): number {
-  const cycle = (((phase % 1) + 1) % 1) * FULL_TURN,
-    waxing = cycle < HALF_TURN,
-    angle = HALF_TURN - (waxing ? cycle : FULL_TURN - cycle),
+export function skyMoonTint(color: string, horizon: string, warm: number): string {
+  const channels = rgb(horizon);
+  return toHex(rgb(color).map((v, i) => v * (1 - warm * (1 - (channels[i] ?? CHANNEL_MAX) / CHANNEL_MAX))));
+}
+export function skyMoonPhase(phase: number, limbDegrees?: number, phaseDegrees?: number): number {
+  const cycle = (phase - Math.floor(phase)) * FULL_TURN,
+    angle = finite(phaseDegrees) ? phaseDegrees : Math.abs(HALF_TURN - cycle),
     out = SKY_MOON_STEPS.findIndex(limit => angle <= limit),
     half = SKY_MOON_PICTURES / 2,
-    picture = out === -1 ? 0 : waxing ? half - out : half + out;
+    upper = finite(limbDegrees) ? ((limbDegrees % FULL_TURN) + FULL_TURN) % FULL_TURN < HALF_TURN : cycle > HALF_TURN,
+    picture = out === -1 ? 0 : upper ? half + out : half - out;
   return picture / SKY_MOON_PICTURES;
 }
 // 0 new, .25 first quarter, .5 full, .75 last quarter: the Moon's elongation from
@@ -321,7 +359,31 @@ export function moonHourAt(
   latitude: number | undefined,
   longitude: number | undefined,
 ): number | undefined {
-  if (!finite(latitude) || !finite(longitude)) return undefined;
+  if (!finite(time) || !finite(latitude) || !finite(longitude)) return undefined;
+  const altitude = moonAltitude(time, latitude, longitude);
+  if (!finite(altitude) || altitude <= 0.125) return undefined;
+  // Bracket each horizon crossing around the visible interval. This keeps the path
+  // aligned with the Moon's changing declination through a long polar day.
+  const crossing = (direction: -1 | 1): number | undefined => {
+    for (let hours = 1; hours <= 48; hours++) {
+      const outside = time + direction * hours * HOUR,
+        height = moonAltitude(outside, latitude, longitude);
+      if (!finite(height) || height > 0.125) continue;
+      let down = outside,
+        up = outside - direction * HOUR;
+      while (Math.abs(up - down) > 15 * 1000) {
+        const middle = (up + down) / 2;
+        if ((moonAltitude(middle, latitude, longitude) ?? 0) > 0.125) up = middle;
+        else down = middle;
+      }
+      return (up + down) / 2;
+    }
+    return undefined;
+  };
+  const rise = crossing(-1),
+    set = crossing(1);
+  if (finite(rise) && finite(set) && set > rise) return 6 + 12 * clamp((time - rise) / (set - rise));
+  // During continuous lunar daylight, the hour angle keeps the track bounded.
   const { dec, hour, phi } = lunarSky(time, latitude, longitude),
     angle = Math.atan2(Math.sin(hour), Math.cos(hour));
   const cosine = -Math.tan(phi) * Math.tan(dec),
@@ -360,8 +422,26 @@ export function moonTilt(
   if (!finite(latitude) || !finite(longitude)) return undefined;
   const { dec, hour, phi } = lunarSky(time, latitude, longitude);
   const parallactic = Math.atan2(Math.sin(hour), Math.tan(phi) * Math.cos(dec) - Math.sin(dec) * Math.cos(hour));
-  // Both angles run from north toward east, counter-clockwise on the sky; the canvas turns clockwise.
   return parallactic - moonAxis(time);
+}
+
+// The bright limb's direction selects a mirrored phase image. The observer's local
+// parallactic angle is used separately by moonTilt to rotate the lunar surface.
+export function moonAppearance(time: number): { limb: number; angle: number } {
+  const { ra, dec, e, d } = lunarPosition(time),
+    anomaly = (357.529 + 0.98560028 * d) * RAD,
+    longitude = (280.46 + 0.9856474 * d + 1.915 * Math.sin(anomaly) + 0.02 * Math.sin(2 * anomaly)) * RAD,
+    solarRa = Math.atan2(Math.cos(e) * Math.sin(longitude), Math.cos(longitude)),
+    solarDec = Math.asin(Math.sin(e) * Math.sin(longitude)),
+    delta = solarRa - ra,
+    limb = Math.atan2(
+      Math.cos(solarDec) * Math.sin(delta),
+      Math.sin(solarDec) * Math.cos(dec) - Math.cos(solarDec) * Math.sin(dec) * Math.cos(delta),
+    ),
+    cosine = Math.sin(solarDec) * Math.sin(dec) + Math.cos(solarDec) * Math.cos(dec) * Math.cos(delta),
+    separation = Math.acos(clamp(cosine, -1, 1)),
+    angle = Math.atan2(Math.sin(separation), moonDistance(time) / 149597870 - Math.cos(separation));
+  return { limb: (limb / RAD + FULL_TURN) % FULL_TURN, angle: angle / RAD };
 }
 function lunarPosition(time: number) {
   const d = daysSinceJ2000(time),

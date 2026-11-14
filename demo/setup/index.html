@@ -23,8 +23,12 @@
 
     <h2 id="install">Install</h2>
     <h3 id="hacs">With HACS</h3>
-    <p><a class="add" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=sitapix&amp;repository=iweather-card&amp;category=plugin">Open in HACS</a></p>
-    <p>The button opens the card in HACS on your own Home Assistant. Install <strong>iWeather Card</strong>, then reload your browser. To add it by hand instead:</p>
+    <p>
+      <a class="hacs-install" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=sitapix&amp;repository=iweather-card&amp;category=plugin">
+        <img src="https://my.home-assistant.io/badges/hacs_repository.svg" width="354" height="40" alt="Open iWeather Card in HACS on your Home Assistant">
+      </a>
+    </p>
+    <p>Install <strong>iWeather Card</strong> in HACS, then reload your browser. You can also add the repository manually.</p>
     <ol>
       <li>In HACS, open the ⋮ menu and choose <strong>Custom repositories</strong>.</li>
       <li>Add <code>https://github.com/sitapix/iweather-card</code> with the type <strong>Dashboard</strong>.</li>
@@ -33,7 +37,7 @@
 
     <h3 id="by-hand">By hand</h3>
     <ol>
-      <li>Download every file from the latest release, or build them with Node 22.18 or newer and pnpm:
+      <li>Download every file from the <a href="https://github.com/sitapix/iweather-card/releases/latest">latest release</a>, or build them with Node 22.18 or newer and pnpm:
         <pre><code>pnpm install --frozen-lockfile
 pnpm build   # writes them to dist/</code></pre>
       </li>
