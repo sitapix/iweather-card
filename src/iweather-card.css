@@ -1017,11 +1017,9 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .radar-dot{position:absolute;left:var(--x,50%);top:var(--y,50%);width:12px;height:12px;border-radius:50%;background:#0a84ff;border:2.5px solid #fff;transform:translate(-50%,-50%);box-shadow:0 1px 6px #0008}
 .radar-credit{position:absolute;right:6px;bottom:4px;font-size:9px;color:#ffffff8c}
 /* The time of the radar frame shown, while the small map plays: in the corner at its foot, 10 px
-   in and 9 px up, in a soft shade that keeps it read over rain and names. The credit stands
-   beside it, set right on as many lines as the room left takes, so it never lifts the time. */
-.map-foot{position:absolute;inset:auto 0 0;display:flex;align-items:flex-end;justify-content:flex-end;gap:10px;padding:0 6px 4px 10px;pointer-events:none}
-.map-foot .radar-credit{position:static;flex:1 1 0;min-width:0;text-align:right}
-.map-when{flex:none;margin-bottom:5px;font-size:14px;font-weight:600;color:#ffffffd9;text-shadow:0 0 6px #000000b3,0 0 14px #00000080}.map-when:empty{display:none}
+   in and 9 px up, in a soft shade that keeps it read over rain and names. */
+.map-foot{position:absolute;inset:auto 0 0;display:flex;padding:0 10px 9px;pointer-events:none}
+.map-when{font-size:14px;font-weight:600;color:#ffffffd9;text-shadow:0 0 6px #000000b3,0 0 14px #00000080}.map-when:empty{display:none}
 /* The forecast's hours in the small map's loop, hidden until its playhead blends them in. */
 .map-field.map-hour{opacity:0}
 .radar-note{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:600;color:#ffffffb3}

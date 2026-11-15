@@ -269,7 +269,8 @@ export function mapMarkup(look: MapLook): string {
       .filter(Boolean)
       .join(' · '),
     legend = large ? mapKey(kind, look.unit, look.windWord, look.colours, credits) : '',
-    credit = legend ? '' : `<small class="radar-credit">${credits}</small>`;
+    // The small map carries no credit: the map it opens names its sources under Map Data.
+    credit = legend || !large ? '' : `<small class="radar-credit">${credits}</small>`;
   return (
     `<div class="map-pan"${place}>` +
     stillImage(still?.ground) +
@@ -311,11 +312,8 @@ export function mapMarkup(look: MapLook): string {
     legend +
     (large ? mapTools(centre.zoom, moved, kind, config.map === 'rainviewer') : '') +
     look.timeline +
-    // Small, the radar's time while it plays stands in the corner at the foot, the credit beside
-    // it, however many lines that takes.
-    (!large && radar
-      ? `<div class="map-foot"><span class="map-when" aria-hidden="true"></span>${credit}</div>`
-      : credit) +
+    // Small, the radar's time while it plays stands in the corner at the foot.
+    (!large && radar ? '<div class="map-foot"><span class="map-when" aria-hidden="true"></span></div>' : credit) +
     (radar && failed ? `<span class="radar-note">${say('Radar unavailable')}</span>` : '')
   );
 }
