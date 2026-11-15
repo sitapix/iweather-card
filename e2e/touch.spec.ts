@@ -108,7 +108,7 @@ test('a tapped chart is left as drawn', async ({ card }) => {
 
 test.describe('touch map navigation', () => {
   test.use({ config: MAP });
-  test('pans and zooms on a phone with single taps', async ({ card }) => {
+  test('zooms on a phone with single taps, and goes back home', async ({ card }) => {
     await card.locator('.tile[data-tile=map]').tap();
     const map = card.locator('dialog[open] .radar.large');
     const home = map.locator('[data-home]');
@@ -121,12 +121,5 @@ test.describe('touch map navigation', () => {
     }
     await home.tap();
     await expect(home).toHaveAttribute('data-here', '');
-    for (const name of ['Pan north', 'Pan west', 'Pan east', 'Pan south']) {
-      await map.locator('summary').tap();
-      await map.getByRole('button', { name, exact: true }).tap();
-      await expect(home).not.toHaveAttribute('data-here', '');
-      await home.tap();
-      await expect(home).toHaveAttribute('data-here', '');
-    }
   });
 });

@@ -266,24 +266,10 @@ test('a weather refresh preserves the open menu, focused choice and native timel
   expect(card.maps.timelineTime).toBe(card.maps.timelineOf(wind)?.times[0]);
 });
 
-test('the raster map can pan in four directions and zoom using only buttons', async () => {
+test('the raster map zooms by its buttons, and has no pan control among its tools', async () => {
   const card = await page({}),
-    view = await openMap(card),
-    directions = view.querySelector('details');
-  if (!directions) throw new Error('No navigation');
-  directions.querySelector('summary')?.click();
-  expect(directions.open).toBe(true);
-  for (const [key, axis, sign] of [
-    ['ArrowUp', 'latitude', 1],
-    ['ArrowDown', 'latitude', -1],
-    ['ArrowLeft', 'longitude', -1],
-    ['ArrowRight', 'longitude', 1],
-  ] as const) {
-    const before = card.maps.centreOf(view)[axis];
-    view.querySelector<HTMLElement>(`[data-pan="${key}"]`)?.click();
-    await vi.waitFor(() => expect((card.maps.centreOf(view)[axis] - before) * sign).toBeGreaterThan(0));
-    expect(directions.open).toBe(true);
-  }
+    view = await openMap(card);
+  expect(view.querySelector('.map-tools details, [data-pan]')).toBeNull();
   for (const step of [1, -1]) {
     const before = card.maps.centreOf(view).zoom;
     view.querySelector<HTMLElement>(`[data-zoom="${step}"]`)?.click();

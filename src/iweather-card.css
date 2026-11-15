@@ -1235,7 +1235,6 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
    them changes nothing, and a click on them reaches the map, which only closes the menu. */
 .map-tools:has([aria-expanded=true]) button,.detail[data-id=map]:has(.map-tools [aria-expanded=true]) header{pointer-events:none}
 .map-pill:has([aria-expanded=true]){opacity:.35}.map-tools [aria-expanded=true]{--shade:#ffffff3d}.radar.large:not([data-kind=wind],[data-night]) .map-tools [aria-expanded=true]{--shade:#0000001f}
-.radar.large:not([data-kind=wind],[data-night]) .map-navigation summary{color:#1c1c1e}
 .map-tools svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.map-tools [data-here] svg,.map-tools .fill{fill:currentColor}.map-tools [data-layers] svg{stroke-width:1.6}
 /* The layers menu, at the top right of the map. Beside a tile it is small: dark grey glass just
    under its button, a hairline round it, white names on 24 px rows and a check beside the one
@@ -1300,18 +1299,8 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .radar.large[data-night] .map-span{background:#ffffff1a}.radar.large[data-night] .map-span .thumb{background:#c1c2c6}.radar.large[data-night] .map-span:not([data-held]) [aria-pressed=true]{color:#1c1c1e}.radar.large[data-night] .map-span[data-held] .thumb{background:transparent}
 .map-attribution{position:relative;grid-row:3;justify-self:end;z-index:3;max-width:100%;box-sizing:border-box;padding:2px 6px;border-radius:4px 0 0;background:#fff;color:#232428;font:11px/20px system-ui,sans-serif;text-align:right}
 .map-attribution a{color:#154d78;text-decoration:underline;white-space:nowrap}
-.map-navigation{position:relative;align-self:flex-start;color:#fff}
-.map-navigation summary{display:grid;place-items:center;width:36px;height:36px;cursor:pointer;list-style:none;border-radius:50%}
-.map-navigation summary::-webkit-details-marker{display:none}
-.map-directions{position:absolute;right:0;top:calc(100% + 4px);display:grid;grid-template-columns:repeat(3,1fr);border-radius:14px;background:#26323d;color:#fff;box-shadow:0 2px 8px #0005}
-.map-directions [data-pan=ArrowUp],.map-directions [data-pan=ArrowDown]{grid-column:2}
-.map-directions [data-pan=ArrowLeft]{grid-column:1}.map-directions [data-pan=ArrowRight]{grid-column:3}
-.radar.large .map-directions button{color:#fff}
-.detail[data-id=map][data-full] .map-navigation{align-self:flex-end;order:2}
-.detail[data-id=map][data-full] .map-navigation summary{width:44px;height:44px}
-.detail[data-id=map][data-full] .map-directions{right:calc(100% + 4px);top:auto;bottom:0}
-@media(pointer:coarse){.radar.large .map-tools :is(button,summary){width:44px;height:44px}.detail:not([data-full]) .map-layers{top:60px}}
-@media(max-height:440px){.detail[data-id=map][data-full] .map-tools,.detail[data-id=map][data-full] .map-pill{flex-direction:row}.detail[data-id=map][data-full] .map-navigation{order:0}.detail[data-id=map][data-full] .map-directions{top:calc(100% + 4px);right:0;bottom:auto}}
+@media(pointer:coarse){.radar.large .map-tools button{width:44px;height:44px}.detail:not([data-full]) .map-layers{top:60px}}
+@media(max-height:440px){.detail[data-id=map][data-full] .map-tools,.detail[data-id=map][data-full] .map-pill{flex-direction:row}}
 @media(forced-colors:active){.wind-rail{border:1px solid CanvasText}.wind-rail i{background:Highlight}.wind-rail:has(.wind-track:focus-visible){outline-color:Highlight}}
 /* Over the timeline, the note that some of the view has no radar. */
 .map-gaps{position:absolute;left:0;right:0;bottom:calc(100% + 20px);text-align:center;font-size:12px;line-height:16px;color:#757575;pointer-events:none}.radar.large[data-night] .map-gaps{color:#ffffffa6}

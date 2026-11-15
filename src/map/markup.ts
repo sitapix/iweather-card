@@ -116,20 +116,7 @@ export function timelineMarkup(
 // home. The layers button opens a menu of the four, the one shown checked. Its icon is three
 // layers, or full screen two filled ones (`stacked`).
 function mapTools(zoom: number, moved: boolean, kind: string, layers: boolean): string {
-  const directions = [
-    ['ArrowUp', say('Pan north'), 'M3 10l5-5 5 5'],
-    ['ArrowLeft', say('Pan west'), 'M10 3l-5 5 5 5'],
-    ['ArrowRight', say('Pan east'), 'M6 3l5 5-5 5'],
-    ['ArrowDown', say('Pan south'), 'M3 6l5 5 5-5'],
-  ] as const;
-  const pan = directions
-    .map(
-      ([key, label, path]) =>
-        `<button type="button" data-pan="${key}" aria-label="${label}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="${path}"/></svg></button>`,
-    )
-    .join('');
-  const navigation = `<details class="map-navigation map-pill"><summary aria-label="${say('Pan map')}" title="${say('Pan map')}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v14M1 8h14M5.5 3.5 8 1l2.5 2.5M5.5 12.5 8 15l2.5-2.5M3.5 5.5 1 8l2.5 2.5M12.5 5.5 15 8l-2.5 2.5"/></svg></summary><div class="map-directions">${pan}</div></details>`;
-  return `<div class="map-tools">${navigation}<span class="map-pill"><button type="button" data-zoom="-1" aria-label="${say('Zoom out')}"${zoom <= MAP_ZOOMS.least ? ' disabled' : ''}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg></button><button type="button" data-zoom="1" aria-label="${say('Zoom in')}"${zoom >= MAP_ZOOMS.most ? ' disabled' : ''}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button></span><span class="map-pill">${layers ? `<button type="button" data-layers aria-label="${say('Map layers')}" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="fill" d="M8 1.6 14.6 5.2 8 8.8 1.4 5.2z"/><path d="M2 8.4 8 11.7l6-3.3M2 11.3 8 14.6l6-3.3"/><path class="fill stacked" d="M8 2.4 13.76 5.6 8 8.8 2.24 5.6zM2.24 11.08 4.32 10 8 11.76 11.68 10 13.76 11.08 8 14.4z"/></svg></button>` : ''}<button type="button" data-home${moved ? '' : ' data-here'} aria-label="${say('Back to home')}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M14.6 1.4 1.4 7.3l5.9 1.4 1.4 5.9z"/></svg></button></span></div>${
+  return `<div class="map-tools"><span class="map-pill"><button type="button" data-zoom="-1" aria-label="${say('Zoom out')}"${zoom <= MAP_ZOOMS.least ? ' disabled' : ''}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg></button><button type="button" data-zoom="1" aria-label="${say('Zoom in')}"${zoom >= MAP_ZOOMS.most ? ' disabled' : ''}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button></span><span class="map-pill">${layers ? `<button type="button" data-layers aria-label="${say('Map layers')}" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="fill" d="M8 1.6 14.6 5.2 8 8.8 1.4 5.2z"/><path d="M2 8.4 8 11.7l6-3.3M2 11.3 8 14.6l6-3.3"/><path class="fill stacked" d="M8 2.4 13.76 5.6 8 8.8 2.24 5.6zM2.24 11.08 4.32 10 8 11.76 11.68 10 13.76 11.08 8 14.4z"/></svg></button>` : ''}<button type="button" data-home${moved ? '' : ' data-here'} aria-label="${say('Back to home')}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M14.6 1.4 1.4 7.3l5.9 1.4 1.4 5.9z"/></svg></button></span></div>${
     layers
       ? glassMenuMarkup(
           say('Map layers'),
@@ -368,12 +355,6 @@ export function redrawMap(view: HTMLElement, markup: string, large: boolean) {
       previous.ariaLabel = button.ariaLabel;
       previous.toggleAttribute('data-here', button.hasAttribute('data-here'));
     });
-    const summary = old.querySelector('summary'),
-      label = next.querySelector('summary')?.ariaLabel;
-    if (summary && label) {
-      summary.ariaLabel = label;
-      summary.title = label;
-    }
     return true;
   });
   retain('.map-layers:not([data-leaving])', (old, next) => {

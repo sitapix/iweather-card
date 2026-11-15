@@ -195,22 +195,11 @@ test('the live map keeps its Forecast heading while seeking between observed and
   expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
 });
 
-test('the live map exposes the same four pan directions as the raster fallback', async () => {
+test('the live map zooms a step by each of its buttons', async () => {
   const card = await openMap(),
     view = card.maps.largeView(),
     live = card.maps.gl?.map;
   if (!view || !live) throw new Error('No live map');
-  const pan = vi.spyOn(live, 'panBy');
-  view.querySelector('summary')?.click();
-  for (const [key, x, y] of [
-    ['ArrowUp', 0, -1],
-    ['ArrowDown', 0, 1],
-    ['ArrowLeft', -1, 0],
-    ['ArrowRight', 1, 0],
-  ] as const) {
-    view.querySelector<HTMLElement>(`[data-pan="${key}"]`)?.click();
-    expect(pan).toHaveBeenLastCalledWith([(x * view.clientWidth) / 8, (y * view.clientHeight) / 8]);
-  }
   const zoom = vi.spyOn(live, 'easeTo');
   for (const step of [1, -1]) {
     const before = live.getZoom();
