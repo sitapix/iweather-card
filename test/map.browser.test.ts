@@ -348,6 +348,20 @@ test('the radar timeline labels the selected frame generation time, not the curr
   }
 });
 
+test('a cold mini map shows raster tiles while the styled map is loading', async () => {
+  let finish: (value: GroundStill) => void = () => {};
+  vi.mocked(groundStill).mockReturnValue(
+    new Promise(resolve => {
+      finish = resolve;
+    }),
+  );
+  const card = await mapped();
+  expect(card.root.querySelector('.radar-layer.base.osm img[src]')).not.toBeNull();
+  finish(STILL);
+  await vi.waitFor(() => expect(stills(card)).toHaveLength(2));
+  expect(card.root.querySelector('.radar-layer.base.osm img')).toBeNull();
+});
+
 test('the ground is a picture, with the radar between it and the names', async () => {
   vi.mocked(groundStill).mockResolvedValue(STILL);
   const card = await mapped();

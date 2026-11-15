@@ -67,6 +67,23 @@ test('a frame still to come is passed over, its neighbours blending across it, a
   preview.stop();
 });
 
+test('streamed hours reuse painted frames and keep the running playhead', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+  const paint = vi.fn().mockResolvedValue(true);
+  const mount = (node: HTMLCanvasElement) => document.body.append(node);
+  const first = new RadarPreview(null, frames.slice(0, 2), RADAR_LABEL_STEP, paint, () => true, null, mount);
+  await vi.advanceTimersByTimeAsync(2600);
+  const showing = document.querySelector('[data-on]');
+  expect(shown()).toBe('1');
+  first.stop();
+  document.body.replaceChildren();
+  const next = new RadarPreview(null, frames, RADAR_LABEL_STEP, paint, () => true, null, mount, first);
+  expect(paint).toHaveBeenCalledTimes(3);
+  expect(document.querySelector('[data-on]')).toBe(showing);
+  expect(opacity(1)).toBeCloseTo(0.6, 1);
+  next.stop();
+});
+
 test('a hidden or disabled preview rests on now and sets off again when active', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
   let active = true;

@@ -36,7 +36,7 @@ export class RadarPreview<Frame extends PreviewFrame> {
   private stopped = false;
   // When the playhead last set off from the start, on the page's steady clock, which a change to the
   // time of day doesn't move.
-  private began = 0;
+  private began: number | undefined;
   private said = '';
 
   // `latest`, if given, is the canvas already showing the first frame, the one now. Each other
@@ -52,25 +52,42 @@ export class RadarPreview<Frame extends PreviewFrame> {
       canvas.className = 'radar-layer frame';
       latest?.before(canvas);
     },
+    previous?: RadarPreview<Frame>,
+    identity: (frame: Frame) => object = frame => frame,
   ) {
     this.active = active;
     this.frames = frames;
     this.label = label;
     this.step = step;
+    const painted = new Map<object, HTMLCanvasElement>();
+    if (previous) {
+      if (previous.frames[0]?.time === frames[0]?.time && previous.step === step) this.began = previous.began;
+      previous.frames.forEach((frame, i) => {
+        const canvas = previous.canvases[i];
+        if (canvas && previous.ready.has(i)) painted.set(identity(frame), canvas);
+      });
+    }
     this.canvases = frames.map((frame, i) => {
-      const canvas = (i === 0 ? latest : null) ?? document.createElement('canvas');
+      const saved = painted.get(identity(frame));
+      const canvas = saved ?? (i === 0 ? latest : null) ?? document.createElement('canvas');
       if (canvas !== latest) mount(canvas, frame);
       canvas.dataset['frame'] = String(i);
       // The blend is set frame by frame, so no transition lags behind it.
       canvas.style.transition = 'none';
-      void paint(canvas, frame, this.asked.signal).then(painted => {
-        if (this.stopped) return;
-        if (painted) this.ready.add(i);
-        this.update();
-      });
+      if (saved) this.ready.add(i);
+      else
+        void paint(canvas, frame, this.asked.signal).then(done => {
+          if (this.stopped) return;
+          if (done) this.ready.add(i);
+          this.update();
+        });
       return canvas;
     });
-    this.show(0, 0, 0);
+    if (this.began !== undefined && this.ready.size > 1 && this.active()) this.tick();
+    else {
+      this.show(0, 0, 0);
+      if (this.ready.size > 1) this.update();
+    }
   }
 
   // The playhead `share` of the way from frame `from` to frame `to`, at `time`: those two blend, the
@@ -106,7 +123,7 @@ export class RadarPreview<Frame extends PreviewFrame> {
 
   private tick() {
     this.timer = 0;
-    if (this.stopped) return;
+    if (this.stopped || this.began === undefined) return;
     if (!this.active()) {
       this.update();
       return;
@@ -128,11 +145,12 @@ export class RadarPreview<Frame extends PreviewFrame> {
     if (!this.active()) {
       window.clearTimeout(this.timer);
       this.timer = 0;
+      this.began = undefined;
       this.show(0, 0, 0);
       return;
     }
     if (this.timer || this.ready.size < 2) return;
-    this.began = performance.now();
+    this.began ??= performance.now();
     this.timer = window.setTimeout(() => this.tick(), TICK);
   }
 

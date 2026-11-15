@@ -9,6 +9,7 @@ import { PRECIPITATION, RADAR, RADAR_STILL, RADAR_STILL_NIGHT, radarLevels, rada
 import { RainLayer } from './rain-gl.ts';
 import { forecastLevels, forecastRecolour, isForecastTile } from './radar-forecast.ts';
 import { pacedFetch } from './pace.ts';
+import { keptStill, keepStill } from './kept-tiles.ts';
 import { say } from '../weather/words.ts';
 import { SECOND } from '../lib/time.ts';
 import { coverageTile } from '../lib/services.ts';
@@ -861,19 +862,30 @@ function drawnCloser(map: GlMap, by: number) {
 }
 const settled = (map: GlMap) => new Promise<void>(done => map.once('idle', done));
 const pictureOf = (map: GlMap) =>
-  new Promise<string>((done, failed) => {
+  new Promise<Blob>((done, failed) => {
     map.getCanvas().toBlob(blob => {
-      if (blob) done(URL.createObjectURL(blob));
+      if (blob) done(blob);
       else failed(new Error('Map still: no picture'));
     });
   });
 export async function groundStill(
   root: ShadowRoot,
-  { latitude, longitude, zoom, width, height, pixelRatio }: MapStillView,
+  view: MapStillView,
   look: GroundLook,
+  key: string,
+  signal: AbortSignal,
 ): Promise<GroundStill | null> {
+  const urls = ({ ground, names }: { ground: Blob; names: Blob }) => ({
+    ground: URL.createObjectURL(ground),
+    names: URL.createObjectURL(names),
+  });
+  const cancelled = () => signal.aborted;
+  const saved = await keptStill(key);
+  if (cancelled()) return null;
+  if (saved) return urls(saved);
   const maplibre = await loadMapLibre(root);
-  if (!maplibre) return null;
+  if (!maplibre || cancelled()) return null;
+  const { latitude, longitude, zoom, width, height, pixelRatio } = view;
   const by = SHEET_LOOKS.has(look) ? CLOSER : 1,
     // The wind's own sheet map stands at the screen's scale, so what is drawn on it is as much
     // smaller as the page is drawn larger.
@@ -899,8 +911,6 @@ export async function groundStill(
     container.remove();
     return null;
   }
-  // The first picture, let go if the second never comes.
-  let first: string | undefined;
   const show = (layers: readonly GlLayer[], visibility: string) => {
     for (const { id } of layers) map.setLayoutProperty(id, 'visibility', visibility);
   };
@@ -932,18 +942,27 @@ export async function groundStill(
     show(names, 'none');
     await settled(map);
     const ground = await pictureOf(map);
-    first = ground;
     show(rest, 'none');
     show(names, 'visible');
     await settled(map);
     return { ground, names: await pictureOf(map) };
   };
-  const still = await Promise.race([
-    draw().catch(() => null),
-    new Promise<null>(done => window.setTimeout(done, STILL_WAIT, null)),
-  ]);
-  map.remove();
-  container.remove();
-  if (!still && first) URL.revokeObjectURL(first);
-  return still;
+  let stop = () => {};
+  const ended = new Promise<null>(resolve => {
+    stop = () => resolve(null);
+  });
+  const timer = window.setTimeout(stop, STILL_WAIT);
+  signal.addEventListener('abort', stop, { once: true });
+  map.on('webglcontextlost', stop);
+  try {
+    const still = await Promise.race([draw().catch(() => null), ended]);
+    if (!still || cancelled()) return null;
+    void keepStill(key, still);
+    return urls(still);
+  } finally {
+    window.clearTimeout(timer);
+    signal.removeEventListener('abort', stop);
+    map.remove();
+    container.remove();
+  }
 }

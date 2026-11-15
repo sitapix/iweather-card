@@ -95,32 +95,12 @@ export function driftBetween(
   return { x: fine.x * FINE, y: fine.y * FINE };
 }
 
-// The drift between two radar frames painted by `paint` into canvases of their own, or none where
-// either fails to paint.
-export async function measureDrift<Frame>(
-  paint: (canvas: HTMLCanvasElement, frame: Frame, signal: AbortSignal) => Promise<boolean>,
-  before: Frame,
-  after: Frame,
-  signal: AbortSignal,
-): Promise<Drift> {
-  const [then, now] = [document.createElement('canvas'), document.createElement('canvas')],
-    [painted, paintedToo] = await Promise.all([paint(then, before, signal), paint(now, after, signal)]),
-    width = now.width,
-    height = now.height;
-  if (!painted || !paintedToo || !width || !height || then.width !== width || then.height !== height) return STILL;
+// Compare the two mosaics already painted for this observation.
+export function measureDrift(then: HTMLCanvasElement, now: HTMLCanvasElement): Drift {
+  const { width, height } = now;
+  if (!width || !height || then.width !== width || then.height !== height) return STILL;
   const read = (canvas: HTMLCanvasElement) => canvas.getContext('2d')?.getImageData(0, 0, width, height).data;
   const a = read(then),
     b = read(now);
   return a && b ? driftBetween(a, b, width, height) : STILL;
-}
-
-// Carries what `canvas` shows `x` and `y` of its pixels along.
-export function carry(canvas: HTMLCanvasElement, x: number, y: number) {
-  const copy = document.createElement('canvas');
-  copy.width = canvas.width;
-  copy.height = canvas.height;
-  copy.getContext('2d')?.drawImage(canvas, 0, 0);
-  const context = canvas.getContext('2d');
-  context?.clearRect(0, 0, canvas.width, canvas.height);
-  context?.drawImage(copy, x, y);
 }

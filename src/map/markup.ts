@@ -211,7 +211,6 @@ export interface MapLook extends PinReading {
   // The ground is the live one (see MapViews.startGl), so none of the card's own.
   live: boolean;
   // Or a picture of it, on the way (undefined) or none to be had (null): see MapViews.drawStill.
-  pictured: boolean;
   still: GroundStill | null | undefined;
   radar: boolean;
   rainHours: boolean;
@@ -236,7 +235,7 @@ export interface MapLook extends PinReading {
 }
 export function mapMarkup(look: MapLook): string {
   const { config, width, height, large, centre, moved, home, kind, badge, tint, pin } = look,
-    { live, pictured, still, radar, rainHours, frames, shownFrame, latestFrame } = look,
+    { live, still, radar, rainHours, frames, shownFrame, latestFrame } = look,
     { field, streaks, overlay, dataCredit, failed } = look;
   // Large, a ring of tiles past the edges for a drag to show, loaded at once: lazily, being
   // clipped, they would wait until let go. Not for the radar, whose every frame is a layer of
@@ -291,9 +290,7 @@ export function mapMarkup(look: MapLook): string {
     `<div class="map-pan"${place}>` +
     stillImage(still?.ground) +
     scaled(grow) +
-    (live || (pictured && still !== null)
-      ? ''
-      : layer(ground, tile => fill(base, tile), config.map_tile_url ? 'base' : 'base osm')) +
+    (live || still ? '' : layer(ground, tile => fill(base, tile), config.map_tile_url ? 'base' : 'base osm')) +
     '</div>' +
     (live || rainHours || !frames.length
       ? ''

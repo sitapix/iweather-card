@@ -70,7 +70,16 @@ function cardFileGuard(): Plugin {
     generateBundle(_, bundle) {
       const card = bundle[CARD];
       if (card?.type !== 'chunk') this.error(`No ${CARD} in the build.`);
-      const bytes = Buffer.byteLength(card.code);
+      // Count the entry and every synchronous import against the dashboard's startup budget.
+      const initial = new Set([CARD]);
+      let code = '';
+      for (const name of initial) {
+        const part = bundle[name];
+        if (part?.type !== 'chunk') this.error(`Missing startup module ${name}.`);
+        code += part.code;
+        for (const dependency of part.imports) initial.add(dependency);
+      }
+      const bytes = Buffer.byteLength(code);
       if (bytes > CARD_BYTES)
         this.error(`${CARD} is ${bytes} bytes, over the ${CARD_BYTES} it may be: raise CARD_BYTES if that is meant.`);
       const beside: [string, string][] = [
@@ -79,16 +88,15 @@ function cardFileGuard(): Plugin {
         ...translated().map((sentence): [string, string] => ['a translation', sentence]),
       ];
       for (const [what, mark] of beside)
-        if (card.code.includes(mark)) this.error(`${CARD} holds ${what}, which belongs beside it: ${mark}`);
-      if (!card.code.includes('import.meta.url'))
-        this.error(`${CARD} no longer finds its side files by its own address.`);
+        if (code.includes(mark)) this.error(`${CARD} holds ${what}, which belongs beside it: ${mark}`);
+      if (!code.includes('import.meta.url')) this.error(`${CARD} no longer finds its side files by its own address.`);
     },
   };
 }
 
 // `pnpm build`: the card's one file, with the styles inlined without their comments through `?inline` imports
-// and the editor bundled in, loaded only when opened, and beside it the files it asks for as it needs
-// them: its pictures, languages and MapLibre. Nothing goes in a folder, as release
+// and the editor in a separate module, fetched only when opened. Its pictures, languages and
+// MapLibre also sit beside it and load on demand. Nothing goes in a folder, as release
 // assets have none. Every dashboard loads the card's file, so what isn't needed at once stays out.
 // `pnpm dev`: the preview pages, served from the sources, reloading on each change.
 export default defineConfig(({ command }) => ({
@@ -117,13 +125,14 @@ export default defineConfig(({ command }) => ({
     sourcemap: true,
     rolldownOptions: {
       input: 'src/iweather-card.ts',
+      preserveEntrySignatures: 'strict',
       output: {
         entryFileNames: CARD,
         // Languages are data, but stand beside the card as `.js`, as installers compress only that.
         assetFileNames: ({ names }) =>
           names.some(name => name.endsWith('.json')) ? 'iweather-[name]-[hash].js' : 'iweather-[name]-[hash][extname]',
         sourcemapExcludeSources: true,
-        codeSplitting: false,
+        chunkFileNames: 'iweather-ui-[name]-[hash].js',
         comments: { legal: false },
       },
     },

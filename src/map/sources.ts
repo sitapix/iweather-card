@@ -72,11 +72,17 @@ export async function radarFrames(fetcher: Fetcher = fetch): Promise<RadarFrame[
     const list = radar[key];
     return isList(list) ? list : [];
   };
-  return frames('past').flatMap(frame =>
-    isRecord(frame) && finite(frame['time']) && text(frame['path'])
-      ? [{ time: fromUnix(frame['time']), url: `${host}${frame['path']}` }]
-      : [],
-  );
+  return frames('past').flatMap(frame => {
+    if (!isRecord(frame) || !finite(frame['time']) || !text(frame['path'])) return [];
+    try {
+      const url = new URL(frame['path'], host || undefined);
+      return url.protocol === 'https:' || url.protocol === 'http:'
+        ? [{ time: fromUnix(frame['time']), url: url.href }]
+        : [];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export const MAP_ZOOM = 7;

@@ -1,6 +1,6 @@
 import { drawRadarCoverage } from './coverage.ts';
 import { FORECAST_LABEL_STEP, RADAR_LABEL_STEP, RadarPreview } from './radar-preview.ts';
-import { carry, type Drift, measureDrift, STILL } from './radar-drift.ts';
+import { type Drift, measureDrift, STILL } from './radar-drift.ts';
 import { clamp } from '../lib/values.ts';
 // The map views: the map tile's, and the large one in its sheet. For each, what it shows and
 // where it looks, the data asked for it, and everything that moves on it.
@@ -131,6 +131,8 @@ const RADAR_FRAMES = 10,
   FORECAST_TIMEOUT = 20 * SECOND;
 // The small map's ground: the pictures kept, enough for a light and a dark theme in a few sizes.
 const STILLS_KEPT = 6;
+// Start one short scroll before the tile comes on screen.
+const MAP_PREFETCH_MARGIN = 200;
 // The page is drawn a quarter larger than it stands on screen (PAGE_DRAWN), and the small map a
 // step closer by as much, so that it takes in what the large map does at the same zoom.
 const PAGE_STEPS = Math.log2(PAGE_DRAWN);
@@ -255,17 +257,21 @@ const RADAR_RING = 4;
 function radarPainter(centre: MapCentre, width: number, height: number, look: GroundLook) {
   const sky = radarSky(centre, width, height, RADAR_RING),
     tilesOf = (frame: RadarFrame) => `${look}|${sky.tiles.map(radarTile(frame)).join()}`;
+  const size = (canvas: HTMLCanvasElement) => {
+    canvas.width = Math.round((width / sky.grow + 2 * RADAR_RING) * RADAR_SHARP);
+    canvas.height = Math.round((height / sky.grow + 2 * RADAR_RING) * RADAR_SHARP);
+    Object.assign(canvas.style, {
+      left: `${-RADAR_RING}px`,
+      top: `${-RADAR_RING}px`,
+      width: `calc(100% + ${2 * RADAR_RING}px)`,
+      height: `calc(100% + ${2 * RADAR_RING}px)`,
+    });
+  };
   return {
     tilesOf,
+    size,
     paint: (canvas: HTMLCanvasElement, frame: RadarFrame, signal?: AbortSignal) => {
-      canvas.width = Math.round((width / sky.grow + 2 * RADAR_RING) * RADAR_SHARP);
-      canvas.height = Math.round((height / sky.grow + 2 * RADAR_RING) * RADAR_SHARP);
-      Object.assign(canvas.style, {
-        left: `${-RADAR_RING}px`,
-        top: `${-RADAR_RING}px`,
-        width: `calc(100% + ${2 * RADAR_RING}px)`,
-        height: `calc(100% + ${2 * RADAR_RING}px)`,
-      });
+      size(canvas);
       canvas.dataset['tiles'] = tilesOf(frame);
       return paintRadar(canvas, sky.tiles, radarTile(frame), look === 'night', signal);
     },
@@ -415,10 +421,12 @@ export class MapViews {
   windMaps: { canvas: HTMLCanvasElement; map: WindMap }[] = [];
   radarFrame = -1;
   private readonly radarPreviews = new Map<HTMLElement, RadarPreview<TileFrame>>();
+  private readonly nearby = new Map<HTMLElement, boolean>();
+  private mapVisibility: IntersectionObserver | undefined;
   // The small map's pictures of its ground, by look and view (see drawStill); null where none could
   // be drawn; and the one being drawn.
   stills = new Map<string, GroundStill | null>();
-  stillDrawing = false;
+  private stillDrawing: AbortController | undefined;
   // The picture last shown, which a view drawn afresh takes up until its own comes.
   lastStill: GroundStill | undefined;
   constructor(card: MapHost) {
@@ -496,6 +504,13 @@ export class MapViews {
   }
   // Invalidates an unfinished request when radar is disabled or the card leaves the page.
   invalidateRadar() {
+    this.stillDrawing?.abort();
+    this.stillDrawing = undefined;
+    if (!this.card.isConnected) {
+      this.mapVisibility?.disconnect();
+      this.mapVisibility = undefined;
+      this.nearby.clear();
+    }
     this.gridViews.clear();
     this.releaseGrids();
     for (const [view, preview] of this.radarPreviews) {
@@ -610,6 +625,7 @@ export class MapViews {
       !document.hidden &&
       this.card.config?.map === 'rainviewer' &&
       this.card.root.contains(view) &&
+      this.nearby.get(view) !== false &&
       !view.closest('dialog:not([open])') &&
       view.clientWidth > 0 &&
       view.clientHeight > 0
@@ -1329,11 +1345,11 @@ export class MapViews {
   async drawStill(key: string, view: MapStillView, look: GroundLook) {
     const { card } = this;
     if (this.stillDrawing || !card.visible || document.hidden) return;
-    this.stillDrawing = true;
-    const still = await groundStill(card.root, view, look);
-    this.stillDrawing = false;
-    // The card went while it was being drawn, and nothing would let it go.
-    if (!card.isConnected) {
+    const controller = new AbortController();
+    this.stillDrawing = controller;
+    const still = await groundStill(card.root, view, look, key, controller.signal);
+    if (this.stillDrawing === controller) this.stillDrawing = undefined;
+    if (controller.signal.aborted || !card.isConnected) {
       if (still) letGo(still);
       return;
     }
@@ -1479,7 +1495,7 @@ export class MapViews {
     // A small map's one frame, painted into a canvas.
     const held = large ? null : view.querySelector<HTMLCanvasElement>('canvas.radar-layer.frame[data-on]'),
       newest = frames[this.radarFrame],
-      { paint, tilesOf } = radarPainter(centre, width, height, look);
+      { paint, tilesOf, size } = radarPainter(centre, width, height, look);
     // Only the radar has a later frame: the small map stays as it is, and that comes in over it.
     if (same && held && newest && !preview) {
       crossRadar(held, this.radarFrame, canvas => paint(canvas, newest));
@@ -1496,7 +1512,8 @@ export class MapViews {
     const before = large ? view.querySelector<HTMLElement>(':scope > .map-pan:not(.map-old)') : null,
       // Large, the radar's frame its timeline shows; only that one's tiles load at first.
       shownFrame = timeline?.span === '1h' ? Math.round(timelineAt(timeline, this.timelineTime ?? Date.now())) : -1;
-    this.radarPreviews.get(view)?.stop();
+    const oldPreview = this.radarPreviews.get(view);
+    oldPreview?.stop();
     this.radarPreviews.delete(view);
     const markup = mapMarkup({
       config,
@@ -1516,7 +1533,6 @@ export class MapViews {
           ? `<small>${esc(windDirection(bearing === '' ? undefined : Number(bearing), card.text?.compass))}</small>${badge}<small>${esc(unit)}</small>`
           : badge,
       live: Boolean(gl),
-      pictured,
       still,
       radar,
       rainHours,
@@ -1557,7 +1573,9 @@ export class MapViews {
       hours = hoursLoop && grid?.hours ? hoursFromNow(grid.hours, Date.now()) : [],
       // The radar frame before the latest, to see how far the rain moves in a step.
       previous = frames[this.radarFrame - 1];
-    let drift: Promise<Drift> | undefined, lastHour: Promise<boolean> | undefined;
+    let drift: Promise<Drift> | undefined,
+      observed: Promise<boolean> | undefined,
+      lastHour: Promise<boolean> | undefined;
     if (frameCanvas instanceof HTMLCanvasElement && newest) {
       if (preview)
         this.radarPreviews.set(
@@ -1600,11 +1618,22 @@ export class MapViews {
                   : Promise.resolve(paintHour());
                 return lastHour;
               }
-              if (!('ahead' in frame)) return paint(canvas, frame, signal);
-              drift ??= previous ? measureDrift(paint, previous, newest, signal) : Promise.resolve(STILL);
-              return Promise.all([paint(canvas, newest, signal), drift]).then(([painted, moved]) => {
-                if (painted) carry(canvas, moved.x * frame.ahead, moved.y * frame.ahead);
-                return painted;
+              // The five or six future positions all come from the same observation mosaic.
+              observed ??= paint(frameCanvas, newest, signal);
+              if (!('ahead' in frame)) return observed;
+              if (!drift) {
+                const before = document.createElement('canvas');
+                drift = previous
+                  ? Promise.all([observed, paint(before, previous, signal)]).then(([a, b]) =>
+                      a && b && !signal.aborted ? measureDrift(before, frameCanvas) : STILL,
+                    )
+                  : Promise.resolve(STILL);
+              }
+              return Promise.all([observed, drift]).then(([painted, moved]) => {
+                if (!painted || signal.aborted) return false;
+                size(canvas);
+                canvas.getContext('2d')?.drawImage(frameCanvas, moved.x * frame.ahead, moved.y * frame.ahead);
+                return true;
               });
             },
             () =>
@@ -1628,6 +1657,8 @@ export class MapViews {
                 frameCanvas.before(canvas);
               }
             },
+            hours.length && same ? oldPreview : undefined,
+            frame => ('field' in frame ? frame.field : frame),
           ),
         );
       else if (held?.dataset['tiles'] === tilesOf(newest)) frameCanvas.replaceWith(held);
@@ -1683,6 +1714,36 @@ export class MapViews {
     if (before) holdMap(view, before);
     if (large) bindMapMoves(view, this);
   }
+  // Start fetching shortly before the dashboard tile scrolls into view. Dialogs draw immediately.
+  private nearView(view: HTMLElement) {
+    if (view.closest('dialog') || typeof IntersectionObserver === 'undefined') return true;
+    if (!this.nearby.has(view)) {
+      const rect = view.getBoundingClientRect();
+      this.nearby.set(
+        view,
+        rect.bottom >= -MAP_PREFETCH_MARGIN && rect.top <= window.innerHeight + MAP_PREFETCH_MARGIN,
+      );
+      this.mapVisibility ??= new IntersectionObserver(
+        entries => {
+          let changed = false;
+          for (const { target, isIntersecting } of entries) {
+            if (
+              !(target instanceof HTMLElement) ||
+              !this.nearby.has(target) ||
+              this.nearby.get(target) === isIntersecting
+            )
+              continue;
+            this.nearby.set(target, isIntersecting);
+            changed = true;
+          }
+          if (changed) this.draw();
+        },
+        { rootMargin: `${MAP_PREFETCH_MARGIN}px` },
+      );
+      this.mapVisibility.observe(view);
+    }
+    return this.nearby.get(view);
+  }
   // Fills each map view for its kind (see mapView): dark base tiles; for precipitation, the radar,
   // a layer per frame on the large map for its timeline and on the card while its preview plays;
   // otherwise the latest observation; any configured overlay; a wash of the temperature or AQI
@@ -1691,10 +1752,16 @@ export class MapViews {
     const { card } = this,
       config = card.config;
     if (!config) return;
+    for (const view of this.nearby.keys()) {
+      if (card.root.contains(view)) continue;
+      this.mapVisibility?.unobserve(view);
+      this.nearby.delete(view);
+    }
     for (const [view, preview] of this.radarPreviews)
-      if (!view.isConnected) {
+      if (!view.isConnected || this.nearby.get(view) === false) {
         preview.stop();
         this.radarPreviews.delete(view);
+        this.drawn.delete(view);
       } else preview.update();
     void this.loadRadar(Date.now());
     if (!this.largeView() || config.map !== 'rainviewer' || config.map_tile_url) this.stopGl();
@@ -1709,7 +1776,8 @@ export class MapViews {
     // The frame it is now, not any still to come.
     this.radarFrame = latest < 0 ? allFrames.length - 1 : latest;
     for (const view of card.root.querySelectorAll('.radar'))
-      if (view instanceof HTMLElement && !view.closest('dialog:not([open])')) this.drawView(view, config, allFrames);
+      if (view instanceof HTMLElement && !view.closest('dialog:not([open])') && this.nearView(view))
+        this.drawView(view, config, allFrames);
     this.releaseGrids();
     this.windMaps = this.windMaps.filter(({ canvas }) => canvas.isConnected);
     for (const { map } of this.windMaps) map.update();
@@ -1719,7 +1787,11 @@ export class MapViews {
   showRadarFrame() {
     if (!this.radar || this.radar.frames.length === 0) return;
     for (const view of this.card.root.querySelectorAll('.radar')) {
-      if (view.closest('dialog:not([open])') || (view instanceof HTMLElement && this.radarPreviews.has(view))) continue;
+      if (
+        view.closest('dialog:not([open])') ||
+        (view instanceof HTMLElement && (this.radarPreviews.has(view) || this.nearby.get(view) === false))
+      )
+        continue;
       const timeline = view instanceof HTMLElement ? this.timelineOf(view) : null,
         at = timeline?.span === '1h' ? timelineAt(timeline, this.timelineTime ?? Date.now()) : this.radarFrame,
         shown = Math.round(at);
