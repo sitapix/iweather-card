@@ -93,7 +93,8 @@ test('only compact and strip apply the tile sky when switching layouts', () => {
 });
 
 test('a full-screen map pauses the sky until the map closes', async () => {
-  const card = page({ weather_animation: true, sheet_style: 'sheet' });
+  // The page has a map tile once a map is asked for; the card's own tiles need no service.
+  const card = page({ weather_animation: true, sheet_style: 'sheet', map: 'local' });
   vi.spyOn(card.sheets, 'canDock').mockReturnValue(false);
   card.sheets.open('map', tile(card, 'map'));
   expect(card.sheets.detail?.dialog.hasAttribute('data-full')).toBe(true);
@@ -363,7 +364,8 @@ test('today follows the cloud cover the entity reports', async () => {
     const hass = hassWith(),
       home = hass.states['weather.home'];
     if (!home) throw new Error('No weather entity.');
-    home.state = 'partlycloudy';
+    // A named sky keeps its own symbol whatever the cover; snow's shows the sun through a thin one.
+    home.state = 'snowy';
     home.attributes.cloud_coverage = cover;
     return hass;
   };
