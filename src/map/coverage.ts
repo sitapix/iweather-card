@@ -35,20 +35,52 @@ function sample(a: number, b: number, c: number, d: number, t: number): number {
 // Project once per column, then reuse each interpolated model row across the screen rows
 // that need it. An unknown inner reading leaves that interval unknown. An unknown outer
 // neighbour only flattens the tangent at the last known point.
+// Every screen row between the same two model rows shares their tangents, so those are worked
+// out once for the interval, along with the columns that hold anything but dry ground: a row
+// then costs a few multiplications for each of those columns, and nothing for the rest.
 export function rainRows(field: ScalarField, longitudes: Float64Array) {
-  const across = longitudes.map(longitude => (longitude - field.west) / field.step),
+  const count = longitudes.length,
+    last = field.cols - 1,
+    // Each column's place in the grid: the reading on its left, and how far past it. Outside
+    // the grid there is none.
+    lefts = new Int32Array(count),
+    shares = new Float64Array(count),
     cached = new Map<number, Float32Array>(),
-    result = new Float32Array(across.length);
+    result = new Float32Array(count),
+    change = new Float64Array(count),
+    leaving = new Float64Array(count),
+    arriving = new Float64Array(count);
+  for (let x = 0; x < count; x++) {
+    const along = ((longitudes[x] ?? Number.NaN) - field.west) / field.step,
+      left = Math.floor(along);
+    if (along >= 0 && along <= last) {
+      lefts[x] = left;
+      shares[x] = along - left;
+    } else lefts[x] = -1;
+  }
+  let interval = -1,
+    from = 0,
+    to = 0;
   const line = (index: number) => {
     const row = Math.max(0, Math.min(field.rows - 1, index)),
       held = cached.get(row);
     if (held) return held;
-    const at = (x: number) => field.values[row * field.cols + Math.max(0, Math.min(field.cols - 1, x))] ?? Number.NaN,
-      values = Float32Array.from(across, x => {
-        if (x < 0 || x > field.cols - 1) return Number.NaN;
-        const left = Math.floor(x);
-        return sample(at(left - 1), at(left), at(left + 1), at(left + 2), x - left);
-      });
+    const values = new Float32Array(count),
+      start = row * field.cols,
+      at = (x: number) => field.values[start + x] ?? Number.NaN;
+    for (let x = 0; x < count; x++) {
+      const left = lefts[x] ?? -1;
+      values[x] =
+        left < 0
+          ? Number.NaN
+          : sample(
+              at(Math.max(0, left - 1)),
+              at(left),
+              at(Math.min(last, left + 1)),
+              at(Math.min(last, left + 2)),
+              shares[x] ?? 0,
+            );
+    }
     cached.set(row, values);
     return values;
   };
@@ -59,11 +91,32 @@ export function rainRows(field: ScalarField, longitudes: Float64Array) {
       t = y - top,
       b = line(top);
     if (t === 0) return b;
-    const a = line(top - 1),
-      c = line(top + 1),
-      d = line(top + 2);
-    for (let x = 0; x < result.length; x++)
-      result[x] = sample(a[x] ?? Number.NaN, b[x] ?? Number.NaN, c[x] ?? Number.NaN, d[x] ?? Number.NaN, t);
+    if (top !== interval) {
+      const a = line(top - 1),
+        c = line(top + 1),
+        d = line(top + 2);
+      interval = top;
+      from = count;
+      to = 0;
+      for (let x = 0; x < count; x++) {
+        const start = b[x] ?? Number.NaN,
+          end = c[x] ?? Number.NaN,
+          rise = end - start;
+        change[x] = rise;
+        leaving[x] = slope(start - (a[x] ?? Number.NaN), rise);
+        arriving[x] = slope(rise, (d[x] ?? Number.NaN) - end);
+        // An unknown reading is not dry, and compares unequal to zero.
+        if (start !== 0 || rise !== 0) {
+          from = Math.min(from, x);
+          to = x + 1;
+        }
+      }
+    }
+    const u = 1 - t,
+      rising = t * (1 + 2 * u);
+    result.fill(0);
+    for (let x = from; x < to; x++)
+      result[x] = (b[x] ?? 0) + t * (rising * (change[x] ?? 0) + u * (u * (leaving[x] ?? 0) - t * (arriving[x] ?? 0)));
     return result;
   };
 }

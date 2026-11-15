@@ -885,10 +885,12 @@ export async function groundStill(
   if (cancelled()) return null;
   if (saved) return urls(saved);
   // The first forecast and dashboard layout can both change the initial view.
-  // Raster tiles are already visible while the view settles.
+  // Raster tiles are already visible while the view settles. MapLibre comes meanwhile, as the
+  // view that takes this one's place needs it too: only the renderer waits for the view.
+  const coming = loadMapLibre(root);
   await new Promise<void>(done => window.setTimeout(done, VIEW_SETTLE));
   if (cancelled()) return null;
-  const maplibre = await loadMapLibre(root);
+  const maplibre = await coming;
   if (!maplibre || cancelled()) return null;
   const { latitude, longitude, zoom, width, height, pixelRatio } = view;
   const by = SHEET_LOOKS.has(look) ? CLOSER : 1,

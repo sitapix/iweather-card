@@ -327,31 +327,36 @@ export function drawField(
     image = ctx.createImageData(cols, rows),
     pixels = new Uint32Array(image.data.buffer),
     colour = fieldRamp(stops),
-    mask = coverage ? new OffscreenCanvas(cols, rows) : undefined,
-    maskContext = mask?.getContext('2d'),
-    missing = maskContext?.createImageData(cols, rows);
-  let gaps = false;
+    // Rain's scale opens on a clear colour, and a new picture is clear already: nothing at or
+    // under that reading is looked up or written, which is most of a map on most days.
+    clearTo = rain ? (stops[0]?.value ?? 0) : -Infinity;
+  // The readings that are missing, kept only once one is.
+  let missing: ImageData | undefined;
   for (let row = 0; row < rows; row++) {
     const latitude = tilePlace(middle.x, y(row), zoom).latitude,
       rates = rainAt?.(latitude);
     for (let col = 0; col < cols; col++) {
       const value = rates ? (rates[col] ?? Number.NaN) : gridAt(field, field.values, latitude, longitudes[col] ?? 0),
         offset = row * cols + col;
-      if (missing && !Number.isFinite(value)) {
+      if (Number.isFinite(value)) {
+        if (value > clearTo) pixels[offset] = colour(value);
+      } else if (coverage) {
+        missing ??= ctx.createImageData(cols, rows);
         missing.data[offset * CHANNELS + ALPHA] = BYTE;
-        gaps = true;
       }
-      pixels[offset] = colour(value);
     }
   }
   ctx.putImageData(image, 0, 0);
-  if (coverage && mask && maskContext && missing) {
-    maskContext.putImageData(missing, 0, 0);
+  if (coverage) {
     coverage.width = Math.ceil(width);
     coverage.height = Math.ceil(height);
-    coverage.getContext('2d')?.drawImage(mask, 0, 0, width, height);
-    coverage.dataset['gaps'] = String(gaps);
-    hatch(coverage);
+    coverage.dataset['gaps'] = String(missing !== undefined);
+    if (missing) {
+      const mask = new OffscreenCanvas(cols, rows);
+      mask.getContext('2d')?.putImageData(missing, 0, 0);
+      coverage.getContext('2d')?.drawImage(mask, 0, 0, width, height);
+      hatch(coverage);
+    }
   }
 }
 
