@@ -3,8 +3,12 @@ import { CloudAtlas } from '../src/sky/cloud-decks.ts';
 import { cloudIsBlanket } from '../src/sky/clouds.ts';
 import { CloudPainter, cloudPainter, resetCloudPainter } from '../src/sky/clouds-gl.ts';
 import { WeatherScene } from '../src/sky/scene.ts';
+import { skyGl } from '../src/sky/sky-gl.ts';
 import { context2d } from '../src/lib/canvas.ts';
 import { CLOUD_MAPS } from './cloud-maps.ts';
+
+// The sky's shared context, as it is, apart from where a test says there is none to be had.
+vi.mock('../src/sky/sky-gl.ts', { spy: true });
 
 // The sky as the full page draws it, as in sky.browser.test.ts.
 const WIDTH = 1310,
@@ -97,15 +101,15 @@ test('the blanket repeats one oriented image and preserves its aspect as it drif
 test('without WebGL2 the clouds go to the 2D drawing', async () => {
   const atlas = new CloudAtlas(CLOUD_MAPS, { now: false });
   WeatherScene.atlas = atlas;
-  // The painter asks for its context first of all.
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValueOnce(null);
+  // The painter draws in the sky's shared context, and there is none.
+  vi.mocked(skyGl).mockReturnValue(null);
   expect(cloudPainter(atlas)).toBeNull();
-  await expect(atlas.ready).resolves.toBe(true);
-  expect(atlas.loaded).toBe(true);
+  await vi.waitFor(() => expect(atlas.loaded).toBe(true));
   expect(cloudPainter(atlas)).toBeNull();
+  vi.mocked(skyGl).mockReset();
 });
 
-test('a GPU that loses its context hands the clouds back to the 2D drawing', async () => {
+test('a GPU that loses its context leaves the clouds drawn, by the 2D drawing or a painter made afresh', async () => {
   const atlas = new CloudAtlas(CLOUD_MAPS, { now: false });
   WeatherScene.atlas = atlas;
   const scene = sky(OVERCAST);
@@ -113,11 +117,13 @@ test('a GPU that loses its context hands the clouds back to the 2D drawing', asy
   const painter = scene.painter();
   expect(painter).not.toBeNull();
   painter?.canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
-  for (let tries = 0; tries < 200 && !atlas.loaded; tries++) {
+  // The 2D maps are asked for again at once, and let go if a new painter is ready before they come.
+  const recovered = () => atlas.loaded || (scene.painter() !== null && scene.painter() !== painter);
+  for (let tries = 0; tries < 200 && !recovered(); tries++) {
     scene.paint(WIDTH, HEIGHT, RATIO, PHASE);
     await new Promise(resolve => setTimeout(resolve, 25));
   }
-  expect(atlas.loaded).toBe(true);
+  expect(recovered()).toBe(true);
 });
 
 test('as the page scrolls over the sky, each cloud layer rises by its own share of it, the front most', async () => {

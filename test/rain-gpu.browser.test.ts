@@ -277,8 +277,11 @@ test('GPU rain preserves the lit clouds and their ordering by day, at night and 
       { condition: 'rainy', night: true, elevation: -30, moonAltitude: 45 },
       { condition: 'lightning-rainy', elevation: 38, precipitation: 9 },
     ]) {
+      // Each sky places its clouds by chance, so the two are given the same throw to compare.
+      const chance = vi.spyOn(Math, 'random').mockReturnValue(0.375);
       original.prepare(inputs);
       actual.prepare(inputs);
+      chance.mockRestore();
       original.advance(0);
       actual.advance(0);
       for (const phase of [8000, 17000]) {
