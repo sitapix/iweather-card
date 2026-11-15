@@ -165,15 +165,61 @@ test('a hidden map does not ask for grids, including a move that is still settli
     fetch = vi.fn().mockRejectedValue(new Error('No request expected.'));
   vi.stubGlobal('fetch', fetch);
   host.visible = false;
-  await maps.loadGrid(centre, 100, 100, false, 'forecast');
+  const view = maps.largeView();
+  if (!view) throw new Error('No map');
+  view.style.cssText = 'width:100px;height:100px';
+  const demand = { centre, width: 100, height: 100, source: 'forecast' } as const;
+  await maps.loadGrid(view, demand);
   expect(fetch).not.toHaveBeenCalled();
   host.visible = true;
-  const loading = maps.loadGrid(centre, 100, 100, true, 'forecast');
+  const loading = maps.loadGrid(view, demand);
   host.root.querySelector('dialog')?.close();
   await loading;
   expect(fetch).not.toHaveBeenCalled();
 });
 
+test('the last visible consumer cancels a forecast grid, and reopening starts it immediately', async () => {
+  const { host, maps } = mapHost(),
+    large = maps.largeView(),
+    dialog = host.root.querySelector('dialog');
+  if (!large || !dialog) throw new Error('No map sheet');
+  large.style.cssText = 'width:100px;height:100px';
+  const small = document.createElement('div');
+  small.className = 'radar';
+  small.style.cssText = large.style.cssText;
+  host.root.append(small);
+  const signals: AbortSignal[] = [];
+  vi.stubGlobal('fetch', (_url: string, init: RequestInit) => {
+    const signal = init.signal;
+    if (!signal) throw new Error('Missing abort signal');
+    signals.push(signal);
+    return new Promise<Response>((_resolve, reject) =>
+      signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }),
+    );
+  });
+  const demand = { centre, width: 100, height: 100, source: 'rain' } as const;
+  const load = maps.loadGrid(small, demand);
+  await vi.waitFor(() => expect(signals.length).toBeGreaterThan(0));
+  const started = signals.length;
+  await maps.loadGrid(large, { ...demand });
+  dialog.close();
+  maps.reset();
+  expect(signals.every(signal => !signal.aborted)).toBe(true);
+  expect(signals).toHaveLength(started);
+  small.remove();
+  maps.reset();
+  await load;
+  expect(signals.every(signal => signal.aborted)).toBe(true);
+  expect(maps.winds).toHaveLength(0);
+  expect(signals).toHaveLength(started);
+  dialog.show();
+  const again = maps.loadGrid(large, { ...demand });
+  await vi.waitFor(() => expect(signals.length).toBeGreaterThan(started));
+  dialog.close();
+  maps.reset();
+  await again;
+  expect(signals.every(signal => signal.aborted)).toBe(true);
+});
 function localMap(kind: MapInputs['kind']) {
   const { host, maps } = mapHost(),
     view = maps.largeView();

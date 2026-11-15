@@ -93,7 +93,13 @@ function localTo(view: HTMLElement, event: { clientX: number; clientY: number })
 // opens the menu of them (see glass-menu.ts), and a layer chosen from it is drawn instead: from the
 // foot coming out of its button as a drop, beside a tile simply shown. The pin gives a card with a
 // tap or a key, and a tap on the map itself makes it small.
-function bindMapTools(view: HTMLElement, map: Moving, step: (steps: number) => void, goHome: () => void) {
+function bindMapTools(
+  view: HTMLElement,
+  map: Moving,
+  step: (steps: number) => void,
+  pan: (key: string) => void,
+  goHome: () => void,
+) {
   // The map drawn now, this one or the one drawn again in its place for the layer chosen.
   const shown = () => (view.isConnected ? view : (map.largeView() ?? view));
   bindGlassMenu(view, {
@@ -117,6 +123,14 @@ function bindMapTools(view: HTMLElement, map: Moving, step: (steps: number) => v
     },
   });
   view.addEventListener('keydown', event => {
+    const navigation = view.querySelector<HTMLDetailsElement>('.map-navigation[open]');
+    if (event.key === 'Escape' && navigation) {
+      event.preventDefault();
+      event.stopPropagation();
+      navigation.open = false;
+      navigation.querySelector('summary')?.focus();
+      return;
+    }
     if (
       (event.key === 'Enter' || event.key === ' ') &&
       event.target instanceof Element &&
@@ -131,6 +145,8 @@ function bindMapTools(view: HTMLElement, map: Moving, step: (steps: number) => v
   view.addEventListener('pointerdown', event => (pressed = localTo(view, event)), true);
   view.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target : null;
+    const navigation = view.querySelector<HTMLDetailsElement>('.map-navigation[open]');
+    if (navigation && !target?.closest('.map-navigation')) navigation.open = false;
     // The menu and its button answer for themselves.
     if (target?.closest('[data-layers],.map-layers')) return;
     const about = target?.closest('.map-data button');
@@ -147,13 +163,17 @@ function bindMapTools(view: HTMLElement, map: Moving, step: (steps: number) => v
     const { x, y } = localTo(view, event);
     if (
       Math.hypot(x - pressed.x, y - pressed.y) < MAP_TAP &&
-      !target?.closest('a,button,.map-key,.map-layers,.map-card,.wind-time')
+      !target?.closest('a,button,.map-tools,.map-key,.map-layers,.map-card,.wind-time')
     )
       map.setPin(view, 'small');
     const button = target?.closest('.map-tools button');
     if (!(button instanceof HTMLElement)) return;
     haptic(map.card, 'light');
-    const { zoom } = button.dataset;
+    const { zoom, pan: direction } = button.dataset;
+    if (direction) {
+      pan(direction);
+      return;
+    }
     const live = map.gl?.map;
     if (zoom) step(Number(zoom));
     else if (live) {
@@ -237,7 +257,7 @@ export function bindMapMoves(view: HTMLElement, map: Moving) {
       gesture?.over ||
       held.size > 1 ||
       event.button !== 0 ||
-      target?.closest('button,a,.wind-time,.map-key,.map-layers,.map-card,.map-drop')
+      target?.closest('button,a,.map-tools,.wind-time,.map-key,.map-layers,.map-card,.map-drop')
     )
       return;
     window.clearTimeout(resting);
@@ -326,20 +346,25 @@ export function bindMapMoves(view: HTMLElement, map: Moving) {
   // its size, + and − zoom it, eased.
   view.addEventListener('keydown', event => {
     if (event.target !== view) return;
-    const [across, down] = MAP_KEYS[event.key] ?? [0, 0],
-      zoom = ZOOM_KEYS[event.key];
-    if (!across && !down && zoom === undefined) return;
+    const zoom = ZOOM_KEYS[event.key];
+    if (!(event.key in MAP_KEYS) && zoom === undefined) return;
     event.preventDefault();
-    const live = map.gl?.map;
     if (zoom !== undefined) step(zoom);
-    else if (live) live.panBy([(across * view.clientWidth) / MAP_KEY_STEP, (down * view.clientHeight) / MAP_KEY_STEP]);
+    else pan(event.key);
+  });
+  function pan(key: string) {
+    const direction = MAP_KEYS[key];
+    if (!direction) return;
+    const dx = (direction[0] * view.clientWidth) / MAP_KEY_STEP,
+      dy = (direction[1] * view.clientHeight) / MAP_KEY_STEP;
+    if (map.gl) map.gl.map.panBy([dx, dy]);
     else {
-      shift((-across * view.clientWidth) / MAP_KEY_STEP, (-down * view.clientHeight) / MAP_KEY_STEP);
+      shift(-dx, -dy);
       show(true);
       restIn(MOTION.ease);
     }
-  });
-  bindMapTools(view, map, step, () => {
+  }
+  bindMapTools(view, map, step, pan, () => {
     window.clearTimeout(resting);
     motion = undefined;
     view.removeAttribute('data-dragging');

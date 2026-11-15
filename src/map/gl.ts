@@ -18,8 +18,7 @@ export const GL_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 export const GL_ZOOM_OFFSET = 1;
 // The page is drawn a quarter larger than it stands on screen (see map/views.ts).
 export const PAGE_DRAWN = 1.25;
-export const GL_CREDIT = '© OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors',
-  GL_CREDIT_SHORT = '© OpenStreetMap · OpenMapTiles · OpenFreeMap';
+export const GL_CREDIT_SHORT = '© OpenStreetMap · OpenMapTiles · OpenFreeMap';
 
 // The few parts of MapLibre the card uses (its own types don't build under the card's module
 // settings). Places are [longitude, latitude].
@@ -620,7 +619,7 @@ export function pickRadar(map: GlMap, at: number, playing = false) {
   radar?.showAt(at);
   radar?.play(playing);
   // Coverage stripes describe observations, not the model's forecast domain.
-  const visibility = at > (rainLayers.get(map)?.forecastFrom ?? Infinity) - 1 ? 'none' : 'visible';
+  const visibility = Math.round(at) >= (rainLayers.get(map)?.forecastFrom ?? Infinity) ? 'none' : 'visible';
   if (map.getLayer(GAPS) && map.getLayoutProperty(GAPS, 'visibility') !== visibility)
     map.setLayoutProperty(GAPS, 'visibility', visibility);
   return radar?.readyAt(at) ?? false;

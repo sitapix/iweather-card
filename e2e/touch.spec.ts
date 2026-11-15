@@ -1,4 +1,4 @@
-import { expect, test, TODAY } from './card.ts';
+import { expect, MAP, test, TODAY } from './card.ts';
 
 // The card on a phone, under a finger: what a mouse never reaches.
 const UV = /^UV index/;
@@ -104,4 +104,29 @@ test('a tapped chart is left as drawn', async ({ card }) => {
   await expect(chart).not.toHaveAttribute('data-scrubbing');
   await expect(chart).not.toHaveAttribute('data-kept');
   await expect(chart.locator('.chart-cursor')).toHaveCount(0);
+});
+
+test.describe('touch map navigation', () => {
+  test.use({ config: MAP });
+  test('pans and zooms on a phone with single taps', async ({ card }) => {
+    await card.locator('.tile[data-tile=map]').tap();
+    const map = card.locator('dialog[open] .radar.large');
+    const home = map.locator('[data-home]');
+    for (const name of ['Zoom in', 'Zoom out']) {
+      const button = map.getByRole('button', { name, exact: true });
+      await expect(button).toBeVisible();
+      expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      await button.tap();
+      await expect(map).not.toHaveAttribute('data-dragging', '');
+    }
+    await home.tap();
+    await expect(home).toHaveAttribute('data-here', '');
+    for (const name of ['Pan north', 'Pan west', 'Pan east', 'Pan south']) {
+      await map.locator('summary').tap();
+      await map.getByRole('button', { name, exact: true }).tap();
+      await expect(home).not.toHaveAttribute('data-here', '');
+      await home.tap();
+      await expect(home).toHaveAttribute('data-here', '');
+    }
+  });
 });

@@ -573,6 +573,17 @@ test('without a picture, the map falls back on tiles of the ground', async () =>
   });
   expect(stills(card)).toHaveLength(0);
   expect(card.root.querySelector('.radar-credit')?.textContent).toContain('OpenStreetMap');
+  card.root.querySelector<HTMLElement>('.tile[data-tile=map]')?.click();
+  await vi.waitFor(() => {
+    const map = card.maps.largeView(),
+      link = map?.querySelector<HTMLAnchorElement>('.map-attribution a');
+    expect(link?.href).toBe('https://www.openstreetmap.org/copyright');
+    expect(link?.checkVisibility()).toBe(true);
+    expect(map?.querySelector('.map-data small')?.textContent).not.toContain('OpenStreetMap');
+    const timeline = map?.querySelector('.wind-time');
+    if (timeline && link)
+      expect(link.getBoundingClientRect().top).toBeGreaterThanOrEqual(timeline.getBoundingClientRect().bottom);
+  });
 });
 test('those tiles take the theme’s look, and tiles of the user’s own are left as they come', async () => {
   const ground = (card: IWeatherCard) => card.root.querySelector<HTMLElement>('.radar-layer.base img'),

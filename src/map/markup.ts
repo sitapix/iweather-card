@@ -9,7 +9,7 @@ import { isForecastTile } from './radar-forecast.ts';
 import { weatherIcon } from '../weather/icons.ts';
 import { airGlyphFor } from '../cards/air-quality/rules.ts';
 import { AQI_US, css, ring, scaleColour, scaleKey, type Stop } from './field.ts';
-import { GL_CREDIT, GL_CREDIT_SHORT, type GroundStill } from './gl.ts';
+import { GL_CREDIT_SHORT, type GroundStill } from './gl.ts';
 import { finite } from '../lib/values.ts';
 import type { TileContext } from '../cards/shared/context.ts';
 import { MAP_ZOOMS, windKey, type MapCentre } from './wind.ts';
@@ -110,13 +110,26 @@ export function timelineMarkup(
     spans = span
       ? `<div class="map-span" role="group" aria-label="${say('Time span')}"><i class="thumb" aria-hidden="true"></i>${RAIN_SPANS.map(each => `<button type="button" data-span="${each}" aria-pressed="${each === span}">${each}</button>`).join('')}</div>`
       : '';
-  return `<div class="wind-time"><button type="button" class="wind-play" aria-label="${say('Play')}"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="play" d="M4 2.5v11l9-5.5z"/><path class="pause" d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg></button><div class="wind-when"><b>${esc(say(title))}</b><span></span></div>${spans}<div class="wind-track" role="slider" tabindex="0" aria-label="${say('Time')}" aria-valuemin="0" aria-valuemax="${count - 1}"><i></i>${ticks}</div><div class="wind-marks">${marks}</div>${span ? `<span class="map-gaps" hidden>${say('Precipitation data is unavailable in some areas')}</span>` : ''}</div>`;
+  return `<div class="wind-time"><button type="button" class="wind-play" aria-label="${say('Play')}"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="play" d="M4 2.5v11l9-5.5z"/><path class="pause" d="M4 2.5h3v11H4zM9 2.5h3v11H9z"/></svg></button><div class="wind-when"><b>${esc(say(title))}</b><span></span></div>${spans}<div class="wind-rail"><i aria-hidden="true"></i><span class="wind-ticks" aria-hidden="true">${ticks}</span><input class="wind-track" type="range" min="0" max="${count - 1}" step="1" aria-label="${say('Time')}"></div><div class="wind-marks">${marks}</div>${span ? `<span class="map-gaps" hidden>${say('Precipitation data is unavailable in some areas')}</span>` : ''}</div>`;
 }
 // Large, the map's tools: zoom out and in; then, with the online map, its layers, and back
 // home. The layers button opens a menu of the four, the one shown checked. Its icon is three
 // layers, or full screen two filled ones (`stacked`).
 function mapTools(zoom: number, moved: boolean, kind: string, layers: boolean): string {
-  return `<div class="map-tools"><span class="map-pill"><button type="button" data-zoom="-1" aria-label="${say('Zoom out')}"${zoom <= MAP_ZOOMS.least ? ' disabled' : ''}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg></button><button type="button" data-zoom="1" aria-label="${say('Zoom in')}"${zoom >= MAP_ZOOMS.most ? ' disabled' : ''}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button></span><span class="map-pill">${layers ? `<button type="button" data-layers aria-label="${say('Map layers')}" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="fill" d="M8 1.6 14.6 5.2 8 8.8 1.4 5.2z"/><path d="M2 8.4 8 11.7l6-3.3M2 11.3 8 14.6l6-3.3"/><path class="fill stacked" d="M8 2.4 13.76 5.6 8 8.8 2.24 5.6zM2.24 11.08 4.32 10 8 11.76 11.68 10 13.76 11.08 8 14.4z"/></svg></button>` : ''}<button type="button" data-home${moved ? '' : ' data-here'} aria-label="${say('Back to home')}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M14.6 1.4 1.4 7.3l5.9 1.4 1.4 5.9z"/></svg></button></span></div>${
+  const directions = [
+    ['ArrowUp', say('Pan north'), 'M3 10l5-5 5 5'],
+    ['ArrowLeft', say('Pan west'), 'M10 3l-5 5 5 5'],
+    ['ArrowRight', say('Pan east'), 'M6 3l5 5-5 5'],
+    ['ArrowDown', say('Pan south'), 'M3 6l5 5 5-5'],
+  ] as const;
+  const pan = directions
+    .map(
+      ([key, label, path]) =>
+        `<button type="button" data-pan="${key}" aria-label="${label}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="${path}"/></svg></button>`,
+    )
+    .join('');
+  const navigation = `<details class="map-navigation map-pill"><summary aria-label="${say('Pan map')}" title="${say('Pan map')}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v14M1 8h14M5.5 3.5 8 1l2.5 2.5M5.5 12.5 8 15l2.5-2.5M3.5 5.5 1 8l2.5 2.5M12.5 5.5 15 8l-2.5 2.5"/></svg></summary><div class="map-directions">${pan}</div></details>`;
+  return `<div class="map-tools">${navigation}<span class="map-pill"><button type="button" data-zoom="-1" aria-label="${say('Zoom out')}"${zoom <= MAP_ZOOMS.least ? ' disabled' : ''}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg></button><button type="button" data-zoom="1" aria-label="${say('Zoom in')}"${zoom >= MAP_ZOOMS.most ? ' disabled' : ''}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button></span><span class="map-pill">${layers ? `<button type="button" data-layers aria-label="${say('Map layers')}" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="fill" d="M8 1.6 14.6 5.2 8 8.8 1.4 5.2z"/><path d="M2 8.4 8 11.7l6-3.3M2 11.3 8 14.6l6-3.3"/><path class="fill stacked" d="M8 2.4 13.76 5.6 8 8.8 2.24 5.6zM2.24 11.08 4.32 10 8 11.76 11.68 10 13.76 11.08 8 14.4z"/></svg></button>` : ''}<button type="button" data-home${moved ? '' : ' data-here'} aria-label="${say('Back to home')}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M14.6 1.4 1.4 7.3l5.9 1.4 1.4 5.9z"/></svg></button></span></div>${
     layers
       ? glassMenuMarkup(
           say('Map layers'),
@@ -261,15 +274,19 @@ export function mapMarkup(look: MapLook): string {
   const named = look.pinName ? `<span class="map-home">${esc(look.pinName)}</span>` : '',
     spot = badge === '' ? '' : `<i class="map-spot"></i>${named}`,
     bigPin = !large || look.shown === '' ? '' : largePin(look);
-  const credits = [
-      live ? GL_CREDIT : still ? GL_CREDIT_SHORT : config.map_tile_url ? '' : '© OpenStreetMap contributors',
-      radar ? 'RainViewer' : '',
-      dataCredit,
-    ]
+  const weatherCredit = [radar && !rainHours ? 'RainViewer' : '', dataCredit].filter(Boolean).join(' · '),
+    osm =
+      '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>',
+    vector =
+      '<a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> · <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a>',
+    basemap = live ? `${vector} · ${osm}` : config.map_tile_url ? '' : osm,
+    compact = [still ? GL_CREDIT_SHORT : config.map_tile_url ? '' : '© OpenStreetMap contributors', weatherCredit]
       .filter(Boolean)
       .join(' · '),
-    legend = large ? mapKey(kind, look.unit, look.windWord, look.colours, credits) : '',
-    credit = legend ? '' : `<small class="radar-credit">${credits}</small>`;
+    legend = large ? mapKey(kind, look.unit, look.windWord, look.colours, weatherCredit) : '',
+    credit = large
+      ? basemap && `<small class="map-attribution">${basemap}</small>`
+      : `<small class="radar-credit">${compact}</small>`;
   return (
     `<div class="map-pan"${place}>` +
     stillImage(still?.ground) +
@@ -318,4 +335,97 @@ export function mapMarkup(look: MapLook): string {
       : credit) +
     (radar && failed ? `<span class="radar-note">${say('Radar unavailable')}</span>` : '')
   );
+}
+
+// Replace the painted layers while leaving controls attached. Detaching even briefly loses
+// native focus, pointer capture and an open menu's keyboard position.
+export function redrawMap(view: HTMLElement, markup: string, large: boolean) {
+  if (!large || !view.querySelector('.map-tools')) {
+    view.innerHTML = markup;
+    return;
+  }
+  const template = document.createElement('template');
+  template.innerHTML = markup;
+  const fresh = template.content;
+  const keep = new Map<Element, Element>();
+  const retain = (selector: string, update: (old: Element, next: Element) => boolean) => {
+    const old = view.querySelector(selector),
+      next = fresh.querySelector(selector);
+    if (old && next && update(old, next)) keep.set(next, old);
+  };
+  retain('.map-tools', (old, next) => {
+    const buttons = [...old.querySelectorAll('button')],
+      incoming = [...next.querySelectorAll('button')];
+    if (buttons.length !== incoming.length) return false;
+    incoming.forEach((button, i) => {
+      const previous = buttons[i];
+      if (!previous) return;
+      previous.disabled = button.disabled;
+      previous.ariaLabel = button.ariaLabel;
+      previous.toggleAttribute('data-here', button.hasAttribute('data-here'));
+    });
+    const summary = old.querySelector('summary'),
+      label = next.querySelector('summary')?.ariaLabel;
+    if (summary && label) {
+      summary.ariaLabel = label;
+      summary.title = label;
+    }
+    return true;
+  });
+  retain('.map-layers:not([data-leaving])', (old, next) => {
+    old.ariaLabel = next.ariaLabel;
+    for (const choice of next.querySelectorAll<HTMLElement>('[data-choice]')) {
+      const current = old.querySelector(`[data-choice="${choice.dataset['choice'] ?? ''}"]`);
+      if (current) {
+        current.setAttribute('aria-checked', String(choice.getAttribute('aria-checked')));
+        if (current.textContent !== choice.textContent) current.replaceChildren(...choice.childNodes);
+      }
+    }
+    return true;
+  });
+  retain('.wind-time', (old, next) => {
+    const track = old.querySelector('input'),
+      range = next.querySelector('input');
+    if (!track || !range || Boolean(old.querySelector('.map-span')) !== Boolean(next.querySelector('.map-span')))
+      return false;
+    track.max = range.max;
+    track.ariaLabel = range.ariaLabel;
+    for (const selector of ['.wind-ticks', '.wind-marks']) {
+      const incoming = next.querySelector(selector);
+      if (incoming) old.querySelector(selector)?.replaceChildren(...incoming.childNodes);
+    }
+    for (const option of next.querySelectorAll<HTMLElement>('[data-span]'))
+      old
+        .querySelector(`[data-span="${option.dataset['span'] ?? ''}"]`)
+        ?.setAttribute('aria-pressed', String(option.getAttribute('aria-pressed')));
+    const spans = old.querySelector('.map-span');
+    if (spans) spans.ariaLabel = next.querySelector('.map-span')?.ariaLabel ?? null;
+    const gaps = old.querySelector('.map-gaps');
+    if (gaps) gaps.textContent = next.querySelector('.map-gaps')?.textContent ?? '';
+    return true;
+  });
+  retain('.map-key', (old, next) => {
+    const current = old.querySelector('.map-data'),
+      incoming = next.querySelector('.map-data');
+    if (!current || !incoming) return false;
+    for (const selector of ['b', 'span', '.map-data small']) {
+      const piece = next.querySelector(selector);
+      if (piece) old.querySelector(selector)?.replaceWith(piece);
+    }
+    const button = current.querySelector('button');
+    if (button) button.textContent = incoming.querySelector('button')?.textContent ?? '';
+    return true;
+  });
+  retain('.map-attribution', (old, next) => old.isEqualNode(next));
+  const retained = new Set(keep.values());
+  for (const child of view.querySelectorAll(':scope > *'))
+    if (!retained.has(child) && !child.matches('.map-gl, [data-leaving]')) child.remove();
+  // All retained groups keep their order. Insert new content between them.
+  let anchor = view.querySelector(':scope > :not(.map-gl,[data-leaving])');
+  const incoming = [...fresh.children];
+  for (const child of incoming) {
+    const kept = keep.get(child);
+    if (kept) anchor = kept.nextElementSibling;
+    else view.insertBefore(child, anchor);
+  }
 }

@@ -150,7 +150,7 @@ test('a real IEM forecast tile decodes without mistaking its palette for RainVie
   expect(new Set(levels).size).toBeGreaterThan(5);
 });
 
-test('the live map uses real future tiles, keeps its Forecast heading, and seeks by valid time', async () => {
+test('the live map uses real future tiles, identifies each frame’s source, and seeks by valid time', async () => {
   const card = await openMap();
   await vi.waitFor(() => expect(card.maps.shortForecast?.data?.run).toBe(run));
   const view = card.maps.largeView();
@@ -168,11 +168,22 @@ test('the live map uses real future tiles, keeps its Forecast heading, and seeks
   ]);
   card.maps.timelineTime = last;
   card.maps.syncWindTime();
-  expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
   const track = view.querySelector('.wind-track');
+  expect(track?.getAttribute('aria-valuetext')).toMatch(/^Observed radar, /);
+  expect([...view.querySelectorAll<HTMLAnchorElement>('.map-attribution a')].map(link => link.hostname)).toEqual([
+    'openfreemap.org',
+    'openmaptiles.org',
+    'www.openstreetmap.org',
+  ]);
+  card.maps.timelineTime = last + (run + 135 * MINUTE - last) / 4;
+  card.maps.syncWindTime();
+  expect(view.hasAttribute('data-forecast')).toBe(false);
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
   track?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
   expect(card.maps.timelineTime).toBe(run + 135 * MINUTE);
   expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
+  expect(track?.getAttribute('aria-valuetext')).toMatch(/^Forecast, /);
   expect(view.hasAttribute('data-forecast')).toBe(true);
   expect(view.querySelector('.map-data')?.textContent).toContain('Iowa Environmental Mesonet');
   await vi.waitFor(() => expect(requests.some(isForecastTile)).toBe(true));
@@ -180,7 +191,31 @@ test('the live map uses real future tiles, keeps its Forecast heading, and seeks
   expect(card.maps.gl?.map.getLayoutProperty('radar-gaps', 'visibility')).toBe('none');
   track?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
   expect(card.maps.timelineTime).toBe(last);
-  expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
+});
+
+test('the live map exposes the same four pan directions as the raster fallback', async () => {
+  const card = await openMap(),
+    view = card.maps.largeView(),
+    live = card.maps.gl?.map;
+  if (!view || !live) throw new Error('No live map');
+  const pan = vi.spyOn(live, 'panBy');
+  view.querySelector('summary')?.click();
+  for (const [key, x, y] of [
+    ['ArrowUp', 0, -1],
+    ['ArrowDown', 0, 1],
+    ['ArrowLeft', -1, 0],
+    ['ArrowRight', 1, 0],
+  ] as const) {
+    view.querySelector<HTMLElement>(`[data-pan="${key}"]`)?.click();
+    expect(pan).toHaveBeenLastCalledWith([(x * view.clientWidth) / 8, (y * view.clientHeight) / 8]);
+  }
+  const zoom = vi.spyOn(live, 'easeTo');
+  for (const step of [1, -1]) {
+    const before = live.getZoom();
+    view.querySelector<HTMLElement>(`[data-zoom="${step}"]`)?.click();
+    expect(zoom).toHaveBeenLastCalledWith(expect.objectContaining({ zoom: before + step }));
+  }
 });
 
 test('a failed model tile removes future times instead of substituting the last observation', async () => {
@@ -191,7 +226,7 @@ test('a failed model tile removes future times instead of substituting the last 
   const view = card.maps.largeView();
   if (!view) throw new Error('No map');
   expect(card.maps.timelineOf(view)?.times.at(-1)).toBe(last);
-  expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
 });
 
 test('panning beyond the model domain removes future frames and restores the observed timeline', async () => {

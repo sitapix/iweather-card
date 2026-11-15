@@ -66,6 +66,7 @@ import {
 import {
   isLayer,
   mapMarkup,
+  redrawMap,
   radarSky,
   radarTile,
   timelineAt,
@@ -341,6 +342,21 @@ export interface MapHost extends EventTarget {
   // Its sheet, drawn again for what is chosen in it.
   readonly sheets: { renderMap(): HTMLElement | undefined };
 }
+interface GridView {
+  source: GridSource;
+  centre: MapCentre;
+  width: number;
+  height: number;
+  settling?: boolean;
+}
+const sameGridView = (a: GridView, b: GridView) =>
+  a.source === b.source &&
+  a.width === b.width &&
+  a.height === b.height &&
+  a.centre.zoom === b.centre.zoom &&
+  a.centre.latitude === b.centre.latitude &&
+  a.centre.longitude === b.centre.longitude;
+
 export class MapViews {
   readonly card: MapHost;
   radar: Radar | undefined;
@@ -352,6 +368,8 @@ export class MapViews {
   // forecast's precipitation grids whose hours are still coming.
   winds: WindGrid[] = [];
   readonly rainComing = new WeakSet<WindGrid>();
+  private readonly gridViews = new Map<HTMLElement, GridView>();
+  private readonly gridRequests = new Map<WindGrid, { controller: AbortController; origin: GridView }>();
   // Where the large map looks once moved or zoomed; undefined, home as it opened.
   centre: MapCentre | undefined;
   // The layer chosen for the large map; undefined, the one that matters most (see mapKind).
@@ -393,6 +411,7 @@ export class MapViews {
   timelinePlay = 0;
   // Whether its bar is being dragged.
   timelineScrub = false;
+  private readonly boundTimelines = new WeakSet<HTMLInputElement>();
   windMaps: { canvas: HTMLCanvasElement; map: WindMap }[] = [];
   radarFrame = -1;
   private readonly radarPreviews = new Map<HTMLElement, RadarPreview<TileFrame>>();
@@ -425,6 +444,8 @@ export class MapViews {
   reset() {
     this.playTimeline(false);
     this.timelineTime = undefined;
+    this.timelineScrub = false;
+    this.releaseGrids();
     this.centre = undefined;
     this.layer = undefined;
     this.starts = false;
@@ -474,6 +495,8 @@ export class MapViews {
   }
   // Invalidates an unfinished request when radar is disabled or the card leaves the page.
   invalidateRadar() {
+    this.gridViews.clear();
+    this.releaseGrids();
     for (const [view, preview] of this.radarPreviews) {
       preview.stop();
       this.drawn.delete(view);
@@ -579,75 +602,106 @@ export class MapViews {
   // comes to rest, with room to move in (see windPointsFor). The view is drawn again once it
   // comes. The forecast's precipitation comes from a forecast model instead (see rainPlan),
   // drawn again with each hour that comes.
-  async loadGrid(centre: MapCentre, width: number, height: number, large: boolean, source: GridSource) {
-    const fresh = () =>
-      this.card.config?.map !== 'rainviewer' ||
-      !this.card.isConnected ||
-      !this.card.visible ||
-      document.hidden ||
-      (large && !this.largeView()) ||
-      this.winds.some(
-        grid => grid.source === source && Date.now() - grid.at < REFRESH.wind && fitsWind(grid, centre, width, height),
-      );
-    if (fresh()) return;
-    if (large) {
-      const asked = this.centre;
-      await new Promise(settled => setTimeout(settled, MAP_REST));
-      if (this.centre !== asked || fresh()) return;
+  private gridVisible(view: HTMLElement) {
+    return (
+      this.card.isConnected &&
+      this.card.visible &&
+      !document.hidden &&
+      this.card.config?.map === 'rainviewer' &&
+      this.card.root.contains(view) &&
+      !view.closest('dialog:not([open])') &&
+      view.clientWidth > 0 &&
+      view.clientHeight > 0
+    );
+  }
+  // A provider may fall back to a coarser model while a request is in flight. Its original
+  // view still needs it, as does any other visible view that its current grid covers.
+  private matchesGrid(grid: WindGrid, view: GridView) {
+    if (grid.source !== view.source) return false;
+    const request = this.gridRequests.get(grid);
+    return (request && sameGridView(request.origin, view)) || fitsWind(grid, view.centre, view.width, view.height);
+  }
+  private releaseGrids() {
+    for (const view of this.gridViews.keys()) if (!this.gridVisible(view)) this.gridViews.delete(view);
+    for (const [grid, { controller }] of this.gridRequests) {
+      if ([...this.gridViews.values()].some(view => this.matchesGrid(grid, view))) continue;
+      this.gridRequests.delete(grid);
+      this.winds = this.winds.filter(each => each !== grid);
+      this.rainComing.delete(grid);
+      controller.abort();
     }
-    const now = Date.now();
-    if (source === 'rain') {
-      // The forecast's precipitation, each hour drawn as it comes, the hour now first, from the
-      // finest model that answers (see loadRain).
-      const plans = rainPlans(rainBounds(centre, width, height)),
-        plan = plans[0];
-      if (!plan) return;
-      const grid: WindGrid = {
+  }
+  async loadGrid(view: HTMLElement, wanted: GridView) {
+    if (!this.gridVisible(view)) return;
+    const previous = this.gridViews.get(view),
+      demand = previous && sameGridView(previous, wanted) ? previous : wanted;
+    this.gridViews.set(view, demand);
+    const fresh = () => this.winds.some(grid => Date.now() - grid.at < REFRESH.wind && this.matchesGrid(grid, demand));
+    if (demand.settling || fresh()) return;
+    const large = view.classList.contains('large');
+    if (large) {
+      demand.settling = true;
+      await new Promise(settled => setTimeout(settled, MAP_REST));
+      demand.settling = false;
+      if (this.gridViews.get(view) !== demand || !this.gridVisible(view) || fresh()) return;
+    }
+    const { source, centre, width, height } = demand,
+      now = Date.now(),
+      plans = source === 'rain' ? rainPlans(rainBounds(centre, width, height)) : [],
+      plan = plans[0];
+    if (source === 'rain' && !plan) return;
+    const points = plan?.points ?? windPointsFor(centre, width, height, large),
+      grid: WindGrid = {
         source,
         at: now,
-        bounds: windBounds(plan.points),
-        step: plan.points.step,
+        bounds: windBounds(points),
+        step: points.step,
         hours: null,
-        model: plan.model.id,
-      };
-      this.winds = [...this.winds.slice(1 - WIND_GRIDS), grid];
-      this.rainComing.add(grid);
-      // The first hour is drawn at once; those after it a few at a time, as each draw remakes
-      // every view.
-      let waiting = false;
-      try {
-        const got = await loadRain(plans, now, (hours, used) => {
-          const first = grid.hours === null;
-          Object.assign(grid, {
-            hours,
-            model: used.model.id,
-            step: used.points.step,
-            bounds: windBounds(used.points),
-          });
-          if (first) this.draw();
-          else if (!waiting) {
-            waiting = true;
-            setTimeout(() => {
-              waiting = false;
-              this.draw();
-            }, RAIN_REDRAW);
-          }
-        });
-        grid.hours = got?.hours ?? null;
-      } catch {}
-      this.rainComing.delete(grid);
-      if (!grid.hours) grid.at = now - REFRESH.wind + MINUTE;
-      this.draw();
-      return;
-    }
-    const points = windPointsFor(centre, width, height, large),
-      grid: WindGrid = { source, at: now, bounds: windBounds(points), step: points.step, hours: null };
+        ...(plan && { model: plan.model.id }),
+      },
+      controller = new AbortController(),
+      { signal } = controller;
+    this.gridRequests.set(grid, { controller, origin: demand });
     this.winds = [...this.winds.slice(1 - WIND_GRIDS), grid];
+    let redraw: number | undefined;
     try {
-      grid.hours = await (source === 'air' ? openMeteoAir(points) : openMeteoWind(points));
+      if (source === 'rain') {
+        this.rainComing.add(grid);
+        const got = await loadRain(
+          plans,
+          now,
+          (hours, used) => {
+            const first = grid.hours === null;
+            Object.assign(grid, {
+              hours,
+              model: used.model.id,
+              step: used.points.step,
+              bounds: windBounds(used.points),
+            });
+            if (first) this.draw();
+            else
+              redraw ??= window.setTimeout(() => {
+                redraw = undefined;
+                if (!signal.aborted) this.draw();
+              }, RAIN_REDRAW);
+          },
+          fetch,
+          signal,
+        );
+        grid.hours = got?.hours ?? null;
+      } else {
+        const request = (url: string) => fetch(url, { signal });
+        grid.hours = await (source === 'air' ? openMeteoAir(points, request) : openMeteoWind(points, request));
+      }
     } catch {
-      grid.at = now - REFRESH.wind + MINUTE;
+      // A provider failure can retry in a minute. An abandoned view can retry immediately.
+    } finally {
+      window.clearTimeout(redraw);
+      this.rainComing.delete(grid);
+      this.gridRequests.delete(grid);
     }
+    if (signal.aborted) return;
+    if (!grid.hours) grid.at = now - REFRESH.wind + MINUTE;
     this.draw();
   }
   // The wind a map view shows: the latest grid that fits it; while that loads, the latest with
@@ -946,7 +1000,7 @@ export class MapViews {
       ? {
           times: [...frames, ...ahead].map(frame => frame.time),
           step: RADAR_STEP,
-          title: phrase('Forecast'),
+          title: phrase('Observed radar'),
           clock: true,
           span: '1h',
         }
@@ -964,20 +1018,24 @@ export class MapViews {
         at = timelineAt(shown, time),
         first = shown.times[0] ?? time;
       timeline.style.setProperty('--done', percent(clamp((time - first) / timelineDuration(shown))));
-      if (shown.span === '1h') {
-        const forecast = time > (this.radar?.frames.at(-1)?.time ?? Infinity) && this.shortFrames(view).length > 0;
-        view.toggleAttribute('data-forecast', forecast);
+      const frame = Math.round(at),
+        selected = shown.times[frame] ?? time,
+        forecast = shown.span === '1h' && frame >= (this.radar?.frames.length ?? 0),
+        title = forecast ? say('Forecast') : say(shown.title),
+        clock = { hour: 'numeric', minute: '2-digit', timeZone: ctx.timeZone, hour12: ctx.hour12 } as const,
+        date = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: ctx.timeZone } as const;
+      view.toggleAttribute('data-forecast', forecast);
+      const heading = timeline.querySelector('.wind-when b'),
+        day = timeline.querySelector('.wind-when span'),
+        track = timeline.querySelector<HTMLInputElement>('.wind-track');
+      if (heading && heading.textContent !== title) heading.textContent = title;
+      const display = dateFormat(ctx.locale, shown.clock ? { weekday: 'long', ...clock } : date).format(selected);
+      if (day && day.textContent !== display) day.textContent = display;
+      if (track) {
+        if (track.valueAsNumber !== frame) track.valueAsNumber = frame;
+        const spoken = `${title}, ${dateFormat(ctx.locale, { ...date, ...clock }).format(selected)}`;
+        if (track.getAttribute('aria-valuetext') !== spoken) track.setAttribute('aria-valuetext', spoken);
       }
-      const track = timeline.querySelector('.wind-track');
-      track?.setAttribute('aria-valuenow', String(Math.round(at)));
-      const day = timeline.querySelector('.wind-when span');
-      if (day)
-        day.textContent = dateFormat(
-          ctx.locale,
-          shown.clock
-            ? { weekday: 'long', hour: 'numeric', minute: '2-digit', timeZone: ctx.timeZone, hour12: ctx.hour12 }
-            : { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: ctx.timeZone },
-        ).format(shown.times[Math.round(at)] ?? time);
       timeline.querySelector('.wind-play')?.setAttribute('aria-label', this.timelinePlay ? say('Pause') : say('Play'));
       timeline.toggleAttribute('data-playing', Boolean(this.timelinePlay));
       if (shown.span === '12h') this.drawRainAt(view, time);
@@ -1035,51 +1093,74 @@ export class MapViews {
   // The timeline's controls: the play button, the span switch, and the bar, dragged or stepped
   // with the arrow keys.
   bindTimeline(view: HTMLElement, timeline: Timeline) {
-    const { card } = this,
-      track = view.querySelector<HTMLElement>('.wind-track'),
+    const track = view.querySelector<HTMLInputElement>('.wind-track'),
       marks = view.querySelector<HTMLElement>('.wind-marks'),
-      { times } = timeline,
-      first = times[0],
-      last = times.length - 1;
+      spans = view.querySelector<HTMLElement>('.map-span');
     if (marks) fitWindMarks(marks);
-    view.querySelector('.wind-play')?.addEventListener('click', () => {
-      haptic(card, 'light');
-      this.playTimeline(!this.timelinePlay);
-    });
-    const spans = view.querySelector<HTMLElement>('.map-span');
-    if (spans) this.spans.attach(spans);
-    if (!track || first === undefined) return;
-    const seek = (event: PointerEvent) => {
-      const box = track.getBoundingClientRect();
-      this.timelineTime = Math.min(
-        times[last] ?? first,
-        first + clamp((event.clientX - box.left) / box.width) * timelineDuration(timeline),
-      );
-      this.syncWindTime();
-    };
-    track.addEventListener('pointerdown', event => {
-      this.playTimeline(false);
-      this.timelineScrub = true;
-      track.setPointerCapture(event.pointerId);
-      seek(event);
-    });
-    track.addEventListener('pointermove', event => {
-      if (track.hasPointerCapture(event.pointerId)) seek(event);
-    });
-    const release = () => {
-      this.timelineScrub = false;
-    };
-    track.addEventListener('pointerup', release);
-    track.addEventListener('pointercancel', release);
-    track.addEventListener('keydown', event => {
-      const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-      if (!step) return;
-      event.preventDefault();
-      this.playTimeline(false);
-      const at = Math.round(timelineAt(timeline, this.timelineTime ?? Date.now())) + step;
-      this.timelineTime = times[Math.min(last, Math.max(0, at))] ?? first;
-      this.syncWindTime();
-    });
+    if (spans) {
+      this.spans.attach(spans);
+      this.spans.place();
+    }
+    if (!track) return;
+    if (!this.boundTimelines.has(track)) {
+      this.boundTimelines.add(track);
+      view.querySelector('.wind-play')?.addEventListener('click', () => {
+        haptic(this.card, 'light');
+        this.playTimeline(!this.timelinePlay);
+      });
+      const seek = (event: PointerEvent) => {
+        const shown = this.timelineOf(view),
+          box = track.getBoundingClientRect();
+        if (!shown || !box.width) return;
+        const first = shown.times[0],
+          last = shown.times.at(-1);
+        if (first === undefined || last === undefined) return;
+        this.timelineTime = Math.min(
+          last,
+          first + clamp((event.clientX - box.left) / box.width) * timelineDuration(shown),
+        );
+        this.syncWindTime();
+      };
+      track.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || !event.isPrimary) return;
+        event.preventDefault();
+        track.focus({ preventScroll: true });
+        this.playTimeline(false);
+        this.timelineScrub = true;
+        track.setPointerCapture(event.pointerId);
+        seek(event);
+      });
+      track.addEventListener('pointermove', event => {
+        if (track.hasPointerCapture(event.pointerId)) seek(event);
+      });
+      track.addEventListener('lostpointercapture', () => {
+        this.timelineScrub = false;
+      });
+      const select = (index: number) => {
+        const times = this.timelineOf(view)?.times;
+        if (!times || times.length === 0) return;
+        this.playTimeline(false);
+        this.timelineTime = times[Math.max(0, Math.min(times.length - 1, index))];
+        this.syncWindTime();
+      };
+      // Assistive technologies can change the native range without sending a keyboard event.
+      track.addEventListener('input', () => select(track.valueAsNumber));
+      track.addEventListener('keydown', event => {
+        const at = track.valueAsNumber,
+          keys: Readonly<Record<string, number>> = {
+            ArrowRight: at + 1,
+            ArrowUp: at + 1,
+            ArrowLeft: at - 1,
+            ArrowDown: at - 1,
+            Home: 0,
+            End: Number(track.max),
+          };
+        const frame = keys[event.key];
+        if (frame === undefined) return;
+        event.preventDefault();
+        select(frame);
+      });
+    }
     this.syncWindTime();
     // Precipitation's plays by itself as the map opens, once it has come.
     if (this.starts) {
@@ -1193,7 +1274,7 @@ export class MapViews {
   // unless it is already there.
   placeGround(view: HTMLElement, gl: NonNullable<MapViews['gl']>, centre: MapCentre) {
     // Quiet, as resizing and setting its camera report moves of their own.
-    view.prepend(gl.container);
+    if (view.firstElementChild !== gl.container) view.prepend(gl.container);
     this.glDrawn = centre;
     this.glQuiet = true;
     gl.map.resize();
@@ -1259,9 +1340,11 @@ export class MapViews {
   drawView(view: HTMLElement, config: CardConfig, allFrames: RadarFrame[]) {
     const width = view.clientWidth,
       height = view.clientHeight;
-    if (!width || !height) return;
     const inputs = this.inputsOf(view);
-    if (!inputs) return;
+    if (!width || !height || !inputs) {
+      this.gridViews.delete(view);
+      return;
+    }
     const { latitude, longitude, kind, badge, tint, bearing, unit, low, high, condition, temperatureUnit } = inputs,
       { dark, pinName } = inputs,
       radar = kind === 'precipitation' && config.map === 'rainviewer';
@@ -1292,7 +1375,8 @@ export class MapViews {
       gridded =
         config.map === 'rainviewer' &&
         (kind === 'wind' || kind === 'temperature' || kind === 'air_quality' || rainHours || hoursLoop);
-    if (gridded) void this.loadGrid(centre, width, height, large, source);
+    if (gridded) void this.loadGrid(view, { centre, width, height, source });
+    else this.gridViews.delete(view);
     // The wind across the map when the online map has it; else home's, drawn near home only.
     const { card } = this,
       sun = card.update?.sun,
@@ -1312,6 +1396,7 @@ export class MapViews {
         preview,
         rainHours,
         size: [Math.round(width), Math.round(height)],
+        locale: [card.update?.ctx.locale, card.update?.ctx.timeZone, card.update?.ctx.hour12],
         inputs,
         sun: sun?.state,
         moved,
@@ -1394,7 +1479,7 @@ export class MapViews {
       shownFrame = timeline?.span === '1h' ? Math.round(timelineAt(timeline, this.timelineTime ?? Date.now())) : -1;
     this.radarPreviews.get(view)?.stop();
     this.radarPreviews.delete(view);
-    view.innerHTML = mapMarkup({
+    const markup = mapMarkup({
       config,
       width,
       height,
@@ -1439,15 +1524,14 @@ export class MapViews {
       dataCredit: [
         ...new Set([
           ahead.length > 0 ? HRRR_CREDIT : '',
-          grid?.hours && (rainHours || hoursLoop)
-            ? (RAIN_MODELS.find(model => model.id === grid.model)?.credit ?? 'Open-Meteo')
-            : '',
+          grid?.hours ? (RAIN_MODELS.find(model => model.id === grid.model)?.credit ?? 'Open-Meteo') : '',
         ]),
       ]
         .filter(Boolean)
         .join(' · '),
       failed: Boolean(this.radar?.failed),
     });
+    redrawMap(view, markup, large);
     if (large) this.setPin(view, this.pin);
     // The frame it had carries over, as long as it is the frame and place it is now.
     const frameCanvas = large ? null : view.querySelector('canvas.radar-layer.frame'),
@@ -1583,6 +1667,7 @@ export class MapViews {
     void this.loadRadar(Date.now());
     if (!this.largeView() || config.map !== 'rainviewer' || config.map_tile_url) this.stopGl();
     if (!card.isConnected || !card.visible || document.hidden) {
+      this.releaseGrids();
       this.playTimeline(false);
       return;
     }
@@ -1592,7 +1677,8 @@ export class MapViews {
     // The frame it is now, not any still to come.
     this.radarFrame = latest < 0 ? allFrames.length - 1 : latest;
     for (const view of card.root.querySelectorAll('.radar'))
-      if (view instanceof HTMLElement) this.drawView(view, config, allFrames);
+      if (view instanceof HTMLElement && !view.closest('dialog:not([open])')) this.drawView(view, config, allFrames);
+    this.releaseGrids();
     this.windMaps = this.windMaps.filter(({ canvas }) => canvas.isConnected);
     for (const { map } of this.windMaps) map.update();
     this.showRadarFrame();
@@ -1601,7 +1687,7 @@ export class MapViews {
   showRadarFrame() {
     if (!this.radar || this.radar.frames.length === 0) return;
     for (const view of this.card.root.querySelectorAll('.radar')) {
-      if (view instanceof HTMLElement && this.radarPreviews.has(view)) continue;
+      if (view.closest('dialog:not([open])') || (view instanceof HTMLElement && this.radarPreviews.has(view))) continue;
       const timeline = view instanceof HTMLElement ? this.timelineOf(view) : null,
         at = timeline?.span === '1h' ? timelineAt(timeline, this.timelineTime ?? Date.now()) : this.radarFrame,
         shown = Math.round(at);
