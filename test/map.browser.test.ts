@@ -196,6 +196,12 @@ test('precipitation plays on the card from now into the forecast, never before n
   card.maps.draw();
   await vi.waitFor(() => expect(hours()).toBe(12));
   expect(layers(card)).toHaveLength(1);
+  const forecasts = [...card.root.querySelectorAll('.map-hour')],
+    group = forecasts[0]?.parentElement;
+  expect(group && getComputedStyle(group).isolation).toBe('isolate');
+  expect(
+    forecasts.every(frame => frame.parentElement === group && getComputedStyle(frame).mixBlendMode === 'plus-lighter'),
+  ).toBe(true);
   await vi.waitFor(() => expect(when()).toBe('In 1 hour'), { timeout: 5000 });
   expect(card.maps.timelineTime).toBeUndefined();
 
@@ -352,6 +358,13 @@ test('the ground is a picture, with the radar between it and the names', async (
     [frame] = layers(card);
   expect(ground?.getAttribute('src')).toBe(STILL.ground);
   expect(names?.getAttribute('src')).toBe(STILL.names);
+  expect(ground && getComputedStyle(ground).animationName).toBe('none');
+  expect(names && getComputedStyle(names).animationName).toBe('none');
+  const blend = frame?.closest('.map-precipitation');
+  expect(blend && getComputedStyle(blend).isolation).toBe('isolate');
+  expect(frame && getComputedStyle(frame).mixBlendMode).toBe('plus-lighter');
+  expect(blend?.contains(ground ?? null)).toBe(false);
+  expect(blend?.contains(names ?? null)).toBe(false);
   expect(card.root.querySelector('.radar-layer.osm')).toBeNull();
   expect(card.root.querySelector('.radar-credit')?.textContent).toContain('OpenFreeMap');
   const order = (a: Node | undefined, b: Node | undefined) => (a && b ? a.compareDocumentPosition(b) : 0);
@@ -366,6 +379,15 @@ test('the ground is a picture, with the radar between it and the names', async (
     expect(layers(card)).toHaveLength(1);
   });
   expect(stills(card)[0]).toBe(ground);
+  // A weather redraw can rebuild every frame while the ground and place names stay decoded.
+  const view = frame?.closest<HTMLElement>('.radar'),
+    pan = view?.querySelector('.map-pan');
+  if (!view || !pan) throw new Error('No precipitation map.');
+  card.maps.drawn.delete(view);
+  card.maps.draw();
+  expect(view.querySelector('.map-pan')).not.toBe(pan);
+  expect(stills(card)[0]).toBe(ground);
+  expect(stills(card)[1]).toBe(names);
   expect(groundStill).not.toHaveBeenCalled();
 });
 

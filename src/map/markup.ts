@@ -297,7 +297,8 @@ export function mapMarkup(look: MapLook): string {
     '</div>' +
     (live || rainHours || !frames.length
       ? ''
-      : scaled(skyGrow) +
+      : (large ? '' : '<div class="map-precipitation">') +
+        scaled(skyGrow) +
         frames
           .map((frame, i) =>
             large
@@ -307,7 +308,7 @@ export function mapMarkup(look: MapLook): string {
                 : '',
           )
           .join('') +
-        '</div>') +
+        (large ? '</div>' : '</div></div>')) +
     (overlay ? `${scaled(grow)}${layer(ground, tile => fill(overlay, tile), 'overlay')}</div>` : '') +
     (field && !live
       ? `<canvas class="map-field" data-kind="${kind}"></canvas>`
@@ -340,13 +341,19 @@ export function mapMarkup(look: MapLook): string {
 // Replace the painted layers while leaving controls attached. Detaching even briefly loses
 // native focus, pointer capture and an open menu's keyboard position.
 export function redrawMap(view: HTMLElement, markup: string, large: boolean) {
-  if (!large || !view.querySelector('.map-tools')) {
-    view.innerHTML = markup;
-    return;
-  }
   const template = document.createElement('template');
   template.innerHTML = markup;
   const fresh = template.content;
+  if (!large || !view.querySelector('.map-tools')) {
+    // Keep the decoded ground and labels when only the precipitation frames change.
+    const stills = view.querySelectorAll('.map-still');
+    fresh.querySelectorAll('.map-still').forEach((next, i) => {
+      const previous = stills[i];
+      if (previous?.isEqualNode(next)) next.replaceWith(previous);
+    });
+    view.replaceChildren(fresh);
+    return;
+  }
   const keep = new Map<Element, Element>();
   const retain = (selector: string, update: (old: Element, next: Element) => boolean) => {
     const old = view.querySelector(selector),

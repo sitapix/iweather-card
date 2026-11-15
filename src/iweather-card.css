@@ -1009,10 +1009,8 @@
 .tile[data-tile=map]{aspect-ratio:2/1}
 .radar-layer{position:absolute;inset:0}.radar-layer img{position:absolute;width:256px;height:256px;max-width:none;user-select:none;pointer-events:none}
 .radar-layer.frame{display:block;opacity:0;transition:opacity .25s}.radar-layer.frame[data-on]{opacity:.85}
-canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{position:absolute;inset:0;width:100%;height:100%;animation:map-still .25s;user-select:none;pointer-events:none}.radar[data-still] .map-tint{display:none}@keyframes map-still{from{opacity:0}}canvas.radar-layer.frame[data-on]{opacity:1}
-/* A small map's corners hold while its picture fades in. WebKit draws a fading picture as a layer of
-   its own, which the map's rounded overflow doesn't cut, so for a quarter second the corners showed
-   square. A mask cuts every layer inside it to the map's rounded box. */
+canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{position:absolute;inset:0;width:100%;height:100%;user-select:none;pointer-events:none}.radar[data-still] .map-tint{display:none}canvas.radar-layer.frame[data-on]{opacity:1}
+/* Clip every composited layer of the small map to its rounded corners on WebKit. */
 .radar:not(.large){-webkit-mask-image:linear-gradient(#000 0 0);mask-image:linear-gradient(#000 0 0)}
 .radar-dot{position:absolute;left:var(--x,50%);top:var(--y,50%);width:12px;height:12px;border-radius:50%;background:#0a84ff;border:2.5px solid #fff;transform:translate(-50%,-50%);box-shadow:0 1px 6px #0008}
 .radar-credit{position:absolute;right:6px;bottom:4px;font-size:9px;color:#ffffff8c}
@@ -1069,6 +1067,10 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
    white (extreme) would vanish multiplied in. On a dark map nothing multiplies into the ground
    either: the colours lie over it. */
 .map-field[data-kind=precipitation]{opacity:.9;mix-blend-mode:normal}.radar[data-night] .map-field{mix-blend-mode:normal}
+/* Add the two weighted rain frames on a transparent layer. A stationary shower keeps its
+   brightness halfway through the blend, and the ground and labels keep their own colours. */
+.map-precipitation{position:absolute;inset:0;isolation:isolate;pointer-events:none}
+.map-precipitation :is(.radar-layer.frame,.map-field.map-hour){mix-blend-mode:plus-lighter}
 /* For precipitation, the timeline's switch between the radar's last hour and the forecast's 12. */
 .map-span{grid-area:1 / 3;position:relative;z-index:1;display:flex;padding:2px;border-radius:15px;background:#0000000f;touch-action:pan-y;-webkit-user-select:none;user-select:none}
 .map-span button{position:relative;z-index:1;flex:1;min-width:0;height:26px;padding:0 2px;border:0;border-radius:13px;background:none;color:inherit;font:inherit;font-size:13px;font-weight:600}
