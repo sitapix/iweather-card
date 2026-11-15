@@ -22,25 +22,103 @@ const inside = (field: ScalarField, latitude: number, longitude: number) =>
   longitude >= field.west &&
   longitude <= field.west + (field.cols - 1) * field.step;
 
-export function rainReading(field: ScalarField, latitude: number, longitude: number): number {
-  if (!inside(field, latitude, longitude)) return Number.NaN;
-  const row = (field.north - latitude) / field.step,
-    col = (longitude - field.west) / field.step,
-    top = Math.floor(row),
-    left = Math.floor(col),
-    fy = row - top,
-    fx = col - left;
-  let value = 0;
-  for (let y = 0; y < 2; y++)
-    for (let x = 0; x < 2; x++) {
-      const weight = (x ? fx : 1 - fx) * (y ? fy : 1 - fy);
-      // At an exact grid point an unused neighbour must not invalidate a known dry reading.
-      if (weight === 0) continue;
-      const sample = field.values[(top + y) * field.cols + left + x];
-      if (sample === undefined || !Number.isFinite(sample)) return Number.NaN;
-      value += sample * weight;
+// A shape-preserving cubic between the two middle readings. Limiting each tangent to the
+// smaller adjacent slope keeps a dry interval dry and preserves the measured storm peaks.
+const slope = (a: number, b: number) => (a * b > 0 ? Math.sign(a) * Math.min(Math.abs(a), Math.abs(b)) : 0);
+function sample(a: number, b: number, c: number, d: number, t: number): number {
+  if (t === 0 || b === c) return b;
+  const change = c - b,
+    u = 1 - t;
+  return b + t * (t * (1 + 2 * u) * change + u * (u * slope(b - a, change) - t * slope(change, d - c)));
+}
+
+// Project once per column, then reuse each interpolated model row across the screen rows
+// that need it. An unknown inner reading leaves that interval unknown. An unknown outer
+// neighbour only flattens the tangent at the last known point.
+// Every screen row between the same two model rows shares their tangents, so those are worked
+// out once for the interval, along with the columns that hold anything but dry ground: a row
+// then costs a few multiplications for each of those columns, and nothing for the rest.
+export function rainRows(field: ScalarField, longitudes: Float64Array) {
+  const count = longitudes.length,
+    last = field.cols - 1,
+    // Each column's place in the grid: the reading on its left, and how far past it. Outside
+    // the grid there is none.
+    lefts = new Int32Array(count),
+    shares = new Float64Array(count),
+    cached = new Map<number, Float32Array>(),
+    result = new Float32Array(count),
+    change = new Float64Array(count),
+    leaving = new Float64Array(count),
+    arriving = new Float64Array(count);
+  for (let x = 0; x < count; x++) {
+    const along = ((longitudes[x] ?? Number.NaN) - field.west) / field.step,
+      left = Math.floor(along);
+    if (along >= 0 && along <= last) {
+      lefts[x] = left;
+      shares[x] = along - left;
+    } else lefts[x] = -1;
+  }
+  let interval = -1,
+    from = 0,
+    to = 0;
+  const line = (index: number) => {
+    const row = Math.max(0, Math.min(field.rows - 1, index)),
+      held = cached.get(row);
+    if (held) return held;
+    const values = new Float32Array(count),
+      start = row * field.cols,
+      at = (x: number) => field.values[start + x] ?? Number.NaN;
+    for (let x = 0; x < count; x++) {
+      const left = lefts[x] ?? -1;
+      values[x] =
+        left < 0
+          ? Number.NaN
+          : sample(
+              at(Math.max(0, left - 1)),
+              at(left),
+              at(Math.min(last, left + 1)),
+              at(Math.min(last, left + 2)),
+              shares[x] ?? 0,
+            );
     }
-  return value;
+    cached.set(row, values);
+    return values;
+  };
+  return (latitude: number) => {
+    const y = (field.north - latitude) / field.step;
+    if (y < 0 || y > field.rows - 1) return result.fill(Number.NaN);
+    const top = Math.floor(y),
+      t = y - top,
+      b = line(top);
+    if (t === 0) return b;
+    if (top !== interval) {
+      const a = line(top - 1),
+        c = line(top + 1),
+        d = line(top + 2);
+      interval = top;
+      from = count;
+      to = 0;
+      for (let x = 0; x < count; x++) {
+        const start = b[x] ?? Number.NaN,
+          end = c[x] ?? Number.NaN,
+          rise = end - start;
+        change[x] = rise;
+        leaving[x] = slope(start - (a[x] ?? Number.NaN), rise);
+        arriving[x] = slope(rise, (d[x] ?? Number.NaN) - end);
+        // An unknown reading is not dry, and compares unequal to zero.
+        if (start !== 0 || rise !== 0) {
+          from = Math.min(from, x);
+          to = x + 1;
+        }
+      }
+    }
+    const u = 1 - t,
+      rising = t * (1 + 2 * u);
+    result.fill(0);
+    for (let x = from; x < to; x++)
+      result[x] = (b[x] ?? 0) + t * (rising * (change[x] ?? 0) + u * (u * (leaving[x] ?? 0) - t * (arriving[x] ?? 0)));
+    return result;
+  };
 }
 // Whether the visible part of a grid has gaps. Inspect its cells, including the neighbours used
 // for interpolation; data outside the viewport doesn't put an unavailable note over the map.

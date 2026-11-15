@@ -465,7 +465,13 @@ test('radar tiles cover the view around home', async () => {
       json: () =>
         Promise.resolve({
           host: 'https://h',
-          radar: { past: [{ time: 10, path: '/a' }], nowcast: [{ time: 20, path: '/b' }] },
+          radar: {
+            past: [
+              { time: 10, path: '/a' },
+              { time: 11, path: 'file:///' },
+            ],
+            nowcast: [{ time: 20, path: '/b' }],
+          },
         }),
     }),
   );

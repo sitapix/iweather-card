@@ -326,19 +326,24 @@ export function bindMapMoves(view: HTMLElement, map: Moving) {
   // its size, + and − zoom it, eased.
   view.addEventListener('keydown', event => {
     if (event.target !== view) return;
-    const [across, down] = MAP_KEYS[event.key] ?? [0, 0],
-      zoom = ZOOM_KEYS[event.key];
-    if (!across && !down && zoom === undefined) return;
+    const zoom = ZOOM_KEYS[event.key];
+    if (!(event.key in MAP_KEYS) && zoom === undefined) return;
     event.preventDefault();
-    const live = map.gl?.map;
     if (zoom !== undefined) step(zoom);
-    else if (live) live.panBy([(across * view.clientWidth) / MAP_KEY_STEP, (down * view.clientHeight) / MAP_KEY_STEP]);
+    else pan(event.key);
+  });
+  function pan(key: string) {
+    const direction = MAP_KEYS[key];
+    if (!direction) return;
+    const dx = (direction[0] * view.clientWidth) / MAP_KEY_STEP,
+      dy = (direction[1] * view.clientHeight) / MAP_KEY_STEP;
+    if (map.gl) map.gl.map.panBy([dx, dy]);
     else {
-      shift((-across * view.clientWidth) / MAP_KEY_STEP, (-down * view.clientHeight) / MAP_KEY_STEP);
+      shift(-dx, -dy);
       show(true);
       restIn(MOTION.ease);
     }
-  });
+  }
   bindMapTools(view, map, step, () => {
     window.clearTimeout(resting);
     motion = undefined;

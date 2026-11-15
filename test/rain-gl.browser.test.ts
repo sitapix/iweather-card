@@ -169,6 +169,64 @@ test('the radar’s colours read back as their reflectivity', () => {
   expect([...radarLevels(pixels)]).toEqual([30 - RADAR_NONE, 0]);
 });
 
+test('a radar mosaic starts with its first tile and builds its mipmaps when the frame is complete', async () => {
+  const canvas = document.createElement('canvas'),
+    gl = canvas.getContext('webgl2');
+  if (!gl) throw new Error('No WebGL 2.');
+  const upload = vi.spyOn(gl, 'texSubImage2D'),
+    clear = vi.spyOn(gl, 'clearBufferfv'),
+    mips = vi.spyOn(gl, 'generateMipmap'),
+    allocate = vi.spyOn(gl, 'createTexture'),
+    tile = new Uint8Array(TILE * TILE).fill(40 - RADAR_NONE),
+    deliveries: Array<() => void> = [],
+    layer = new RainLayer(
+      'test-radar',
+      {
+        getCanvas: () => canvas,
+        getZoom: () => 1,
+        getCenter: () => ({ lat: 0, lng: 0 }),
+        getBounds: () => ({ getNorth: () => 12, getSouth: () => -12, getEast: () => 12, getWest: () => -12 }),
+        triggerRepaint: () => {},
+      },
+      () => new Promise(done => deliveries.push(() => done(tile))),
+    );
+  try {
+    layer.showRadar(['model/{z}/{x}/{y}'], RADAR, 0);
+    layer.prerender(gl);
+    expect(deliveries).toHaveLength(4);
+    expect(allocate).not.toHaveBeenCalled();
+    deliveries.shift()?.();
+    await Promise.resolve();
+    layer.prerender(gl);
+    expect(allocate).toHaveBeenCalledOnce();
+    expect(clear).toHaveBeenCalledBefore(upload);
+    expect(upload).toHaveBeenCalledOnce();
+    expect(mips).not.toHaveBeenCalled();
+    for (const deliver of deliveries) deliver();
+    await Promise.resolve();
+    layer.prerender(gl);
+    layer.prerender(gl);
+    expect(upload).toHaveBeenCalledTimes(4);
+    expect(mips).toHaveBeenCalledOnce();
+    let attributeEnabled = false;
+    const draw = gl.drawArrays.bind(gl);
+    vi.spyOn(gl, 'drawArrays').mockImplementation((...args) => {
+      attributeEnabled = gl.getVertexAttrib(0, gl.VERTEX_ATTRIB_ARRAY_ENABLED) === true;
+      draw(...args);
+    });
+    layer.render(gl, { modelViewProjectionMatrix: new DOMMatrix().toFloat32Array() });
+    expect(attributeEnabled).toBe(true);
+    expect(gl.getError()).toBe(gl.NO_ERROR);
+    const texture: unknown = allocate.mock.results[0]?.value;
+    if (!(texture instanceof WebGLTexture)) throw new Error('Missing mosaic texture.');
+    expect(gl.isTexture(texture)).toBe(true);
+    layer.onRemove();
+    expect(gl.isTexture(texture)).toBe(false);
+  } finally {
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+  }
+});
+
 test('future frames change shape and intensity from their own readings, with no synthetic translation', async () => {
   const map = await liveMap(1);
   const load: RadarLoad = url => {
@@ -227,10 +285,10 @@ test('future frames change shape and intensity from their own readings, with no 
   expect(near(at(-20), over(RADAR, 40))).toBe(true);
 });
 
-test('an unloaded forecast cannot substitute a historical radar frame', async () => {
+test.each(['observed', 'forecast'])('a missing %s frame never borrows from the other source', async missing => {
   const map = await liveMap(1),
     layer = new RainLayer('rain', map, url =>
-      url.includes('forecast')
+      url.includes(missing)
         ? new Promise(() => undefined)
         : Promise.resolve(new Uint8Array(TILE * TILE).fill(40 - RADAR_NONE)),
     );
@@ -240,16 +298,17 @@ test('an unloaded forecast cannot substitute a historical radar frame', async ()
     RADAR,
     1,
   );
-  layer.showAt(0);
+  const available = missing === 'forecast' ? 0 : 1;
+  layer.showAt(available);
   await expect
     .poll(async () => {
       await settled(map);
       return near(pixel(map, SIZE / 2, SIZE / 2), over(RADAR, 40));
     }, PATIENCE)
     .toBe(true);
-  layer.showAt(1);
+  layer.showAt(1 - available);
   await settled(map);
-  expect(layer.readyAt(1)).toBe(false);
+  if (missing === 'forecast') expect(layer.readyAt(1)).toBe(false);
   expect(near(pixel(map, SIZE / 2, SIZE / 2), [0, 0, 0])).toBe(true);
 });
 

@@ -648,7 +648,9 @@ export class DetailSheets {
       markup = this.markup(detail, shown, days);
     // What it showed has gone, as the next hour's rain does: it stays as it was until it's closed.
     if (!markup && detail.drawnFrom) return;
-    const drawnFrom = `${markup}${JSON.stringify(sheetCard.redrawnBy?.(ctx, card.maps.layer))}`,
+    // The map refreshes its readings inside the existing view, including while a control has focus.
+    const drawnFrom =
+        detail.id === 'map' ? markup : `${markup}${JSON.stringify(sheetCard.redrawnBy?.(ctx, card.maps.layer))}`,
       top = this.scrolledBy(detail);
     if (detail.dialog.open && drawnFrom === detail.drawnFrom) {
       // The map draws itself again when what it shows has changed: its markup doesn't say.

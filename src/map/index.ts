@@ -15,7 +15,7 @@ export const map: TileCard & SheetCard = {
   title: phrase('Precipitation Map'),
   wide: true,
   tile: mapTile,
-  // Its markup says only which map it is: what the map shows is drawn afterwards.
+  // Changing readings refresh the compact tile; the open map updates its own layers in place.
   redrawnBy: (ctx, layer) => mapView(ctx, layer)?.inputs,
   available: () => true,
   opens: () => ({ id: 'map' }),

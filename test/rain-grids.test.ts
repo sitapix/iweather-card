@@ -279,6 +279,31 @@ test('Canada’s models are asked for exactly the grid’s points, an hour a req
   });
 });
 
+test('aborting GeoMet stops in-flight hours and skips alternate providers without putting the model on cooldown', async () => {
+  const bounds = { north: 52, south: 51, west: -1, east: 0 },
+    plans = rainPlans(bounds),
+    controller = new AbortController(),
+    started: string[] = [];
+  assert.equal(plans[0]?.model.id, 'gdps');
+  const fetcher: BytesFetcher = (url, init) => {
+    assert.equal(init?.signal, controller.signal);
+    started.push(url);
+    return new Promise((_resolve, reject) =>
+      controller.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), {
+        once: true,
+      }),
+    );
+  };
+  const load = loadRain(plans, Date.now(), () => assert.fail('abandoned grid published'), fetcher, controller.signal);
+  const inFlight = started.length;
+  assert.ok(inFlight > 0 && inFlight < 12);
+  controller.abort();
+  await assert.rejects(load, { name: 'AbortError' });
+  assert.equal(started.length, inFlight);
+  assert.ok(started.every(url => url.includes('geo.weather.gc.ca')));
+  assert.equal(rainPlan(bounds)?.model.id, 'gdps');
+});
+
 test('MET Norway’s model is read in one request for every hour, each the difference since the hour before', async () => {
   const meps = RAIN_MODELS.find(model => model.id === 'meps');
   if (!meps) throw new Error('No model.');

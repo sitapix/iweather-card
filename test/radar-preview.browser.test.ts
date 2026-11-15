@@ -67,6 +67,78 @@ test('a frame still to come is passed over, its neighbours blending across it, a
   preview.stop();
 });
 
+test('streamed hours reuse painted frames and keep the running playhead', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+  const paint = vi.fn().mockResolvedValue(true);
+  const mount = (node: HTMLCanvasElement) => document.body.append(node);
+  const first = new RadarPreview(null, frames.slice(0, 2), RADAR_LABEL_STEP, paint, () => true, null, mount);
+  await vi.advanceTimersByTimeAsync(2600);
+  const showing = document.querySelector('[data-on]');
+  expect(shown()).toBe('1');
+  first.stop();
+  document.body.replaceChildren();
+  const next = new RadarPreview(null, frames, RADAR_LABEL_STEP, paint, () => true, null, mount, first);
+  expect(paint).toHaveBeenCalledTimes(3);
+  expect(document.querySelector('[data-on]')).toBe(showing);
+  expect(opacity(1)).toBeCloseTo(0.6, 1);
+  next.stop();
+});
+
+test('frames drawn on demand hold only the pictures the playhead is on or about to reach', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+  const hours = [0, 1, 2, 3, 4, 5].map(step => ({ time: step * HOUR })),
+    paint = vi.fn().mockResolvedValue(true),
+    redraw = vi.fn((node: HTMLCanvasElement) => {
+      node.width = 8;
+      node.height = 8;
+    }),
+    mount = (node: HTMLCanvasElement) => document.body.append(node),
+    held = () =>
+      [...document.querySelectorAll('canvas')].flatMap(node => (node.width > 0 ? [Number(node.dataset['frame'])] : [])),
+    start = () =>
+      new RadarPreview(null, hours, FORECAST_LABEL_STEP, paint, () => true, null, mount, undefined, undefined, redraw);
+  document.body.replaceChildren();
+  const preview = start();
+  // Every frame is ready at once, with nothing asked of the painter: now and the next are drawn.
+  expect(paint).not.toHaveBeenCalled();
+  expect(held()).toEqual([0, 1]);
+  await vi.advanceTimersByTimeAsync(2500);
+  expect(held()).toEqual([0, 1, 2]);
+  expect(opacity(0)).toBeCloseTo(0.5, 1);
+  expect(opacity(1)).toBeCloseTo(0.5, 1);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(held()).toEqual([2, 3, 4]);
+  // Across the last gap the first frame is ready for the playhead to come round to.
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(held()).toEqual([0, 4, 5]);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(shown()).toBe('0');
+  expect(held()).toEqual([0, 1]);
+  // Each picture was drawn once on the way round, and the first two again for the next round.
+  expect(redraw).toHaveBeenCalledTimes(8);
+  preview.stop();
+  // The preview that takes its place keeps the pictures already drawn, and draws no frame twice.
+  const kept = [...document.querySelectorAll('canvas')];
+  document.body.replaceChildren();
+  redraw.mockClear();
+  const next = new RadarPreview(
+    null,
+    hours,
+    FORECAST_LABEL_STEP,
+    paint,
+    () => true,
+    null,
+    mount,
+    preview,
+    undefined,
+    redraw,
+  );
+  expect([...document.querySelectorAll('canvas')]).toEqual(kept);
+  expect(redraw).not.toHaveBeenCalled();
+  expect(held()).toEqual([0, 1]);
+  next.stop();
+});
+
 test('a hidden or disabled preview rests on now and sets off again when active', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
   let active = true;

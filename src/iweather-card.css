@@ -1009,10 +1009,8 @@
 .tile[data-tile=map]{aspect-ratio:2/1}
 .radar-layer{position:absolute;inset:0}.radar-layer img{position:absolute;width:256px;height:256px;max-width:none;user-select:none;pointer-events:none}
 .radar-layer.frame{display:block;opacity:0;transition:opacity .25s}.radar-layer.frame[data-on]{opacity:.85}
-canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{position:absolute;inset:0;width:100%;height:100%;animation:map-still .25s;user-select:none;pointer-events:none}.radar[data-still] .map-tint{display:none}@keyframes map-still{from{opacity:0}}canvas.radar-layer.frame[data-on]{opacity:1}
-/* A small map's corners hold while its picture fades in. WebKit draws a fading picture as a layer of
-   its own, which the map's rounded overflow doesn't cut, so for a quarter second the corners showed
-   square. A mask cuts every layer inside it to the map's rounded box. */
+canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{position:absolute;inset:0;width:100%;height:100%;user-select:none;pointer-events:none}.radar[data-still] .map-tint{display:none}canvas.radar-layer.frame[data-on]{opacity:1}
+/* Clip every composited layer of the small map to its rounded corners on WebKit. */
 .radar:not(.large){-webkit-mask-image:linear-gradient(#000 0 0);mask-image:linear-gradient(#000 0 0)}
 .radar-dot{position:absolute;left:var(--x,50%);top:var(--y,50%);width:12px;height:12px;border-radius:50%;background:#0a84ff;border:2.5px solid #fff;transform:translate(-50%,-50%);box-shadow:0 1px 6px #0008}
 .radar-credit{position:absolute;right:6px;bottom:4px;font-size:9px;color:#ffffff8c}
@@ -1069,9 +1067,13 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
    white (extreme) would vanish multiplied in. On a dark map nothing multiplies into the ground
    either: the colours lie over it. */
 .map-field[data-kind=precipitation]{opacity:.9;mix-blend-mode:normal}.radar[data-night] .map-field{mix-blend-mode:normal}
+/* Add the two weighted rain frames on a transparent layer. A stationary shower keeps its
+   brightness halfway through the blend, and the ground and labels keep their own colours. */
+.map-precipitation{position:absolute;inset:0;isolation:isolate;pointer-events:none}
+.map-precipitation :is(.radar-layer.frame,.map-field.map-hour){mix-blend-mode:plus-lighter}
 /* For precipitation, the timeline's switch between the radar's last hour and the forecast's 12. */
-.map-span{grid-area:1 / 2;justify-self:end;position:relative;z-index:1;display:flex;padding:2px;border-radius:15px;background:#0000000f;touch-action:pan-y;-webkit-user-select:none;user-select:none}
-.map-span button{position:relative;z-index:1;min-width:40px;height:26px;padding:0 10px;border:0;border-radius:13px;background:none;color:inherit;font:inherit;font-size:13px;font-weight:600}
+.map-span{grid-area:1 / 3;position:relative;z-index:1;display:flex;padding:2px;border-radius:15px;background:#0000000f;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.map-span button{position:relative;z-index:1;flex:1;min-width:0;height:26px;padding:0 2px;border:0;border-radius:13px;background:none;color:inherit;font:inherit;font-size:13px;font-weight:600}
 /* Its thumb is a glass one, as the hourly panel's is (see glass-switch.ts). */
 .map-span .thumb{position:absolute;left:0;top:var(--y,2px);width:var(--w,40px);height:var(--h,26px);border-radius:999px;background:#fff;box-shadow:0 1px 3px #0002;transform:translateX(var(--x,2px));transition:background .2s,box-shadow .2s;pointer-events:none}
 .map-span[data-held] .thumb{background:transparent;box-shadow:0 0 0 .75px #00000059,inset 0 0 0 .75px #ffffff4d,inset 1px 1px 1px -.5px #ffffffb3,inset -1px -1px 1.5px -.5px #ffffff40,0 3px 10px -4px #0003}
@@ -1087,7 +1089,7 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
    read as well over rain as over the white ground. */
 .radar.large:not([data-kind=wind],[data-night]) .map-key{background:#f6f6f680}.radar.large:not([data-kind=wind],[data-night]) .map-key b{border-bottom-color:#0000001a}
 .radar.large:not([data-kind=wind],[data-night]) .map-key i{color:#00000099;font-weight:400}
-.radar.large:not([data-kind=wind],[data-night]) .wind-track{background:#00000027}.radar.large:not([data-kind=wind],[data-night]) .wind-track b{background:#0000003d}
+.radar.large:not([data-kind=wind],[data-night]) .wind-rail{background:#00000027}.radar.large:not([data-kind=wind],[data-night]) .wind-rail b{background:#0000003d}
 .radar.large:not([data-kind=wind],[data-night]) .wind-when span{color:#0000008a}.radar.large:not([data-kind=wind],[data-night]) .wind-marks{color:#0000008a}.radar.large:not([data-kind=wind],[data-night]) .wind-marks [data-now]{color:#000000b8}
 .radar.large:not([data-kind=wind],[data-night]) .wind-time{box-shadow:0 0 3px #0000001f,inset 0 0 0 1px #ffffffb3}.radar.large:not([data-kind=wind],[data-night]) .wind-play{background:#0000001a}
 .radar[data-kind=wind] .map-tint{background:var(--tint)}
@@ -1134,7 +1136,7 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .detail[data-id=map][data-full]::backdrop{background:#000}
 /* Full screen, the controls are a finger's size: the close button and the tools are 44 px, 10 px
    from the edges. The layers and home buttons stand in one pill down the right, the zoom pill
-   under them where a mouse needs it (fingers pinch). The legend stands 10 px under the close
+   and pan controls within reach. The legend stands 10 px under the close
    button, 85 px wide, its unit set left over a rule 31 px down and small marks up a 94 px bar,
    with the credits link well clear of it. The timeline is inset 38.5 px a side and rests on the
    home indicator, its play button 26 px, its day in small type. Layers show as two filled layers,
@@ -1148,7 +1150,7 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .detail[data-id=map][data-full] .map-tools button{width:44px;height:44px;border-radius:22px}
 .map-tools .stacked{display:none}.detail[data-id=map][data-full] .map-tools [data-layers] svg{width:20px;height:20px}.detail[data-id=map][data-full] .map-tools [data-layers] path{display:none}.detail[data-id=map][data-full] .map-tools [data-layers] .stacked{display:inline}
 .detail[data-id=map][data-full] .map-tools [data-home] svg{fill:none;stroke-width:1.8}
-@media(pointer:coarse){.detail[data-id=map][data-full] .map-pill:has([data-zoom]){display:none}}
+
 .detail[data-id=map][data-full] .map-layers{top:calc(var(--map-top,0px) + 8px);right:10px}
 .detail[data-id=map][data-full] .map-key{top:calc(var(--map-top,0px) + 62px);min-width:85px;padding-bottom:15px;border-radius:18px}
 .detail[data-id=map][data-full] .map-key b{padding:10px 10px 9px;font-size:10px;font-weight:400;line-height:12px;text-align:left}
@@ -1156,9 +1158,9 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .detail[data-id=map][data-full] .map-key span:before{top:-4.5px;bottom:-4.5px}
 .detail[data-id=map][data-full] .map-key i{font-size:8.5px}
 .detail[data-id=map][data-full] .map-data{top:calc(100% + 47px)}.detail[data-id=map][data-full] .map-data button{font-size:9.5px;font-weight:500}
-.detail[data-id=map][data-full] .wind-time{left:38.5px;right:38.5px;bottom:var(--map-bottom,0px);grid-template-columns:26px 1fr;row-gap:11px;padding:12.5px 18.5px 18px}
+.detail[data-id=map][data-full] .wind-time{margin:0 var(--timeline-inset,38.5px);row-gap:11px;padding:12.5px 18.5px 18px}
 .detail[data-id=map][data-full] .wind-play{width:26px;height:26px}.detail[data-id=map][data-full] .wind-play svg{width:15px;height:15px}
-.detail[data-id=map][data-full] .wind-when{padding-left:34.5px}.detail[data-id=map][data-full] .wind-when b{font-size:12px;font-weight:600}.detail[data-id=map][data-full] .wind-when span{display:block;font-size:9.75px;line-height:12px}
+.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-when{padding-inline-start:34.5px}.detail[data-id=map][data-full] .wind-when b{font-size:12px;font-weight:600}.detail[data-id=map][data-full] .wind-when span{display:block;font-size:9.75px;line-height:12px}
 .detail[data-id=map][data-full] .wind-marks{margin-top:-9px}
 /* Full screen on the wind's deep blue, the buttons are a brighter blue glass in a dark hairline
    with a light rim. The legend is dark slate glass, its unit white over a faint grey rule, its marks
@@ -1177,7 +1179,7 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .detail[data-id=map][data-full] .radar[data-kind=wind] .wind-time{background:#20aafb38;color:#fff;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 0 0 .5px #00284d59,inset 0 0 0 1px #ffffff26}
 .detail[data-id=map][data-full] .radar[data-kind=wind] .wind-play{background:#cccccc46;color:#fff}
 .detail[data-id=map][data-full] .radar[data-kind=wind] .wind-when span{color:#74dbff}.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-marks{color:#60d0ff}.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-marks [data-now]{color:#afd3ea}
-.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-track{background:#2da0e1}.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-track b{background:#65b0d7}.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-track i{background:#fff}
+.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-rail{background:#2da0e1}.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-rail b{background:#65b0d7}.detail[data-id=map][data-full] .radar[data-kind=wind] .wind-rail i{background:#fff}
 .detail[data-id=map][data-full] .radar[data-kind=wind] .map-badge[data-kind=wind]{width:60.5px;height:60.5px;border:2.25px solid #fff;background:var(--tint);color:#fff;font-size:22px;box-shadow:0 2px 6px #0b2e5540;transform:translate(-50%,calc(-100% - 14.5px))}
 .detail[data-id=map][data-full] .radar[data-kind=wind] .map-badge[data-kind=wind] small{font-size:10px;color:#ffffff91}
 .detail[data-id=map][data-full] .radar[data-kind=wind] .map-badge[data-kind=wind]:after{bottom:-7.5px;width:9px;height:6.5px;background:#fff}
@@ -1214,7 +1216,7 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 
 .map-tiles{position:absolute;inset:0;transform-origin:0 0}
 .map-old{pointer-events:none}.map-old :is(canvas,.map-badge,.map-spot,.map-home,.radar-dot,.map-tint){display:none}
-.radar.large{touch-action:none;user-select:none}
+.radar.large{display:grid;grid-template-rows:minmax(0,1fr) auto auto;padding-bottom:var(--map-bottom,0px);box-sizing:border-box;touch-action:none;user-select:none}
 /* Its focus ring, over the layers that would hide an outline. */
 .radar.large:focus-visible{outline:none}.radar.large:focus-visible:after{content:"";position:absolute;inset:0;z-index:4;border-radius:inherit;box-shadow:inset 0 0 0 3px #fff;pointer-events:none}
 .map-tools{position:absolute;z-index:3;top:calc(var(--map-top,0px) + 8px);right:10px;display:flex;gap:10px}
@@ -1272,13 +1274,17 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 /* The timeline along the foot: play or pause at its left, the day shown centred over the bar
    of hours, filled dark to the time shown and ticked between hours, and under it the times
    from their ticks on (see timelineOf). The credit moves to the top over it. */
-.wind-time{position:absolute;z-index:3;left:17px;right:17px;bottom:calc(var(--map-bottom,0px) + 12px);display:grid;grid-template-columns:33px 1fr;align-items:center;row-gap:10px;padding:10px 17px 12px;border-radius:22px}
+.radar[data-kind=precipitation] .wind-time{--timeline-inset:clamp(8px,4%,38.5px);--timeline-side:max(84px,5.5rem)}
+.wind-time{position:relative;grid-row:2;z-index:3;min-width:0;margin:0 17px 12px;display:grid;grid-template-columns:var(--timeline-side,1fr) minmax(0,1fr) var(--timeline-side,1fr);align-items:center;gap:10px 4px;padding:10px 17px 12px;border-radius:22px}
 .wind-play{position:relative;z-index:1;grid-area:1 / 1;display:grid;place-items:center;width:33px;height:33px;padding:0;border:0;border-radius:50%;background:#003a7212;color:#000}.wind-play svg{width:11px;height:11px;fill:currentColor}
 .wind-play .pause,.wind-time[data-playing] .wind-play .play{display:none}.wind-time[data-playing] .wind-play .pause{display:inline}
-.wind-when{grid-area:1 / 1 / 2 / -1;padding-left:38px;line-height:1.25}.wind-when b{display:block;font-size:13px;font-weight:700}.wind-when span{font-size:12px;color:#003a72}
-.wind-track{grid-column:1 / -1;position:relative;height:6px;border-radius:3px;background:#4f96d6;touch-action:none}.wind-track:before{content:"";position:absolute;inset:-12px 0}
-.wind-track i{position:absolute;z-index:1;left:0;top:0;bottom:0;width:var(--done,0%);border-radius:inherit;background:#000}
-.wind-track b{position:absolute;top:0;bottom:0;width:1px;background:#2f6aa0}
+.radar[data-kind=wind] .wind-when{grid-column:1 / -1;padding-inline-start:38px;text-align:start}
+.wind-when{grid-area:1 / 2;text-align:center;overflow-wrap:anywhere;line-height:1.25}.wind-when b{display:block;font-size:13px;font-weight:700}.wind-when span{font-size:12px;color:#003a72}
+.wind-rail{grid-column:1 / -1;position:relative;height:6px;border-radius:3px;background:#4f96d6;touch-action:none}
+.wind-track{position:absolute;z-index:2;left:0;top:50%;transform:translateY(-50%);width:100%;height:26px;margin:0;opacity:0;cursor:pointer;touch-action:none}
+.wind-rail:has(.wind-track:focus-visible){outline:3px solid #fff;outline-offset:3px;box-shadow:0 0 0 7px #17446d}
+.wind-rail i{position:absolute;z-index:1;left:0;top:0;bottom:0;width:var(--done,0%);border-radius:inherit;background:#000}
+.wind-rail b{position:absolute;top:0;bottom:0;width:1px;background:#2f6aa0}
 .wind-marks{grid-column:1 / -1;position:relative;height:14px;margin-top:-4px;font-size:11px;font-weight:600;line-height:14px;color:#004684}.wind-marks>span{position:absolute;white-space:nowrap}.wind-marks [data-now]{color:#1e2f3d}.wind-marks .period{font-size:.85em}
 /* On the night ground the legend is dark glass named in white, and the buttons' pills a light
    veil, as the map's own controls are after dark. The timeline is clearer: a mid grey lifts the
@@ -1288,10 +1294,14 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .radar.large[data-night] .wind-time{background:#64646440}
 .radar.large[data-night] .map-pill,.detail[data-id=map]:has(.radar.large[data-night]) header button{background-color:#ffffff24}
 .radar.large[data-night] .wind-play{background:#ffffff1f;color:#fff}.radar.large[data-night] .wind-when span{color:#ffffffc7}
-.radar.large[data-night] .wind-track{background:#ffffff33}.radar.large[data-night] .wind-track i{background:#fff}.radar.large[data-night] .wind-track b{background:#ffffff40}
+.radar.large[data-night] .wind-rail{background:#ffffff33}.radar.large[data-night] .wind-rail i{background:#fff}.radar.large[data-night] .wind-rail b{background:#ffffff40}
 .radar.large[data-night] .wind-marks{color:#ffffffc7}.radar.large[data-night] .wind-marks [data-now]{color:#fff}
 .radar.large[data-night] .map-span{background:#ffffff1a}.radar.large[data-night] .map-span .thumb{background:#c1c2c6}.radar.large[data-night] .map-span:not([data-held]) [aria-pressed=true]{color:#1c1c1e}.radar.large[data-night] .map-span[data-held] .thumb{background:transparent}
-.wind-time~.radar-credit{top:68px;bottom:auto;right:16px}
+.map-attribution{position:relative;grid-row:3;justify-self:end;z-index:3;max-width:100%;box-sizing:border-box;padding:2px 6px;border-radius:4px 0 0;background:#fff;color:#232428;font:11px/20px system-ui,sans-serif;text-align:right}
+.map-attribution a{color:#154d78;text-decoration:underline;white-space:nowrap}
+@media(pointer:coarse){.radar.large .map-tools button{width:44px;height:44px}.detail:not([data-full]) .map-layers{top:60px}}
+@media(max-height:440px){.detail[data-id=map][data-full] .map-tools,.detail[data-id=map][data-full] .map-pill{flex-direction:row}}
+@media(forced-colors:active){.wind-rail{border:1px solid CanvasText}.wind-rail i{background:Highlight}.wind-rail:has(.wind-track:focus-visible){outline-color:Highlight}}
 /* Over the timeline, the note that some of the view has no radar. */
 .map-gaps{position:absolute;left:0;right:0;bottom:calc(100% + 20px);text-align:center;font-size:12px;line-height:16px;color:#757575;pointer-events:none}.radar.large[data-night] .map-gaps{color:#ffffffa6}
 /* Keep pending forecast tiles distinct from a clear-weather forecast. */

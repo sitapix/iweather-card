@@ -178,6 +178,22 @@ test('a picture of the ground that comes after the card has gone is let go', asy
   expect(card.maps.stills.size).toBe(0);
 });
 
+test('changing the mini map zoom cancels the unfinished snapshot for its previous view', async () => {
+  let finish: (still: GroundStill) => void = () => {};
+  const draw = vi.mocked(groundStill).mockReturnValueOnce(new Promise(resolve => (finish = resolve))),
+    revoked = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {}),
+    card = page({ map: 'local' }),
+    view = { latitude: 1, longitude: 2, zoom: 4, width: 300, height: 200, pixelRatio: 1 };
+  card.maps.stillFor(view, 'pale', card);
+  const previous = draw.mock.lastCall;
+  card.maps.stillFor({ ...view, zoom: 8 }, 'pale', card);
+  expect(previous?.[4].aborted).toBe(true);
+  expect(draw.mock.lastCall?.[1].zoom).toBe(8);
+  finish({ ground: 'blob:old-ground', names: 'blob:old-names' });
+  await vi.waitFor(() => expect(revoked.mock.calls.flat()).toEqual(['blob:old-ground', 'blob:old-names']));
+  expect(card.maps.stills.has(previous?.[3] ?? '')).toBe(false);
+});
+
 test('an open map is left as it is while nothing about it changes', async () => {
   const card = page({ map: 'local' });
   await vi.waitFor(() => {

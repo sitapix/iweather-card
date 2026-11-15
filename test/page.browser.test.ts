@@ -128,9 +128,20 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-test("the large map tells the radar's time on its timeline", async () => {
-  const large = await openMap(await page({}));
-  expect(large.querySelector('.wind-when b')?.textContent).toBe('Forecast');
+test('the observation-only precipitation timeline centers Forecast between its controls', async () => {
+  const card = await page({}),
+    view = await openMap(card),
+    heading = part(card, '.radar.large .wind-when');
+  expect(heading.querySelector('b')?.textContent).toBe('Forecast');
+  expect(getComputedStyle(heading).textAlign).toBe('center');
+  for (const width of [320, 390, 1100]) {
+    view.style.width = `${width}px`;
+    const label = heading.getBoundingClientRect(),
+      rail = part(card, '.radar.large .wind-rail').getBoundingClientRect();
+    expect(Math.abs(label.left + label.right - rail.left - rail.right)).toBeLessThan(2);
+    expect(part(card, '.radar.large .wind-play').getBoundingClientRect().right).toBeLessThanOrEqual(label.left);
+    expect(part(card, '.radar.large .map-span').getBoundingClientRect().left).toBeGreaterThanOrEqual(label.right);
+  }
 });
 
 test('the arrow keys slide the large map an eighth of its size, and it is drawn there at rest', async () => {
@@ -181,13 +192,90 @@ test('the arrow keys step the timeline a frame at a time, and stop at its ends',
   const card = await page({});
   await openMap(card);
   const track = part(card, '.radar.large .wind-track'),
-    last = Number(track.getAttribute('aria-valuemax'));
-  expect(track.getAttribute('aria-valuenow')).toBe(String(last));
+    last = Number(track.getAttribute('max'));
+  if (!(track instanceof HTMLInputElement)) throw new Error('No time range');
+  expect(track.value).toBe(String(last));
   press(track, 'ArrowLeft');
-  expect(track.getAttribute('aria-valuenow')).toBe(String(last - 1));
+  expect(track.value).toBe(String(last - 1));
   press(track, 'ArrowRight');
   press(track, 'ArrowRight');
-  expect(track.getAttribute('aria-valuenow')).toBe(String(last));
+  expect(track.value).toBe(String(last));
+});
+
+test('the native time range supports keyboard endpoints, vertical arrows and assistive input in the HA time zone', async () => {
+  const card = await page({}),
+    view = await openMap(card),
+    track = view.querySelector('input[type=range]');
+  if (!(track instanceof HTMLInputElement)) throw new Error('No time range');
+  press(track, 'Home');
+  expect(track.valueAsNumber).toBe(0);
+  expect(track.getAttribute('aria-valuetext')).toBe(
+    `Forecast, ${new Intl.DateTimeFormat('en', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'America/Chicago',
+    }).format(NOW - (9 * HOUR) / 6)}`,
+  );
+  press(track, 'ArrowUp');
+  expect(track.valueAsNumber).toBe(1);
+  press(track, 'ArrowDown');
+  expect(track.valueAsNumber).toBe(0);
+  press(track, 'End');
+  expect(track.value).toBe(track.max);
+  track.valueAsNumber = 3;
+  track.dispatchEvent(new Event('input', { bubbles: true }));
+  expect(card.maps.timelineTime).toBe(card.maps.timelineOf(view)?.times[3]);
+});
+
+test('a weather refresh preserves the open menu, focused choice and native timeline control', async () => {
+  const card = await page({}),
+    view = await openMap(card),
+    trigger = part(card, '.radar.large [data-layers]'),
+    choice = part(card, '.radar.large [data-choice=wind]'),
+    menu = part(card, '.radar.large .map-layers');
+  trigger.click();
+  choice.focus();
+  const hass = hassWith(),
+    weather = hass.states['weather.home'];
+  if (!weather) throw new Error('Missing weather fixture');
+  card.hass = {
+    ...hass,
+    states: { ...hass.states, 'weather.home': { ...weather, attributes: { ...weather.attributes, temperature: 59 } } },
+  };
+  await vi.waitFor(() => expect(view.querySelector('.map-drop')?.textContent).toContain('59'));
+  expect(card.maps.largeView()).toBe(view);
+  expect(menu.hidden).toBe(false);
+  expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  expect(card.root.activeElement).toBe(choice);
+  choice.click();
+  // The wind's hours across the map come a moment after its layer is chosen, and its timeline with them.
+  await vi.waitFor(() => expect(part(card, '.radar.large input[type=range]')).toBeTruthy());
+  const wind = part(card, '.radar.large'),
+    track = part(card, '.radar.large input[type=range]');
+  track.focus();
+  card.maps.drawn.delete(wind);
+  card.maps.draw();
+  expect(card.root.activeElement).toBe(track);
+  expect(wind.querySelector('.wind-track')).toBe(track);
+  press(track, 'Home');
+  expect(card.maps.timelineTime).toBe(card.maps.timelineOf(wind)?.times[0]);
+});
+
+test('the raster map zooms by its buttons, and has no pan control among its tools', async () => {
+  const card = await page({}),
+    view = await openMap(card);
+  expect(view.querySelector('.map-tools details, [data-pan]')).toBeNull();
+  for (const step of [1, -1]) {
+    const before = card.maps.centreOf(view).zoom;
+    view.querySelector<HTMLElement>(`[data-zoom="${step}"]`)?.click();
+    await vi.waitFor(() => expect(card.maps.centreOf(view).zoom).toBeCloseTo(before + step));
+  }
+  expect(view.querySelector('.map-attribution')).toBeNull();
 });
 
 test('what a sensor recorded lately reaches its tile, however late it comes', async () => {

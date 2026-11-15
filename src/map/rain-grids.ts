@@ -21,7 +21,7 @@ import { OPEN_METEO } from '../lib/services.ts';
 // Enough of `fetch` for bytes, ranges of them and text.
 export type BytesFetcher = (
   url: string,
-  init?: { headers?: Record<string, string> },
+  init?: { headers?: Record<string, string>; signal?: AbortSignal },
 ) => Promise<{ ok: boolean; status?: number; arrayBuffer(): Promise<ArrayBuffer>; text(): Promise<string> }>;
 
 export interface RainModel {
@@ -35,7 +35,13 @@ export interface RainModel {
   covers(bounds: Bounds): boolean;
   // Each hour's precipitation (mm) to each of `ends`, on `grid`'s points, as each comes; or
   // 'declined' where it would cost the view too much, and the next model is asked.
-  load(grid: WindPoints, ends: readonly number[], fetcher: BytesFetcher, each: Each): Promise<Answer>;
+  load(
+    grid: WindPoints,
+    ends: readonly number[],
+    fetcher: BytesFetcher,
+    each: Each,
+    signal?: AbortSignal,
+  ): Promise<Answer>;
 }
 type Answer = 'tried' | 'declined';
 type Each = (end: number, values: Float32Array) => void;
@@ -160,11 +166,16 @@ function fromGeo(grid: WindPoints, geos: readonly GeoGrid[]): Float32Array {
 }
 
 // One piece of work after another from a list, a few at a time.
-async function inTurn<T>(items: readonly T[], work: (item: T) => Promise<void>): Promise<void> {
+async function inTurn<T>(
+  items: readonly T[],
+  signal: AbortSignal | undefined,
+  work: (item: T) => Promise<void>,
+): Promise<void> {
   let next = 0;
   await Promise.all(
     Array.from({ length: Math.min(AT_ONCE, items.length) }, async () => {
       while (next < items.length) {
+        signal?.throwIfAborted();
         const item = items[next++];
         if (item !== undefined)
           try {
@@ -297,7 +308,7 @@ const hrrr: RainModel = {
       (right - left + 1) * (top - bottom + 1) <= HRRR.mostTiles && (declined.get(tilesKey(tiles)) ?? 0) <= Date.now()
     );
   },
-  async load(grid, ends, fetcher, each) {
+  async load(grid, ends, fetcher, each, signal) {
     const found = await hrrrLatest(Math.min(...ends), fetcher);
     if (!found) return 'tried';
     // The hours wanted, by their place in the run's tiles.
@@ -321,31 +332,36 @@ const hrrr: RainModel = {
       (sum, { col, row }, k) => sum + (kept[k] ? 0 : (found.sizes.get(`0.${row}.${col}`) ?? 0)),
       0,
     );
+    signal?.throwIfAborted();
     if (cost > HRRR.budget) {
       declined.set(tilesKey({ left, right, bottom, top }), Date.now() + HRRR.declined);
       return 'declined';
     }
-    await inTurn(tiles, async ({ col, row }, k = tiles.findIndex(each => each.col === col && each.row === row)) => {
-      const url = `${hrrrRun(found.run)}/0.${row}.${col}`;
-      let bytes = kept[k];
-      if (!bytes) {
-        const response = await fetcher(url);
-        if (!response.ok) return;
-        bytes = await response.arrayBuffer();
-        void keepTile(url, bytes);
-      }
-      const raw = readBlosc(new Uint8Array(bytes)),
-        view = new DataView(raw.buffer, raw.byteOffset, raw.byteLength),
-        square = tile * tile;
-      wanted.forEach(({ index }, slot) => {
-        for (let y = 0; y < tile; y++)
-          for (let x = 0; x < tile; x++) {
-            const value = view.getFloat32((index * square + y * tile + x) * FLOAT_BYTES, true);
-            hours[slot * plane + ((row - bottom) * tile + y) * width + (col - left) * tile + x] =
-              value === HRRR.fill ? Number.NaN : value;
-          }
-      });
-    });
+    await inTurn(
+      tiles,
+      signal,
+      async ({ col, row }, k = tiles.findIndex(each => each.col === col && each.row === row)) => {
+        const url = `${hrrrRun(found.run)}/0.${row}.${col}`;
+        let bytes = kept[k];
+        if (!bytes) {
+          const response = await fetcher(url);
+          if (!response.ok) return;
+          bytes = await response.arrayBuffer();
+          void keepTile(url, bytes);
+        }
+        const raw = readBlosc(new Uint8Array(bytes)),
+          view = new DataView(raw.buffer, raw.byteOffset, raw.byteLength),
+          square = tile * tile;
+        wanted.forEach(({ index }, slot) => {
+          for (let y = 0; y < tile; y++)
+            for (let x = 0; x < tile; x++) {
+              const value = view.getFloat32((index * square + y * tile + x) * FLOAT_BYTES, true);
+              hours[slot * plane + ((row - bottom) * tile + y) * width + (col - left) * tile + x] =
+                value === HRRR.fill ? Number.NaN : value;
+            }
+        });
+      },
+    );
     const sample = onCone(grid, {
       ...hrrrCone,
       x: hrrrCone.x + left * tile * hrrrCone.dx,
@@ -487,7 +503,7 @@ function geomet(id: 'rdps' | 'gdps', layer: string, native: number, covers: (bou
     credit: 'Environment and Climate Change Canada',
     native,
     covers,
-    async load(grid, ends, fetcher, each) {
+    async load(grid, ends, fetcher, each, signal) {
       // The points' cells, so each answered value sits on a point of the grid; either side of the
       // date line a part of its own, as the service's longitudes stop there.
       const north = Math.min(POLE, grid.north + grid.step / 2),
@@ -507,7 +523,7 @@ function geomet(id: 'rdps' | 'gdps', layer: string, native: number, covers: (bou
                   [-HALF_TURN, east],
                 ]
               : [[west, east]];
-      await inTurn(ends, async end => {
+      await inTurn(ends, signal, async end => {
         const geos: GeoGrid[] = [];
         for (const [from, to] of parts) {
           const response = await fetcher(
@@ -632,12 +648,20 @@ export async function loadRain(
   now: number,
   update: (hours: WindHours, plan: RainPlan) => void,
   fetcher: BytesFetcher = fetch,
+  signal?: AbortSignal,
 ): Promise<{ hours: WindHours; plan: RainPlan } | null> {
   const first = Math.floor(now / HOUR) * HOUR - BEFORE * HOUR,
     ends = Array.from({ length: HOURS }, (_, k) => first + k * HOUR)
       // The hour now first, then outward from it.
       .sort((a, b) => Math.abs(a - now - HOUR / 2) - Math.abs(b - now - HOUR / 2));
+  const request: BytesFetcher = signal
+    ? (url, init) => {
+        signal.throwIfAborted();
+        return fetcher(url, { ...init, signal });
+      }
+    : fetcher;
   for (const plan of plans) {
+    signal?.throwIfAborted();
     const come = new Map<number, ScalarField>(),
       // What has come, in time order.
       gathered = (): WindHours => {
@@ -646,11 +670,19 @@ export async function loadRain(
       };
     let answer: Answer = 'tried';
     try {
-      answer = await plan.model.load(plan.points, ends, fetcher, (end, values) => {
-        come.set(end, { ...plan.points, values });
-        update(gathered(), plan);
-      });
+      answer = await plan.model.load(
+        plan.points,
+        ends,
+        request,
+        (end, values) => {
+          signal?.throwIfAborted();
+          come.set(end, { ...plan.points, values });
+          update(gathered(), plan);
+        },
+        signal,
+      );
     } catch {}
+    signal?.throwIfAborted();
     if (come.size > 0) return { hours: gathered(), plan };
     if (answer !== 'declined') resting.set(plan.model.id, Date.now() + REST);
   }

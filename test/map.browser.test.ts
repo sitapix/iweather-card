@@ -196,6 +196,12 @@ test('precipitation plays on the card from now into the forecast, never before n
   card.maps.draw();
   await vi.waitFor(() => expect(hours()).toBe(12));
   expect(layers(card)).toHaveLength(1);
+  const forecasts = [...card.root.querySelectorAll('.map-hour')],
+    group = forecasts[0]?.parentElement;
+  expect(group && getComputedStyle(group).isolation).toBe('isolate');
+  expect(
+    forecasts.every(frame => frame.parentElement === group && getComputedStyle(frame).mixBlendMode === 'plus-lighter'),
+  ).toBe(true);
   await vi.waitFor(() => expect(when()).toBe('In 1 hour'), { timeout: 5000 });
   expect(card.maps.timelineTime).toBeUndefined();
 
@@ -342,6 +348,22 @@ test('the radar timeline labels the selected frame generation time, not the curr
   }
 });
 
+test('a cold mini map shows raster tiles while the styled map is loading', async () => {
+  let finish: (value: GroundStill) => void = () => {};
+  vi.mocked(groundStill).mockReturnValue(
+    new Promise(resolve => {
+      finish = resolve;
+    }),
+  );
+  const card = await mapped();
+  expect(card.root.querySelector('.radar-layer.base.osm img[src]')).not.toBeNull();
+  const measured = card.measureZoom() * (devicePixelRatio || 1);
+  expect(vi.mocked(groundStill).mock.calls.every(([, view]) => view.pixelRatio === measured)).toBe(true);
+  finish(STILL);
+  await vi.waitFor(() => expect(stills(card)).toHaveLength(2));
+  expect(card.root.querySelector('.radar-layer.base.osm img')).toBeNull();
+});
+
 test('the ground is a picture, with the radar between it and the names', async () => {
   vi.mocked(groundStill).mockResolvedValue(STILL);
   const card = await mapped();
@@ -352,6 +374,13 @@ test('the ground is a picture, with the radar between it and the names', async (
     [frame] = layers(card);
   expect(ground?.getAttribute('src')).toBe(STILL.ground);
   expect(names?.getAttribute('src')).toBe(STILL.names);
+  expect(ground && getComputedStyle(ground).animationName).toBe('none');
+  expect(names && getComputedStyle(names).animationName).toBe('none');
+  const blend = frame?.closest('.map-precipitation');
+  expect(blend && getComputedStyle(blend).isolation).toBe('isolate');
+  expect(frame && getComputedStyle(frame).mixBlendMode).toBe('plus-lighter');
+  expect(blend?.contains(ground ?? null)).toBe(false);
+  expect(blend?.contains(names ?? null)).toBe(false);
   expect(card.root.querySelector('.radar-layer.osm')).toBeNull();
   expect(card.root.querySelector('.radar-credit')?.textContent).toContain('OpenFreeMap');
   const order = (a: Node | undefined, b: Node | undefined) => (a && b ? a.compareDocumentPosition(b) : 0);
@@ -366,6 +395,16 @@ test('the ground is a picture, with the radar between it and the names', async (
     expect(layers(card)).toHaveLength(1);
   });
   expect(stills(card)[0]).toBe(ground);
+  // A weather redraw can rebuild every frame while the ground and place names stay decoded.
+  // The frame that faded in took the first one's place, so the map is found from the ground.
+  const view = ground?.closest<HTMLElement>('.radar'),
+    pan = view?.querySelector('.map-pan');
+  if (!view || !pan) throw new Error('No precipitation map.');
+  card.maps.drawn.delete(view);
+  card.maps.draw();
+  expect(view.querySelector('.map-pan')).not.toBe(pan);
+  expect(stills(card)[0]).toBe(ground);
+  expect(stills(card)[1]).toBe(names);
   expect(groundStill).not.toHaveBeenCalled();
 });
 
@@ -573,6 +612,17 @@ test('without a picture, the map falls back on tiles of the ground', async () =>
   });
   expect(stills(card)).toHaveLength(0);
   expect(card.root.querySelector('.radar-credit')?.textContent).toContain('OpenStreetMap');
+  card.root.querySelector<HTMLElement>('.tile[data-tile=map]')?.click();
+  await vi.waitFor(() => {
+    const map = card.maps.largeView(),
+      link = map?.querySelector<HTMLAnchorElement>('.map-attribution a');
+    expect(link?.href).toBe('https://www.openstreetmap.org/copyright');
+    expect(link?.checkVisibility()).toBe(true);
+    expect(map?.querySelector('.map-data small')?.textContent ?? '').not.toContain('OpenStreetMap');
+    const timeline = map?.querySelector('.wind-time');
+    if (timeline && link)
+      expect(link.getBoundingClientRect().top).toBeGreaterThanOrEqual(timeline.getBoundingClientRect().bottom);
+  });
 });
 test('those tiles take the theme’s look, and tiles of the user’s own are left as they come', async () => {
   const ground = (card: IWeatherCard) => card.root.querySelector<HTMLElement>('.radar-layer.base img'),

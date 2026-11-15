@@ -150,7 +150,7 @@ test('a real IEM forecast tile decodes without mistaking its palette for RainVie
   expect(new Set(levels).size).toBeGreaterThan(5);
 });
 
-test('the live map uses real future tiles, keeps its Forecast heading, and seeks by valid time', async () => {
+test('the live map keeps its Forecast heading while seeking between observed and modeled frames', async () => {
   const card = await openMap();
   await vi.waitFor(() => expect(card.maps.shortForecast?.data?.run).toBe(run));
   const view = card.maps.largeView();
@@ -170,9 +170,20 @@ test('the live map uses real future tiles, keeps its Forecast heading, and seeks
   card.maps.syncWindTime();
   expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
   const track = view.querySelector('.wind-track');
+  expect(track?.getAttribute('aria-valuetext')).toMatch(/^Forecast, /);
+  expect([...view.querySelectorAll<HTMLAnchorElement>('.map-attribution a')].map(link => link.hostname)).toEqual([
+    'openfreemap.org',
+    'openmaptiles.org',
+    'www.openstreetmap.org',
+  ]);
+  card.maps.timelineTime = last + (run + 135 * MINUTE - last) / 4;
+  card.maps.syncWindTime();
+  expect(view.hasAttribute('data-forecast')).toBe(false);
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
   track?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
   expect(card.maps.timelineTime).toBe(run + 135 * MINUTE);
   expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
+  expect(track?.getAttribute('aria-valuetext')).toMatch(/^Forecast, /);
   expect(view.hasAttribute('data-forecast')).toBe(true);
   expect(view.querySelector('.map-data')?.textContent).toContain('Iowa Environmental Mesonet');
   await vi.waitFor(() => expect(requests.some(isForecastTile)).toBe(true));
@@ -180,7 +191,44 @@ test('the live map uses real future tiles, keeps its Forecast heading, and seeks
   expect(card.maps.gl?.map.getLayoutProperty('radar-gaps', 'visibility')).toBe('none');
   track?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
   expect(card.maps.timelineTime).toBe(last);
+  expect(view.hasAttribute('data-forecast')).toBe(false);
   expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
+});
+
+test('the live map zooms a step by each of its buttons', async () => {
+  const card = await openMap(),
+    view = card.maps.largeView(),
+    live = card.maps.gl?.map;
+  if (!view || !live) throw new Error('No live map');
+  const zoom = vi.spyOn(live, 'easeTo');
+  for (const step of [1, -1]) {
+    const before = live.getZoom();
+    view.querySelector<HTMLElement>(`[data-zoom="${step}"]`)?.click();
+    expect(zoom).toHaveBeenLastCalledWith(expect.objectContaining({ zoom: before + step }));
+  }
+});
+
+test('a restored map reattaches both precipitation layers and resumes on the same canvas', async () => {
+  const card = await openMap(),
+    map = card.maps.gl?.map;
+  if (!map) throw new Error('No live map');
+  const loss = map.getCanvas().getContext('webgl2')?.getExtension('WEBGL_lose_context');
+  if (!loss) throw new Error('Cannot simulate context loss');
+  await vi.waitFor(() => expect(map.getLayer('rain-radar')).toBeDefined());
+  const lost = new Promise<void>(done => map.on('webglcontextlost', done));
+  loss.loseContext();
+  await lost;
+  expect(card.maps.gl).toBeUndefined();
+  card.maps.syncWindTime();
+  // A context can be given back only once the loss has been told in full, a task later.
+  await new Promise(done => setTimeout(done, 0));
+  loss.restoreContext();
+  await vi.waitFor(() => {
+    expect(card.maps.gl?.map).toBe(map);
+    expect(map.getLayer('rain-radar')).toBeDefined();
+    expect(map.getLayer('rain-forecast')).toBeDefined();
+  });
+  await vi.waitFor(() => expect(card.maps.shortForecast?.data?.run).toBe(run));
 });
 
 test('a failed model tile removes future times instead of substituting the last observation', async () => {
@@ -191,6 +239,7 @@ test('a failed model tile removes future times instead of substituting the last 
   const view = card.maps.largeView();
   if (!view) throw new Error('No map');
   expect(card.maps.timelineOf(view)?.times.at(-1)).toBe(last);
+  expect(view.hasAttribute('data-forecast')).toBe(false);
   expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
 });
 
@@ -228,6 +277,19 @@ test('the live 12-hour map replaces its first frame as forecast hours arrive and
   const card = await openMap();
   card.maps.chooseSpan('12h');
   await vi.waitFor(() => expect(vi.mocked(showRainSlots).mock.lastCall?.[1]).toHaveLength(1));
+  card.maps.timelineTime = first;
+  card.maps.syncWindTime();
+  const heading = card.maps.largeView()?.querySelector('.wind-when');
+  expect(heading?.querySelector('b')?.textContent).toBe('Forecast');
+  expect(heading?.querySelector('span')?.textContent).toBe(
+    new Intl.DateTimeFormat('en', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'America/Chicago',
+    }).format(first),
+  );
   finish();
   await vi.waitFor(() => expect(vi.mocked(showRainSlots).mock.lastCall?.[1]).toHaveLength(3));
   const map = card.maps.gl?.map;

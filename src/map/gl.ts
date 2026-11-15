@@ -9,6 +9,7 @@ import { PRECIPITATION, RADAR, RADAR_STILL, RADAR_STILL_NIGHT, radarLevels, rada
 import { RainLayer } from './rain-gl.ts';
 import { forecastLevels, forecastRecolour, isForecastTile } from './radar-forecast.ts';
 import { pacedFetch } from './pace.ts';
+import { keptStill, keepStill } from './kept-tiles.ts';
 import { say } from '../weather/words.ts';
 import { SECOND } from '../lib/time.ts';
 import { coverageTile } from '../lib/services.ts';
@@ -18,8 +19,7 @@ export const GL_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 export const GL_ZOOM_OFFSET = 1;
 // The page is drawn a quarter larger than it stands on screen (see map/views.ts).
 export const PAGE_DRAWN = 1.25;
-export const GL_CREDIT = '© OpenFreeMap · © OpenMapTiles · © OpenStreetMap contributors',
-  GL_CREDIT_SHORT = '© OpenStreetMap · OpenMapTiles · OpenFreeMap';
+export const GL_CREDIT_SHORT = '© OpenStreetMap · OpenMapTiles · OpenFreeMap';
 
 // The few parts of MapLibre the card uses (its own types don't build under the card's module
 // settings). Places are [longitude, latitude].
@@ -32,7 +32,16 @@ interface GlLayer {
 }
 export interface GlMap {
   on(
-    event: 'load' | 'movestart' | 'move' | 'moveend' | 'idle' | 'remove' | 'webglcontextlost' | 'webglcontextrestored',
+    event:
+      | 'load'
+      | 'style.load'
+      | 'movestart'
+      | 'move'
+      | 'moveend'
+      | 'idle'
+      | 'remove'
+      | 'webglcontextlost'
+      | 'webglcontextrestored',
     listener: () => void,
   ): unknown;
   once(event: 'load' | 'idle', listener: () => void): unknown;
@@ -124,14 +133,6 @@ const isMapLibre = (value: unknown): value is MapLibre =>
   typeof value.Map === 'function' &&
   'addProtocol' in value &&
   typeof value.addProtocol === 'function';
-// Asked once, on a context let go at once rather than left to count against the page's.
-const webGl = () => {
-  const gl =
-    document.createElement('canvas').getContext('webgl2') ?? document.createElement('canvas').getContext('webgl');
-  gl?.getExtension('WEBGL_lose_context')?.loseContext();
-  return Boolean(gl);
-};
-
 let loading: Promise<MapLibre | null> | undefined;
 // MapLibre, its styles put in `root` (they don't reach into a shadow root from the page).
 export function loadMapLibre(root: ShadowRoot): Promise<MapLibre | null> {
@@ -142,16 +143,17 @@ export function loadMapLibre(root: ShadowRoot): Promise<MapLibre | null> {
     link.dataset['maplibre'] = '';
     root.append(link);
   }
-  loading ??= webGl()
-    ? import(/* @vite-ignore */ mapLibre(__MAPLIBRE__.script)).then(
-        (module: unknown) => {
-          if (!isMapLibre(module)) return null;
-          module.addProtocol(GAP_SCHEME, gapTile);
-          return module;
-        },
-        () => null,
-      )
-    : Promise.resolve(null);
+  loading ??=
+    typeof WebGL2RenderingContext !== 'undefined'
+      ? import(/* @vite-ignore */ mapLibre(__MAPLIBRE__.script)).then(
+          (module: unknown) => {
+            if (!isMapLibre(module)) return null;
+            module.addProtocol(GAP_SCHEME, gapTile);
+            return module;
+          },
+          () => null,
+        )
+      : Promise.resolve(null);
   return loading;
 }
 
@@ -579,8 +581,6 @@ function rainOf(map: GlMap) {
       }),
       forecast: new RainLayer(RAIN.forecast, map, radarReadings),
     };
-    map.addLayer(layers.radar, firstOf(map, 'symbol'));
-    map.addLayer(layers.forecast, firstOf(map, 'line'));
     rainLayers.set(map, layers);
     // Tiles on their way stop coming once the map has gone.
     const { radar, forecast } = layers;
@@ -589,6 +589,9 @@ function rainOf(map: GlMap) {
       forecast.onRemove();
     });
   }
+  // A restored style contains its basemap and sources again. Custom layers must be reattached.
+  if (!map.getLayer(RAIN.radar)) map.addLayer(layers.radar, firstOf(map, 'symbol'));
+  if (!map.getLayer(RAIN.forecast)) map.addLayer(layers.forecast, firstOf(map, 'line'));
   return layers;
 }
 export function showRadar(
@@ -620,7 +623,7 @@ export function pickRadar(map: GlMap, at: number, playing = false) {
   radar?.showAt(at);
   radar?.play(playing);
   // Coverage stripes describe observations, not the model's forecast domain.
-  const visibility = at > (rainLayers.get(map)?.forecastFrom ?? Infinity) - 1 ? 'none' : 'visible';
+  const visibility = Math.round(at) >= (rainLayers.get(map)?.forecastFrom ?? Infinity) ? 'none' : 'visible';
   if (map.getLayer(GAPS) && map.getLayoutProperty(GAPS, 'visibility') !== visibility)
     map.setLayoutProperty(GAPS, 'visibility', visibility);
   return radar?.readyAt(at) ?? false;
@@ -645,7 +648,8 @@ export interface GroundStill {
   ground: string;
   names: string;
 }
-const STILL_WAIT = 10_000;
+const STILL_WAIT = 10_000,
+  VIEW_SETTLE = 200;
 // Room kept clear of names: around home, for the pin and its name under it; along the foot, for
 // the credit; and from a region's scale in, a hairline just outside the top and sides, so a name
 // that would run past them moves to another side of its dot, or gives way, rather than being cut.
@@ -859,19 +863,36 @@ function drawnCloser(map: GlMap, by: number) {
 }
 const settled = (map: GlMap) => new Promise<void>(done => map.once('idle', done));
 const pictureOf = (map: GlMap) =>
-  new Promise<string>((done, failed) => {
+  new Promise<Blob>((done, failed) => {
     map.getCanvas().toBlob(blob => {
-      if (blob) done(URL.createObjectURL(blob));
+      if (blob) done(blob);
       else failed(new Error('Map still: no picture'));
     });
   });
 export async function groundStill(
   root: ShadowRoot,
-  { latitude, longitude, zoom, width, height, pixelRatio }: MapStillView,
+  view: MapStillView,
   look: GroundLook,
+  key: string,
+  signal: AbortSignal,
 ): Promise<GroundStill | null> {
-  const maplibre = await loadMapLibre(root);
-  if (!maplibre) return null;
+  const urls = ({ ground, names }: { ground: Blob; names: Blob }) => ({
+    ground: URL.createObjectURL(ground),
+    names: URL.createObjectURL(names),
+  });
+  const cancelled = () => signal.aborted;
+  const saved = await keptStill(key);
+  if (cancelled()) return null;
+  if (saved) return urls(saved);
+  // The first forecast and dashboard layout can both change the initial view.
+  // Raster tiles are already visible while the view settles. MapLibre comes meanwhile, as the
+  // view that takes this one's place needs it too: only the renderer waits for the view.
+  const coming = loadMapLibre(root);
+  await new Promise<void>(done => window.setTimeout(done, VIEW_SETTLE));
+  if (cancelled()) return null;
+  const maplibre = await coming;
+  if (!maplibre || cancelled()) return null;
+  const { latitude, longitude, zoom, width, height, pixelRatio } = view;
   const by = SHEET_LOOKS.has(look) ? CLOSER : 1,
     // The wind's own sheet map stands at the screen's scale, so what is drawn on it is as much
     // smaller as the page is drawn larger.
@@ -897,8 +918,6 @@ export async function groundStill(
     container.remove();
     return null;
   }
-  // The first picture, let go if the second never comes.
-  let first: string | undefined;
   const show = (layers: readonly GlLayer[], visibility: string) => {
     for (const { id } of layers) map.setLayoutProperty(id, 'visibility', visibility);
   };
@@ -930,18 +949,27 @@ export async function groundStill(
     show(names, 'none');
     await settled(map);
     const ground = await pictureOf(map);
-    first = ground;
     show(rest, 'none');
     show(names, 'visible');
     await settled(map);
     return { ground, names: await pictureOf(map) };
   };
-  const still = await Promise.race([
-    draw().catch(() => null),
-    new Promise<null>(done => window.setTimeout(done, STILL_WAIT, null)),
-  ]);
-  map.remove();
-  container.remove();
-  if (!still && first) URL.revokeObjectURL(first);
-  return still;
+  let stop = () => {};
+  const ended = new Promise<null>(resolve => {
+    stop = () => resolve(null);
+  });
+  const timer = window.setTimeout(stop, STILL_WAIT);
+  signal.addEventListener('abort', stop, { once: true });
+  map.on('webglcontextlost', stop);
+  try {
+    const still = await Promise.race([draw().catch(() => null), ended]);
+    if (!still || cancelled()) return null;
+    void keepStill(key, still);
+    return urls(still);
+  } finally {
+    window.clearTimeout(timer);
+    signal.removeEventListener('abort', stop);
+    map.remove();
+    container.remove();
+  }
 }

@@ -458,8 +458,8 @@ test.describe('the map', () => {
     await dragTo(page, await spot(track, 0.9), await spot(track, 0.25));
     await page.mouse.up();
     await expect(view.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
-    const last = Number(await track.getAttribute('aria-valuemax')),
-      at = Number(await track.getAttribute('aria-valuenow'));
+    const last = Number(await track.getAttribute('max')),
+      at = Number(await track.inputValue());
     expect(at).toBeGreaterThanOrEqual(Math.floor(last * 0.15));
     expect(at).toBeLessThanOrEqual(Math.ceil(last * 0.35));
   });
