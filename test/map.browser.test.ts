@@ -204,6 +204,14 @@ test('precipitation plays on the card from now into the forecast, never before n
   ).toBe(true);
   await vi.waitFor(() => expect(when()).toBe('In 1 hour'), { timeout: 5000 });
   expect(card.maps.timelineTime).toBeUndefined();
+  // The time stands in the corner at the map's foot, with no credit on the small map to lift it.
+  const box = (selector: string) =>
+      card.root.querySelector(`.tile[data-tile=map] ${selector}`)?.getBoundingClientRect(),
+    [map, time] = [box('.radar'), box('.map-when')];
+  if (!map || !time) throw new Error('No map foot.');
+  expect(map.bottom - time.bottom).toBeLessThan(12);
+  expect(time.left - map.left).toBeLessThan(14);
+  expect(card.root.querySelector('.tile[data-tile=map] .radar-credit')).toBeNull();
 
   card.setConfig({ ...config, map_precipitation_animation: false });
   await vi.waitFor(() => expect(hours()).toBe(0));
@@ -382,7 +390,7 @@ test('the ground is a picture, with the radar between it and the names', async (
   expect(blend?.contains(ground ?? null)).toBe(false);
   expect(blend?.contains(names ?? null)).toBe(false);
   expect(card.root.querySelector('.radar-layer.osm')).toBeNull();
-  expect(card.root.querySelector('.radar-credit')?.textContent).toContain('OpenFreeMap');
+  expect(card.root.querySelector('.radar-credit')).toBeNull();
   const order = (a: Node | undefined, b: Node | undefined) => (a && b ? a.compareDocumentPosition(b) : 0);
   expect(order(ground, frame) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(order(frame, names) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -611,7 +619,7 @@ test('without a picture, the map falls back on tiles of the ground', async () =>
     expect(card.root.querySelector('.radar-layer.osm img')).not.toBeNull();
   });
   expect(stills(card)).toHaveLength(0);
-  expect(card.root.querySelector('.radar-credit')?.textContent).toContain('OpenStreetMap');
+  expect(card.root.querySelector('.radar-credit')).toBeNull();
   card.root.querySelector<HTMLElement>('.tile[data-tile=map]')?.click();
   await vi.waitFor(() => {
     const map = card.maps.largeView(),
@@ -642,7 +650,7 @@ test('those tiles take the theme’s look, and tiles of the user’s own are lef
   });
   expect(await look(own)).toBe('none');
   expect(ground(own)?.getAttribute('src')).toContain('https://tiles.invalid/');
-  expect(own.root.querySelector('.radar-credit')?.textContent).not.toContain('OpenStreetMap');
+  expect(own.root.querySelector('.radar-credit')).toBeNull();
 });
 
 test('the map stays as it is while another tile changes and the forecast switches to the same map', async () => {
