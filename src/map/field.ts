@@ -1,4 +1,4 @@
-import { hatch, rainReading } from './coverage.ts';
+import { hatch, rainRows } from './coverage.ts';
 import { HALF_TURN } from '../lib/compass.ts';
 import { tilePlace, tilePoint, gridAt, type ScalarField } from './sources.ts';
 import type { MapCentre } from './wind.ts';
@@ -263,56 +263,93 @@ export function ring(stops: readonly Stop[], from: number, to: number, value: nu
   };
 }
 
-// Paints `field` across a view in the colours of `stops`: worked out every 8 px, at the middle
-// of each, into a canvas that small, which the page stretches smoothly over the view.
-const FIELD_SAMPLE = 8,
+// Paint the forecast at display resolution. Twelve preview frames share a budget of about
+// 24 MiB of canvas pixels; a large raster fallback scales to the same per-frame limit.
+const RAIN_PIXELS = 512 * 1024,
+  FIELD_SAMPLE = 8,
   TILE = 256;
+
+// Each neighbouring pair of palette stops gets one shade for every possible byte value.
+// The packed pixels use the same underlying RGBA byte order as ImageData on this device.
+const fieldRamps = new WeakMap<readonly Stop[], (value: number) => number>();
+function fieldRamp(stops: readonly Stop[]) {
+  const held = fieldRamps.get(stops);
+  if (held) return held;
+  const bands = stops.map((stop, i) => {
+    const from = stops[i - 1]?.value ?? stop.value,
+      span = stop.value - from,
+      pixels = new Uint32Array(BYTE + 1),
+      bytes = new Uint8ClampedArray(pixels.buffer);
+    for (let k = 0; k <= BYTE; k++) bytes.set(scaleColour(stops, from + (k / BYTE) * span), k * CHANNELS);
+    return { end: stop.value, from, factor: span && BYTE / span, pixels };
+  });
+  const first = bands[0]?.pixels[0] ?? 0,
+    last = bands.at(-1)?.pixels[BYTE] ?? 0;
+  const lookup = (value: number) => {
+    if (!Number.isFinite(value)) return 0;
+    if (value <= (stops[0]?.value ?? 0)) return first;
+    for (const band of bands)
+      if (value <= band.end) return band.pixels[Math.round((value - band.from) * band.factor)] ?? 0;
+    return last;
+  };
+  fieldRamps.set(stops, lookup);
+  return lookup;
+}
+
 export function drawField(
   canvas: HTMLCanvasElement,
   field: ScalarField,
-  view: MapCentre & { width: number; height: number },
+  view: MapCentre & { width: number; height: number; pixelRatio?: number },
   stops: readonly Stop[],
   coverage?: HTMLCanvasElement,
 ): void {
-  const cols = Math.ceil(view.width / FIELD_SAMPLE),
-    rows = Math.ceil(view.height / FIELD_SAMPLE),
-    middle = tilePoint(view.latitude, view.longitude, view.zoom),
-    left = middle.x * TILE - view.width / 2,
-    top = middle.y * TILE - view.height / 2;
+  const { width, height, zoom } = view;
+  if (width <= 0 || height <= 0) return;
+  const rain = stops === PRECIPITATION,
+    density = rain
+      ? Math.min(view.pixelRatio ?? (window.devicePixelRatio || 1), Math.sqrt(RAIN_PIXELS / (width * height)))
+      : 1 / FIELD_SAMPLE,
+    cols = rain ? Math.max(1, Math.round(width * density)) : Math.ceil(width / FIELD_SAMPLE),
+    rows = rain ? Math.max(1, Math.round(height * density)) : Math.ceil(height / FIELD_SAMPLE),
+    drawnWidth = rain ? width : cols * FIELD_SAMPLE,
+    drawnHeight = rain ? height : rows * FIELD_SAMPLE,
+    middle = tilePoint(view.latitude, view.longitude, zoom),
+    x = (col: number) => middle.x + (((col + 1 / 2) / cols) * drawnWidth - width / 2) / TILE,
+    y = (row: number) => middle.y + (((row + 1 / 2) / rows) * drawnHeight - height / 2) / TILE;
   canvas.width = cols;
   canvas.height = rows;
-  canvas.style.width = `${cols * FIELD_SAMPLE}px`;
-  canvas.style.height = `${rows * FIELD_SAMPLE}px`;
+  canvas.style.width = `${drawnWidth}px`;
+  canvas.style.height = `${drawnHeight}px`;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  const image = ctx.createImageData(cols, rows),
+  const longitudes = Float64Array.from({ length: cols }, (_, col) => tilePlace(x(col), middle.y, zoom).longitude),
+    rainAt = rain ? rainRows(field, longitudes) : undefined,
+    image = ctx.createImageData(cols, rows),
+    pixels = new Uint32Array(image.data.buffer),
+    colour = fieldRamp(stops),
     mask = coverage ? new OffscreenCanvas(cols, rows) : undefined,
     maskContext = mask?.getContext('2d'),
     missing = maskContext?.createImageData(cols, rows);
   let gaps = false;
-  for (let row = 0; row < rows; row++)
+  for (let row = 0; row < rows; row++) {
+    const latitude = tilePlace(middle.x, y(row), zoom).latitude,
+      rates = rainAt?.(latitude);
     for (let col = 0; col < cols; col++) {
-      const place = tilePlace(
-          (left + (col + 1 / 2) * FIELD_SAMPLE) / TILE,
-          (top + (row + 1 / 2) * FIELD_SAMPLE) / TILE,
-          view.zoom,
-        ),
-        value = coverage
-          ? rainReading(field, place.latitude, place.longitude)
-          : gridAt(field, field.values, place.latitude, place.longitude),
-        colour = scaleColour(stops, value);
+      const value = rates ? (rates[col] ?? Number.NaN) : gridAt(field, field.values, latitude, longitudes[col] ?? 0),
+        offset = row * cols + col;
       if (missing && !Number.isFinite(value)) {
-        missing.data[(row * cols + col) * CHANNELS + ALPHA] = BYTE;
+        missing.data[offset * CHANNELS + ALPHA] = BYTE;
         gaps = true;
       }
-      image.data.set(colour, (row * cols + col) * CHANNELS);
+      pixels[offset] = colour(value);
     }
+  }
   ctx.putImageData(image, 0, 0);
   if (coverage && mask && maskContext && missing) {
     maskContext.putImageData(missing, 0, 0);
-    coverage.width = Math.ceil(view.width);
-    coverage.height = Math.ceil(view.height);
-    coverage.getContext('2d')?.drawImage(mask, 0, 0, cols * FIELD_SAMPLE, rows * FIELD_SAMPLE);
+    coverage.width = Math.ceil(width);
+    coverage.height = Math.ceil(height);
+    coverage.getContext('2d')?.drawImage(mask, 0, 0, width, height);
     coverage.dataset['gaps'] = String(gaps);
     hatch(coverage);
   }

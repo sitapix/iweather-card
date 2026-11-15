@@ -22,25 +22,50 @@ const inside = (field: ScalarField, latitude: number, longitude: number) =>
   longitude >= field.west &&
   longitude <= field.west + (field.cols - 1) * field.step;
 
-export function rainReading(field: ScalarField, latitude: number, longitude: number): number {
-  if (!inside(field, latitude, longitude)) return Number.NaN;
-  const row = (field.north - latitude) / field.step,
-    col = (longitude - field.west) / field.step,
-    top = Math.floor(row),
-    left = Math.floor(col),
-    fy = row - top,
-    fx = col - left;
-  let value = 0;
-  for (let y = 0; y < 2; y++)
-    for (let x = 0; x < 2; x++) {
-      const weight = (x ? fx : 1 - fx) * (y ? fy : 1 - fy);
-      // At an exact grid point an unused neighbour must not invalidate a known dry reading.
-      if (weight === 0) continue;
-      const sample = field.values[(top + y) * field.cols + left + x];
-      if (sample === undefined || !Number.isFinite(sample)) return Number.NaN;
-      value += sample * weight;
-    }
-  return value;
+// A shape-preserving cubic between the two middle readings. Limiting each tangent to the
+// smaller adjacent slope keeps a dry interval dry and preserves the measured storm peaks.
+const slope = (a: number, b: number) => (a * b > 0 ? Math.sign(a) * Math.min(Math.abs(a), Math.abs(b)) : 0);
+function sample(a: number, b: number, c: number, d: number, t: number): number {
+  if (t === 0 || b === c) return b;
+  const change = c - b,
+    u = 1 - t;
+  return b + t * (t * (1 + 2 * u) * change + u * (u * slope(b - a, change) - t * slope(change, d - c)));
+}
+
+// Project once per column, then reuse each interpolated model row across the screen rows
+// that need it. An unknown inner reading leaves that interval unknown. An unknown outer
+// neighbour only flattens the tangent at the last known point.
+export function rainRows(field: ScalarField, longitudes: Float64Array) {
+  const across = longitudes.map(longitude => (longitude - field.west) / field.step),
+    cached = new Map<number, Float32Array>(),
+    result = new Float32Array(across.length);
+  const line = (index: number) => {
+    const row = Math.max(0, Math.min(field.rows - 1, index)),
+      held = cached.get(row);
+    if (held) return held;
+    const at = (x: number) => field.values[row * field.cols + Math.max(0, Math.min(field.cols - 1, x))] ?? Number.NaN,
+      values = Float32Array.from(across, x => {
+        if (x < 0 || x > field.cols - 1) return Number.NaN;
+        const left = Math.floor(x);
+        return sample(at(left - 1), at(left), at(left + 1), at(left + 2), x - left);
+      });
+    cached.set(row, values);
+    return values;
+  };
+  return (latitude: number) => {
+    const y = (field.north - latitude) / field.step;
+    if (y < 0 || y > field.rows - 1) return result.fill(Number.NaN);
+    const top = Math.floor(y),
+      t = y - top,
+      b = line(top);
+    if (t === 0) return b;
+    const a = line(top - 1),
+      c = line(top + 1),
+      d = line(top + 2);
+    for (let x = 0; x < result.length; x++)
+      result[x] = sample(a[x] ?? Number.NaN, b[x] ?? Number.NaN, c[x] ?? Number.NaN, d[x] ?? Number.NaN, t);
+    return result;
+  };
 }
 // Whether the visible part of a grid has gaps. Inspect its cells, including the neighbours used
 // for interpolation; data outside the viewport doesn't put an unavailable note over the map.

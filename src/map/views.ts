@@ -1369,6 +1369,7 @@ export class MapViews {
       radar = kind === 'precipitation' && config.map === 'rainviewer';
     // Being dragged, the large map moves with the pointer and is drawn again once let go.
     const large = view.classList.contains('large'),
+      pixelRatio = (window.devicePixelRatio || 1) * (large ? 1 : this.card.zoom),
       centre = this.centreOf(view),
       moved = large && this.centre !== undefined;
     if (view.hasAttribute('data-dragging')) return;
@@ -1414,7 +1415,7 @@ export class MapViews {
         animate,
         preview,
         rainHours,
-        size: [Math.round(width), Math.round(height)],
+        size: [Math.round(width), Math.round(height), pixelRatio],
         locale: [card.update?.ctx.locale, card.update?.ctx.timeZone, card.update?.ctx.hour12],
         inputs,
         sun: sun?.state,
@@ -1466,7 +1467,6 @@ export class MapViews {
     // Small, with the online map and no tiles of the user's own, the ground is a picture, once
     // drawn (see drawStill); OpenStreetMap's tiles where it can't be.
     const pictured = !large && config.map === 'rainviewer' && !config.map_tile_url,
-      pixelRatio = (window.devicePixelRatio || 1) * card.zoom,
       wanted = pictured ? this.stillFor({ ...centre, width, height, pixelRatio }, look) : null;
     // A new ground is on its way: what's shown stays until it comes.
     if (wanted === undefined && view.querySelector('.map-still')) {
@@ -1557,7 +1557,7 @@ export class MapViews {
       hours = hoursLoop && grid?.hours ? hoursFromNow(grid.hours, Date.now()) : [],
       // The radar frame before the latest, to see how far the rain moves in a step.
       previous = frames[this.radarFrame - 1];
-    let drift: Promise<Drift> | undefined;
+    let drift: Promise<Drift> | undefined, lastHour: Promise<boolean> | undefined;
     if (frameCanvas instanceof HTMLCanvasElement && newest) {
       if (preview)
         this.radarPreviews.set(
@@ -1584,8 +1584,21 @@ export class MapViews {
             hours.length > 0 ? FORECAST_LABEL_STEP : RADAR_LABEL_STEP,
             (canvas, frame, signal) => {
               if ('field' in frame) {
-                drawField(canvas, frame.field, { ...centre, width, height }, PRECIPITATION);
-                return Promise.resolve(true);
+                const paintHour = () => {
+                  if (signal.aborted) return false;
+                  drawField(canvas, frame.field, { ...centre, width, height, pixelRatio }, PRECIPITATION);
+                  return true;
+                };
+                // Show the first hour immediately, then let the browser handle input between frames.
+                lastHour = lastHour
+                  ? lastHour.then(async () => {
+                      if (signal.aborted) return false;
+                      if ('scheduler' in window && 'yield' in window.scheduler) await window.scheduler.yield();
+                      else await new Promise<void>(done => window.setTimeout(done, 0));
+                      return paintHour();
+                    })
+                  : Promise.resolve(paintHour());
+                return lastHour;
               }
               if (!('ahead' in frame)) return paint(canvas, frame, signal);
               drift ??= previous ? measureDrift(paint, previous, newest, signal) : Promise.resolve(STILL);
@@ -1628,7 +1641,7 @@ export class MapViews {
       drawField(
         painted,
         field,
-        { ...centre, width, height },
+        { ...centre, width, height, pixelRatio },
         rainHours ? PRECIPITATION : stops,
         rainHours ? coverage : undefined,
       );
