@@ -198,6 +198,15 @@ test('precipitation plays on the card from now into the forecast, never before n
   expect(layers(card)).toHaveLength(1);
   await vi.waitFor(() => expect(when()).toBe('In 1 hour'), { timeout: 5000 });
   expect(card.maps.timelineTime).toBeUndefined();
+  // The time stands in the corner at the map's foot, the credit beside it and never under it.
+  const box = (selector: string) =>
+      card.root.querySelector(`.tile[data-tile=map] ${selector}`)?.getBoundingClientRect(),
+    [map, time, credit] = [box('.radar'), box('.map-when'), box('.radar-credit')];
+  if (!map || !time || !credit) throw new Error('No map foot.');
+  expect(map.bottom - time.bottom).toBeLessThan(12);
+  expect(time.left - map.left).toBeLessThan(14);
+  expect(credit.left).toBeGreaterThanOrEqual(time.right);
+  expect(credit.bottom).toBeLessThanOrEqual(map.bottom);
 
   card.setConfig({ ...config, map_precipitation_animation: false });
   await vi.waitFor(() => expect(hours()).toBe(0));

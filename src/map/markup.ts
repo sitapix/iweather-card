@@ -311,8 +311,8 @@ export function mapMarkup(look: MapLook): string {
     legend +
     (large ? mapTools(centre.zoom, moved, kind, config.map === 'rainviewer') : '') +
     look.timeline +
-    // Small, the radar's time while it plays stands in the corner just above the credit, however
-    // many lines that takes.
+    // Small, the radar's time while it plays stands in the corner at the foot, the credit beside
+    // it, however many lines that takes.
     (!large && radar
       ? `<div class="map-foot"><span class="map-when" aria-hidden="true"></span>${credit}</div>`
       : credit) +
