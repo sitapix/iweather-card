@@ -9,7 +9,7 @@ import { isForecastTile } from './radar-forecast.ts';
 import { weatherIcon } from '../weather/icons.ts';
 import { airGlyphFor } from '../cards/air-quality/rules.ts';
 import { AQI_US, css, ring, scaleColour, scaleKey, type Stop } from './field.ts';
-import { GL_CREDIT_SHORT, type GroundStill } from './gl.ts';
+import type { GroundStill } from './gl.ts';
 import { finite } from '../lib/values.ts';
 import type { TileContext } from '../cards/shared/context.ts';
 import { MAP_ZOOMS, windKey, type MapCentre } from './wind.ts';
@@ -266,13 +266,9 @@ export function mapMarkup(look: MapLook): string {
     vector =
       '<a href="https://openfreemap.org/" target="_blank" rel="noopener">OpenFreeMap</a> · <a href="https://openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a>',
     basemap = live ? `${vector} · ${osm}` : config.map_tile_url ? '' : osm,
-    compact = [still ? GL_CREDIT_SHORT : config.map_tile_url ? '' : '© OpenStreetMap contributors', weatherCredit]
-      .filter(Boolean)
-      .join(' · '),
     legend = large ? mapKey(kind, look.unit, look.windWord, look.colours, weatherCredit) : '',
-    credit = large
-      ? basemap && `<small class="map-attribution">${basemap}</small>`
-      : `<small class="radar-credit">${compact}</small>`;
+    // The small map carries no credit: the map it opens names its sources.
+    credit = large && basemap ? `<small class="map-attribution">${basemap}</small>` : '';
   return (
     `<div class="map-pan"${place}>` +
     stillImage(still?.ground) +
@@ -313,11 +309,8 @@ export function mapMarkup(look: MapLook): string {
     legend +
     (large ? mapTools(centre.zoom, moved, kind, config.map === 'rainviewer') : '') +
     look.timeline +
-    // Small, the radar's time while it plays stands in the corner just above the credit, however
-    // many lines that takes.
-    (!large && radar
-      ? `<div class="map-foot"><span class="map-when" aria-hidden="true"></span>${credit}</div>`
-      : credit) +
+    // Small, the radar's time while it plays stands in the corner at the foot.
+    (!large && radar ? '<div class="map-foot"><span class="map-when" aria-hidden="true"></span></div>' : credit) +
     (radar && failed ? `<span class="radar-note">${say('Radar unavailable')}</span>` : '')
   );
 }
