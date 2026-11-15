@@ -129,16 +129,19 @@ afterAll(() => {
 });
 
 test('the observation-only precipitation timeline centers Forecast between its controls', async () => {
-  const card = await page({});
-  await openMap(card);
-  const heading = part(card, '.radar.large .wind-when'),
-    label = heading.getBoundingClientRect(),
-    rail = part(card, '.radar.large .wind-rail').getBoundingClientRect();
+  const card = await page({}),
+    view = await openMap(card),
+    heading = part(card, '.radar.large .wind-when');
   expect(heading.querySelector('b')?.textContent).toBe('Forecast');
   expect(getComputedStyle(heading).textAlign).toBe('center');
-  expect(Math.abs(label.left + label.right - rail.left - rail.right)).toBeLessThan(2);
-  expect(part(card, '.radar.large .wind-play').getBoundingClientRect().right).toBeLessThanOrEqual(label.left);
-  expect(part(card, '.radar.large .map-span').getBoundingClientRect().left).toBeGreaterThanOrEqual(label.right);
+  for (const width of [320, 390, 1100]) {
+    view.style.width = `${width}px`;
+    const label = heading.getBoundingClientRect(),
+      rail = part(card, '.radar.large .wind-rail').getBoundingClientRect();
+    expect(Math.abs(label.left + label.right - rail.left - rail.right)).toBeLessThan(2);
+    expect(part(card, '.radar.large .wind-play').getBoundingClientRect().right).toBeLessThanOrEqual(label.left);
+    expect(part(card, '.radar.large .map-span').getBoundingClientRect().left).toBeGreaterThanOrEqual(label.right);
+  }
 });
 
 test('the arrow keys slide the large map an eighth of its size, and it is drawn there at rest', async () => {

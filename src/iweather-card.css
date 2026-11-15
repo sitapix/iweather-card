@@ -1070,8 +1070,8 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
    either: the colours lie over it. */
 .map-field[data-kind=precipitation]{opacity:.9;mix-blend-mode:normal}.radar[data-night] .map-field{mix-blend-mode:normal}
 /* For precipitation, the timeline's switch between the radar's last hour and the forecast's 12. */
-.map-span{grid-area:1 / 3;justify-self:end;position:relative;z-index:1;display:flex;padding:2px;border-radius:15px;background:#0000000f;touch-action:pan-y;-webkit-user-select:none;user-select:none}
-.map-span button{position:relative;z-index:1;min-width:40px;height:26px;padding:0 10px;border:0;border-radius:13px;background:none;color:inherit;font:inherit;font-size:13px;font-weight:600}
+.map-span{grid-area:1 / 3;position:relative;z-index:1;display:flex;padding:2px;border-radius:15px;background:#0000000f;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.map-span button{position:relative;z-index:1;flex:1;min-width:0;height:26px;padding:0 2px;border:0;border-radius:13px;background:none;color:inherit;font:inherit;font-size:13px;font-weight:600}
 /* Its thumb is a glass one, as the hourly panel's is (see glass-switch.ts). */
 .map-span .thumb{position:absolute;left:0;top:var(--y,2px);width:var(--w,40px);height:var(--h,26px);border-radius:999px;background:#fff;box-shadow:0 1px 3px #0002;transform:translateX(var(--x,2px));transition:background .2s,box-shadow .2s;pointer-events:none}
 .map-span[data-held] .thumb{background:transparent;box-shadow:0 0 0 .75px #00000059,inset 0 0 0 .75px #ffffff4d,inset 1px 1px 1px -.5px #ffffffb3,inset -1px -1px 1.5px -.5px #ffffff40,0 3px 10px -4px #0003}
@@ -1156,7 +1156,7 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .detail[data-id=map][data-full] .map-key span:before{top:-4.5px;bottom:-4.5px}
 .detail[data-id=map][data-full] .map-key i{font-size:8.5px}
 .detail[data-id=map][data-full] .map-data{top:calc(100% + 47px)}.detail[data-id=map][data-full] .map-data button{font-size:9.5px;font-weight:500}
-.detail[data-id=map][data-full] .wind-time{margin:0 38.5px;row-gap:11px;padding:12.5px 18.5px 18px}
+.detail[data-id=map][data-full] .wind-time{margin:0 var(--timeline-inset,38.5px);row-gap:11px;padding:12.5px 18.5px 18px}
 .detail[data-id=map][data-full] .wind-play{width:26px;height:26px}.detail[data-id=map][data-full] .wind-play svg{width:15px;height:15px}
 .detail[data-id=map][data-full] .radar[data-kind=wind] .wind-when{padding-inline-start:34.5px}.detail[data-id=map][data-full] .wind-when b{font-size:12px;font-weight:600}.detail[data-id=map][data-full] .wind-when span{display:block;font-size:9.75px;line-height:12px}
 .detail[data-id=map][data-full] .wind-marks{margin-top:-9px}
@@ -1273,7 +1273,8 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 /* The timeline along the foot: play or pause at its left, the day shown centred over the bar
    of hours, filled dark to the time shown and ticked between hours, and under it the times
    from their ticks on (see timelineOf). The credit moves to the top over it. */
-.wind-time{position:relative;grid-row:2;z-index:3;min-width:0;margin:0 17px 12px;display:grid;grid-template-columns:1fr minmax(0,max-content) 1fr;align-items:center;gap:10px 4px;padding:10px 17px 12px;border-radius:22px}
+.radar[data-kind=precipitation] .wind-time{--timeline-inset:clamp(8px,4%,38.5px);--timeline-side:max(84px,5.5rem)}
+.wind-time{position:relative;grid-row:2;z-index:3;min-width:0;margin:0 17px 12px;display:grid;grid-template-columns:var(--timeline-side,1fr) minmax(0,1fr) var(--timeline-side,1fr);align-items:center;gap:10px 4px;padding:10px 17px 12px;border-radius:22px}
 .wind-play{position:relative;z-index:1;grid-area:1 / 1;display:grid;place-items:center;width:33px;height:33px;padding:0;border:0;border-radius:50%;background:#003a7212;color:#000}.wind-play svg{width:11px;height:11px;fill:currentColor}
 .wind-play .pause,.wind-time[data-playing] .wind-play .play{display:none}.wind-time[data-playing] .wind-play .pause{display:inline}
 .radar[data-kind=wind] .wind-when{grid-column:1 / -1;padding-inline-start:38px;text-align:start}
