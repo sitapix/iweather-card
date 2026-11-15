@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest';
+import { geoTiff } from './forecast-files.ts';
 import { normalizeConfig } from '../src/card/config.ts';
 import type * as MapGl from '../src/map/gl.ts';
 import { newMap } from '../src/map/gl.ts';
@@ -220,6 +221,41 @@ test('the last visible consumer cancels a forecast grid, and reopening starts it
   await again;
   expect(signals.every(signal => signal.aborted)).toBe(true);
 });
+test('closing the sheet lets a shared rain grid finish for the visible preview', async () => {
+  const { host, maps } = mapHost(),
+    large = maps.largeView(),
+    dialog = host.root.querySelector('dialog');
+  if (!large || !dialog) throw new Error('No open map');
+  large.style.cssText = 'width:100px;height:100px';
+  const preview = document.createElement('div');
+  preview.className = 'radar';
+  preview.style.cssText = large.style.cssText;
+  host.root.append(preview);
+  vi.spyOn(maps, 'draw').mockImplementation(() => {});
+  let respond = () => {};
+  const gate = new Promise<void>(done => {
+    respond = done;
+  });
+  const bytes = geoTiff({ cols: 2, rows: 2, north: 5, west: -5, step: 10, values: [1, 1, 1, 1] });
+  const fetcher = vi.fn(async (_url: string, init: RequestInit) => {
+    await gate;
+    init.signal?.throwIfAborted();
+    return new Response(bytes);
+  });
+  vi.stubGlobal('fetch', fetcher);
+  const wanted = { centre, width: 100, height: 100, source: 'rain' } as const;
+  const done = maps.loadGrid(preview, wanted);
+  await vi.waitFor(() => expect(fetcher).toHaveBeenCalled());
+  await maps.loadGrid(large, { ...wanted });
+  dialog.close();
+  maps.reset();
+  respond();
+  await done;
+  expect(maps.winds).toHaveLength(1);
+  expect(maps.winds[0]?.hours?.times.length).toBeGreaterThan(12);
+  expect(fetcher.mock.calls.every(([, init]) => init.signal?.aborted === false)).toBe(true);
+});
+
 function localMap(kind: MapInputs['kind']) {
   const { host, maps } = mapHost(),
     view = maps.largeView();

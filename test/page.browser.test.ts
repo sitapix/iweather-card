@@ -208,7 +208,7 @@ test('the native time range supports keyboard endpoints, vertical arrows and ass
       minute: '2-digit',
       hour12: true,
       timeZone: 'America/Chicago',
-    }).format(NOW - (11 * HOUR) / 6)}`,
+    }).format(NOW - (9 * HOUR) / 6)}`,
   );
   press(track, 'ArrowUp');
   expect(track.valueAsNumber).toBe(1);

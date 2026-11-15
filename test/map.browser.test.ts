@@ -579,7 +579,7 @@ test('without a picture, the map falls back on tiles of the ground', async () =>
       link = map?.querySelector<HTMLAnchorElement>('.map-attribution a');
     expect(link?.href).toBe('https://www.openstreetmap.org/copyright');
     expect(link?.checkVisibility()).toBe(true);
-    expect(map?.querySelector('.map-data small')?.textContent).not.toContain('OpenStreetMap');
+    expect(map?.querySelector('.map-data small')?.textContent ?? '').not.toContain('OpenStreetMap');
     const timeline = map?.querySelector('.wind-time');
     if (timeline && link)
       expect(link.getBoundingClientRect().top).toBeGreaterThanOrEqual(timeline.getBoundingClientRect().bottom);
