@@ -38,9 +38,15 @@ export class RadarPreview<Frame extends PreviewFrame> {
   // time of day doesn't move.
   private began: number | undefined;
   private said = '';
+  // Given, a frame's picture is held only while the playhead is on it or about to reach it, and
+  // drawn again by this as it nears: a dozen hours then cost three pictures' memory, not twelve.
+  private readonly redraw: ((canvas: HTMLCanvasElement, frame: Frame) => void) | undefined;
+  // The frames whose canvases hold their pictures now, where they come and go.
+  private readonly drawn = new Set<number>();
 
   // `latest`, if given, is the canvas already showing the first frame, the one now. Each other
   // frame's canvas is placed by `mount`, by default beside `latest`. `label` says the playhead's time.
+  // With `redraw`, every frame is ready from the start and `paint` is never asked.
   constructor(
     latest: HTMLCanvasElement | null,
     frames: readonly Frame[],
@@ -54,27 +60,35 @@ export class RadarPreview<Frame extends PreviewFrame> {
     },
     previous?: RadarPreview<Frame>,
     identity: (frame: Frame) => object = frame => frame,
+    redraw?: (canvas: HTMLCanvasElement, frame: Frame) => void,
   ) {
     this.active = active;
     this.frames = frames;
     this.label = label;
     this.step = step;
-    const painted = new Map<object, HTMLCanvasElement>();
+    this.redraw = redraw;
+    const painted = new Map<object, { canvas: HTMLCanvasElement; drawn: boolean }>();
     if (previous) {
       if (previous.frames[0]?.time === frames[0]?.time && previous.step === step) this.began = previous.began;
       previous.frames.forEach((frame, i) => {
         const canvas = previous.canvases[i];
-        if (canvas && previous.ready.has(i)) painted.set(identity(frame), canvas);
+        if (canvas && previous.ready.has(i)) painted.set(identity(frame), { canvas, drawn: previous.drawn.has(i) });
       });
     }
     this.canvases = frames.map((frame, i) => {
       const saved = painted.get(identity(frame));
-      const canvas = saved ?? (i === 0 ? latest : null) ?? document.createElement('canvas');
+      const canvas = saved?.canvas ?? (i === 0 ? latest : null) ?? document.createElement('canvas');
       if (canvas !== latest) mount(canvas, frame);
       canvas.dataset['frame'] = String(i);
       // The blend is set frame by frame, so no transition lags behind it.
       canvas.style.transition = 'none';
-      if (saved) this.ready.add(i);
+      if (saved?.drawn) this.drawn.add(i);
+      // Until it is drawn, a canvas of no size, as one let go is (see hold).
+      else if (redraw) {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+      if (saved || redraw) this.ready.add(i);
       else
         void paint(canvas, frame, this.asked.signal).then(done => {
           if (this.stopped) return;
@@ -102,6 +116,26 @@ export class RadarPreview<Frame extends PreviewFrame> {
       const said = radarWhen(time, Date.now(), this.step);
       if (said !== this.said) this.label.textContent = said;
       this.said = said;
+    }
+    if (this.redraw) this.hold(from, to, this.redraw);
+  }
+
+  // Holds the pictures of the two frames blending and of the one the playhead reaches next, round
+  // to the first after the last, and lets every other go.
+  private hold(from: number, to: number, redraw: (canvas: HTMLCanvasElement, frame: Frame) => void) {
+    const next = to + 1 < this.frames.length ? to + 1 : 0;
+    for (const [i, canvas] of this.canvases.entries()) {
+      const frame = this.frames[i];
+      if (i === from || i === to || i === next) {
+        if (frame && !this.drawn.has(i)) {
+          redraw(canvas, frame);
+          this.drawn.add(i);
+        }
+      } else if (this.drawn.delete(i)) {
+        // A canvas of no size holds no pixels.
+        canvas.width = 0;
+        canvas.height = 0;
+      }
     }
   }
 

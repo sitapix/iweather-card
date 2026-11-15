@@ -618,7 +618,9 @@ export class MapViews {
   // comes to rest, with room to move in (see windPointsFor). The view is drawn again once it
   // comes. The forecast's precipitation comes from a forecast model instead (see rainPlan),
   // drawn again with each hour that comes.
-  private gridVisible(view: HTMLElement) {
+  // `sized` says the view's size was read just now (as a draw does for each view it fills), so it
+  // isn't read again here, where it would lay the page out a second time for what was just drawn.
+  private gridVisible(view: HTMLElement, sized = false) {
     return (
       this.card.isConnected &&
       this.card.visible &&
@@ -627,8 +629,7 @@ export class MapViews {
       this.card.root.contains(view) &&
       this.nearby.get(view) !== false &&
       !view.closest('dialog:not([open])') &&
-      view.clientWidth > 0 &&
-      view.clientHeight > 0
+      (sized || (view.clientWidth > 0 && view.clientHeight > 0))
     );
   }
   // A provider may fall back to a coarser model while a request is in flight. Its original
@@ -638,8 +639,8 @@ export class MapViews {
     const request = this.gridRequests.get(grid);
     return (request && sameGridView(request.origin, view)) || fitsWind(grid, view.centre, view.width, view.height);
   }
-  private releaseGrids() {
-    for (const view of this.gridViews.keys()) if (!this.gridVisible(view)) this.gridViews.delete(view);
+  private releaseGrids(sized = false) {
+    for (const view of this.gridViews.keys()) if (!this.gridVisible(view, sized)) this.gridViews.delete(view);
     for (const [grid, { controller }] of this.gridRequests) {
       if ([...this.gridViews.values()].some(view => this.matchesGrid(grid, view))) continue;
       this.gridRequests.delete(grid);
@@ -1582,9 +1583,7 @@ export class MapViews {
       hours = hoursLoop && grid?.hours ? hoursFromNow(grid.hours, Date.now()) : [],
       // The radar frame before the latest, to see how far the rain moves in a step.
       previous = frames[this.radarFrame - 1];
-    let drift: Promise<Drift> | undefined,
-      observed: Promise<boolean> | undefined,
-      lastHour: Promise<boolean> | undefined;
+    let drift: Promise<Drift> | undefined, observed: Promise<boolean> | undefined;
     if (frameCanvas instanceof HTMLCanvasElement && newest) {
       if (preview)
         this.radarPreviews.set(
@@ -1610,23 +1609,8 @@ export class MapViews {
                 : [newest],
             hours.length > 0 ? FORECAST_LABEL_STEP : RADAR_LABEL_STEP,
             (canvas, frame, signal) => {
-              if ('field' in frame) {
-                const paintHour = () => {
-                  if (signal.aborted) return false;
-                  drawField(canvas, frame.field, { ...centre, width, height, pixelRatio }, PRECIPITATION);
-                  return true;
-                };
-                // Show the first hour immediately, then let the browser handle input between frames.
-                lastHour = lastHour
-                  ? lastHour.then(async () => {
-                      if (signal.aborted) return false;
-                      if ('scheduler' in window && 'yield' in window.scheduler) await window.scheduler.yield();
-                      else await new Promise<void>(done => window.setTimeout(done, 0));
-                      return paintHour();
-                    })
-                  : Promise.resolve(paintHour());
-                return lastHour;
-              }
+              // An hour of the forecast is drawn as the playhead nears it (see below).
+              if ('field' in frame) return Promise.resolve(true);
               // The five or six future positions all come from the same observation mosaic.
               observed ??= paint(frameCanvas, newest, signal);
               if (!('ahead' in frame)) return observed;
@@ -1668,6 +1652,14 @@ export class MapViews {
             },
             hours.length && same ? oldPreview : undefined,
             frame => ('field' in frame ? frame.field : frame),
+            // The forecast's hours are drawn from fields in hand, each in a millisecond or two, so
+            // only those about to show are kept as pictures.
+            hours.length > 0
+              ? (canvas, frame) => {
+                  if ('field' in frame)
+                    drawField(canvas, frame.field, { ...centre, width, height, pixelRatio }, PRECIPITATION);
+                }
+              : undefined,
           ),
         );
       else if (held?.dataset['tiles'] === tilesOf(newest)) frameCanvas.replaceWith(held);
@@ -1787,7 +1779,8 @@ export class MapViews {
     for (const view of card.root.querySelectorAll('.radar'))
       if (view instanceof HTMLElement && !view.closest('dialog:not([open])') && this.nearView(view))
         this.drawView(view, config, allFrames);
-    this.releaseGrids();
+    // Each view still asking for a grid had its size read as it was drawn, and one of no size let go.
+    this.releaseGrids(true);
     this.windMaps = this.windMaps.filter(({ canvas }) => canvas.isConnected);
     for (const { map } of this.windMaps) map.update();
     this.showRadarFrame();
