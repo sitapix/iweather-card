@@ -169,6 +169,7 @@ The `auto`, `compact`, `strip` and `expanded` layouts only talk to Home Assistan
 | `map: rainviewer`, with the large map's 1-hour view open in the contiguous United States | NOAA HRRR through Iowa State's Environmental Mesonet | Simulated radar in 15-minute steps for the next hour; checks for a completed model run every ten minutes | The map's area |
 | `map: rainviewer` | Open-Meteo | Wind and temperature across the map, air quality when the map shows it, and the 12-hour forecast's precipitation when none of the services below answers | The map's area |
 | `map: rainviewer`, with the large map's 12-hour forecast open | NOAA's HRRR archive at the University of Utah in the United States, MET Norway in the Nordic countries, Environment and Climate Change Canada elsewhere | The forecast's precipitation across the map: in the United States in tiles kept in the browser for a day, elsewhere an hour at a time | The map's area |
+| `map: rainviewer`, with the map showing air quality over the United States, southern Canada or northern Mexico | AirNow, the US Environmental Protection Agency's air quality service | The areas in each band of the US air quality index, as monitors last measured them: one small file, kept ten minutes | Nothing about you: the same file whatever the map shows |
 | `map: rainviewer` | OpenFreeMap, OpenStreetMap | Base map tiles | The map's area |
 | `map: local` | OpenStreetMap | Base map tiles | The map's area |
 | `map_tile_url`, `map_layers` | Services you name | Map tiles | The map's area |
@@ -215,6 +216,7 @@ Pushing a version tag builds the card and creates a draft release with the files
 - **Map library:** [MapLibre GL JS](https://maplibre.org/), BSD 3-Clause, shipped alongside the card with its licence.
 - **Alerts:** the [National Weather Service](https://www.weather.gov/), public domain, used when no alert sensor is set.
 - **Radar:** [RainViewer](https://www.rainviewer.com/), free for personal use with attribution.
+- **Air quality on the map:** [AirNow](https://www.airnow.gov/), from the US Environmental Protection Agency and its partner agencies, over the United States, southern Canada and northern Mexico; Open-Meteo elsewhere.
 - **Precipitation forecast on the map:** NOAA's [HRRR](https://registry.opendata.aws/noaa-hrrr-pds/) model, from the [HRRR Zarr archive](https://mesowest.utah.edu/html/hrrr/) the University of Utah keeps for NOAA; [MEPS](https://thredds.met.no/thredds/catalog/mepslatest/catalog.html) from MET Norway, CC BY 4.0; and Canada's regional and global models from [Environment and Climate Change Canada](https://eccc-msc.github.io/open-data/msc-geomet/readme_en/), under the Open Government Licence – Canada. The map lists the model in use under Map Data.
 - **Maps:** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, [OpenMapTiles](https://openmaptiles.org/) and [OpenFreeMap](https://openfreemap.org/), drawn with [MapLibre GL JS](https://maplibre.org/).
 

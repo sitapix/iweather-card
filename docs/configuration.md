@@ -212,7 +212,7 @@ The panel appears while precipitation falls or starts within 50 minutes. Tap it 
 |---|---|---|
 | Radar | [RainViewer](https://www.rainviewer.com/), free for personal use with attribution, stopping at zoom 7 | None |
 | Wind | Across the whole map, from Open-Meteo, asked for hourly while the map needs it | Your entity's wind around home only |
-| Temperature and air quality | Across the map, from Open-Meteo | Your own entity and sensor |
+| Temperature and air quality | Across the map, from Open-Meteo. Over the United States, southern Canada and northern Mexico, the air quality is drawn from [AirNow](https://www.airnow.gov/)'s monitors, which show one city's air beside the next | Your own entity and sensor |
 | Ground | OpenFreeMap's tiles through MapLibre, with OpenStreetMap's tiles behind them | OpenStreetMap's tiles |
 
 Set `map_tile_url` to use your own ground with either source. Add `map_layers` to overlay tiles from any service you use.

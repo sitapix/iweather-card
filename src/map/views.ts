@@ -2,6 +2,7 @@ import { drawRadarCoverage } from './coverage.ts';
 import { FORECAST_LABEL_STEP, RADAR_LABEL_STEP, RadarPreview } from './radar-preview.ts';
 import { type Drift, measureDrift, STILL } from './radar-drift.ts';
 import { clamp } from '../lib/values.ts';
+import { AIR_CONTOUR_CREDIT, airPoints, contourField, loadAirContours } from './air-contours.ts';
 // The map views: the map tile's, and the large one in its sheet. For each, what it shows and
 // where it looks, the data asked for it, and everything that moves on it.
 import type { CardConfig, MapLayerKind } from '../card/config.ts';
@@ -709,7 +710,23 @@ export class MapViews {
         grid.hours = got?.hours ?? null;
       } else {
         const request = (url: string) => fetch(url, { signal });
-        grid.hours = await (source === 'air' ? openMeteoAir(points, request) : openMeteoWind(points, request));
+        if (source === 'air') {
+          // Where monitors' contours reach the view they are drawn, fine, over the model's readings.
+          const fine = airPoints(points),
+            [model, contours] = await Promise.all([
+              openMeteoAir(points, request).catch(() => null),
+              fine ? loadAirContours().catch(() => null) : null,
+            ]),
+            field = fine && contours ? contourField(contours, fine, model?.aqi?.[0]) : null;
+          if (field && fine)
+            Object.assign(grid, {
+              hours: { times: [now], fields: [], aqi: [field] },
+              step: fine.step,
+              bounds: windBounds(fine),
+              credit: AIR_CONTOUR_CREDIT,
+            });
+          else grid.hours = model;
+        } else grid.hours = await openMeteoWind(points, request);
       }
     } catch {
       // A provider failure can retry in a minute. An abandoned view can retry immediately.
@@ -1569,7 +1586,9 @@ export class MapViews {
       dataCredit: [
         ...new Set([
           ahead.length > 0 ? HRRR_CREDIT : '',
-          grid?.hours ? (RAIN_MODELS.find(model => model.id === grid.model)?.credit ?? 'Open-Meteo') : '',
+          grid?.hours
+            ? (grid.credit ?? RAIN_MODELS.find(model => model.id === grid.model)?.credit ?? 'Open-Meteo')
+            : '',
         ]),
       ]
         .filter(Boolean)

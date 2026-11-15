@@ -230,6 +230,8 @@ export interface WindGrid {
   hours: WindHours | null;
   // For precipitation, the model it came from (see rainPlan).
   model?: string;
+  // Whose readings these are, where not Open-Meteo's or a model's.
+  credit?: string;
 }
 
 export const covers = (outer: Bounds, inner: Bounds): boolean =>
