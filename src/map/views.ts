@@ -426,7 +426,7 @@ export class MapViews {
   // The small map's pictures of its ground, by look and view (see drawStill); null where none could
   // be drawn; and the one being drawn.
   stills = new Map<string, GroundStill | null>();
-  private stillDrawing: AbortController | undefined;
+  private stillDrawing: { key: string; owner: HTMLElement | undefined; controller: AbortController } | undefined;
   // The picture last shown, which a view drawn afresh takes up until its own comes.
   lastStill: GroundStill | undefined;
   constructor(card: MapHost) {
@@ -504,7 +504,7 @@ export class MapViews {
   }
   // Invalidates an unfinished request when radar is disabled or the card leaves the page.
   invalidateRadar() {
-    this.stillDrawing?.abort();
+    this.stillDrawing?.controller.abort();
     this.stillDrawing = undefined;
     if (!this.card.isConnected) {
       this.mapVisibility?.disconnect();
@@ -1333,22 +1333,31 @@ export class MapViews {
   }
   // The picture of a small map's ground for a look and view (see drawStill): undefined while one is
   // on its way, null where none could be drawn.
-  stillFor(view: MapStillView, look: GroundLook): GroundStill | null | undefined {
+  stillFor(view: MapStillView, look: GroundLook, owner: HTMLElement): GroundStill | null | undefined {
     const { latitude, longitude, zoom, width, height, pixelRatio } = view,
       key = `${look}|${width}x${height}|${pixelRatio}|${latitude},${longitude},${zoom}`,
       still = this.stills.get(key);
-    if (still === undefined) void this.drawStill(key, view, look);
+    const drawing = this.stillDrawing;
+    if (drawing && (drawing.owner === owner || !drawing.owner?.isConnected)) {
+      if (drawing.key === key) drawing.owner = owner;
+      else {
+        drawing.controller.abort();
+        this.stillDrawing = undefined;
+      }
+    }
+    if (still === undefined) void this.drawStill(key, view, look, owner);
     return still;
   }
   // Draws the small map's ground for a look and view, one at a time, keeping the last few, and
   // fills the view again once it has it. Until then the ground it had stays.
-  async drawStill(key: string, view: MapStillView, look: GroundLook) {
+  async drawStill(key: string, view: MapStillView, look: GroundLook, owner?: HTMLElement) {
     const { card } = this;
     if (this.stillDrawing || !card.visible || document.hidden) return;
-    const controller = new AbortController();
-    this.stillDrawing = controller;
+    const controller = new AbortController(),
+      drawing = { key, owner, controller };
+    this.stillDrawing = drawing;
     const still = await groundStill(card.root, view, look, key, controller.signal);
-    if (this.stillDrawing === controller) this.stillDrawing = undefined;
+    if (this.stillDrawing === drawing) this.stillDrawing = undefined;
     if (controller.signal.aborted || !card.isConnected) {
       if (still) letGo(still);
       return;
@@ -1483,7 +1492,7 @@ export class MapViews {
     // Small, with the online map and no tiles of the user's own, the ground is a picture, once
     // drawn (see drawStill); OpenStreetMap's tiles where it can't be.
     const pictured = !large && config.map === 'rainviewer' && !config.map_tile_url,
-      wanted = pictured ? this.stillFor({ ...centre, width, height, pixelRatio }, look) : null;
+      wanted = pictured ? this.stillFor({ ...centre, width, height, pixelRatio }, look, view) : null;
     // A new ground is on its way: what's shown stays until it comes.
     if (wanted === undefined && view.querySelector('.map-still')) {
       this.drawn.delete(view);

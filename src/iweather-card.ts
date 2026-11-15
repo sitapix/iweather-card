@@ -624,6 +624,7 @@ export class IWeatherCard extends HTMLElement {
     // WebKit doesn't apply a sheet adopted before the card joined the page until something else
     // makes it look again, and a card laid out without one measures tens of thousands of px tall.
     if (sheet) this.root.adoptedStyleSheets = [sheet];
+    if (this.hasAttribute('data-page')) this.measureZoom();
     this._resize = new ResizeObserver(() => {
       this.fitHero();
       this._geometry = null;
@@ -1002,9 +1003,12 @@ export class IWeatherCard extends HTMLElement {
   drawTiles({ config, now, days, awaited, ctx, alerts, alertsLead, nextHour }: Update) {
     const container = this.parts.tiles,
       page = config.weather_layout === 'page';
+    const scaleChanged = page !== this.hasAttribute('data-page') || (page && config.size !== this.dataset['size']);
     this.toggleAttribute('data-page', page);
     if (page) this.dataset['size'] = config.size;
     else delete this.dataset['size'];
+    // The first map snapshot needs the page's CSS zoom before ResizeObserver delivers its first entry.
+    if (scaleChanged && this.isConnected) this.measureZoom();
     // A tall daily list spans enough rows for its days; the grid's tiers place it. It takes the room
     // of the days on their way from the start, so that their coming moves only its own rows, not
     // the page around it as it is first read.

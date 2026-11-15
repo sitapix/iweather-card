@@ -357,6 +357,8 @@ test('a cold mini map shows raster tiles while the styled map is loading', async
   );
   const card = await mapped();
   expect(card.root.querySelector('.radar-layer.base.osm img[src]')).not.toBeNull();
+  const measured = card.measureZoom() * (devicePixelRatio || 1);
+  expect(vi.mocked(groundStill).mock.calls.every(([, view]) => view.pixelRatio === measured)).toBe(true);
   finish(STILL);
   await vi.waitFor(() => expect(stills(card)).toHaveLength(2));
   expect(card.root.querySelector('.radar-layer.base.osm img')).toBeNull();

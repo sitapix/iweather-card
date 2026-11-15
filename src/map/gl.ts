@@ -648,7 +648,8 @@ export interface GroundStill {
   ground: string;
   names: string;
 }
-const STILL_WAIT = 10_000;
+const STILL_WAIT = 10_000,
+  VIEW_SETTLE = 200;
 // Room kept clear of names: around home, for the pin and its name under it; along the foot, for
 // the credit; and from a region's scale in, a hairline just outside the top and sides, so a name
 // that would run past them moves to another side of its dot, or gives way, rather than being cut.
@@ -883,6 +884,10 @@ export async function groundStill(
   const saved = await keptStill(key);
   if (cancelled()) return null;
   if (saved) return urls(saved);
+  // The first forecast and dashboard layout can both change the initial view.
+  // Raster tiles are already visible while the view settles.
+  await new Promise<void>(done => window.setTimeout(done, VIEW_SETTLE));
+  if (cancelled()) return null;
   const maplibre = await loadMapLibre(root);
   if (!maplibre || cancelled()) return null;
   const { latitude, longitude, zoom, width, height, pixelRatio } = view;
