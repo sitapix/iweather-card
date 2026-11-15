@@ -11,6 +11,13 @@ export const COORDINATE_DIGITS = 3;
 export const atPlace = (latitude: number, longitude: number): string =>
   `latitude=${latitude.toFixed(COORDINATE_DIGITS)}&longitude=${longitude.toFixed(COORDINATE_DIGITS)}`;
 
+// AirNow: the latest contours of the US air quality index, each area's band as `gridcode`, in
+// degrees to a hundredth, thinned to corners two hundredths apart.
+export const AIRNOW = {
+  contours:
+    'https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services/AirNowLatestContoursCombined/FeatureServer/0/query?where=1%3D1&outFields=gridcode&outSR=4326&geometryPrecision=2&maxAllowableOffset=0.02&f=geojson',
+} as const;
+
 // RainViewer: its radar frames, and the tiles of where its radar reaches, black where it has
 // nothing and see-through where it reaches: one tile, or with `{z}`, `{x}` and `{y}` the template
 // a map fills in.

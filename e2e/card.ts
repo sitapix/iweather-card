@@ -135,6 +135,9 @@ function answer(route: Route, faults: string[]) {
     return route.fulfill({ json: url.searchParams.has('daily') ? supplement() : wind(url) });
   if (url.hostname === 'air-quality-api.open-meteo.com') return route.fulfill({ json: air() });
   if (url.hostname === 'api.weather.gov') return route.fulfill({ json: { type: 'FeatureCollection', features: [] } });
+  // The air's contours: none drawn, so the air map shows the model's readings.
+  if (url.hostname === 'services.arcgis.com')
+    return route.fulfill({ json: { type: 'FeatureCollection', features: [] } });
   if (url.hostname === 'hrrrzarr.s3.amazonaws.com') return route.fulfill({ body: hrrr(url) });
   // The short forecast's run, which a small map over the United States asks for: none published.
   if (url.hostname === 'mesonet.agron.iastate.edu') return route.fulfill({ json: {} });
