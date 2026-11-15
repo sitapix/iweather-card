@@ -319,7 +319,6 @@
   "Normal range: {low}° to {high}°": "正常範圍：{low}° 至 {high}°",
   "Now": "目前",
   "Now, {time}": "目前，{time}",
-  "Observed radar": "雷達實況",
   "On {day}, the average humidity will be {average}%.": "{day}的平均濕度將為 {average}%。",
   "On {day}, the average pressure will be {average} all day.": "{day}全天平均氣壓將為 {average}。",
   "On {day}, the average pressure will be {average}, and the lowest pressure will be {low}.": "{day}的平均氣壓將為 {average}，最低氣壓為 {low}。",

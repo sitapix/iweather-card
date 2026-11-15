@@ -128,9 +128,17 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
-test("the large map tells the radar's time on its timeline", async () => {
-  const large = await openMap(await page({}));
-  expect(large.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
+test('the observation-only precipitation timeline centers Forecast between its controls', async () => {
+  const card = await page({});
+  await openMap(card);
+  const heading = part(card, '.radar.large .wind-when'),
+    label = heading.getBoundingClientRect(),
+    rail = part(card, '.radar.large .wind-rail').getBoundingClientRect();
+  expect(heading.querySelector('b')?.textContent).toBe('Forecast');
+  expect(getComputedStyle(heading).textAlign).toBe('center');
+  expect(Math.abs(label.left + label.right - rail.left - rail.right)).toBeLessThan(2);
+  expect(part(card, '.radar.large .wind-play').getBoundingClientRect().right).toBeLessThanOrEqual(label.left);
+  expect(part(card, '.radar.large .map-span').getBoundingClientRect().left).toBeGreaterThanOrEqual(label.right);
 });
 
 test('the arrow keys slide the large map an eighth of its size, and it is drawn there at rest', async () => {
@@ -199,7 +207,7 @@ test('the native time range supports keyboard endpoints, vertical arrows and ass
   press(track, 'Home');
   expect(track.valueAsNumber).toBe(0);
   expect(track.getAttribute('aria-valuetext')).toBe(
-    `Observed radar, ${new Intl.DateTimeFormat('en', {
+    `Forecast, ${new Intl.DateTimeFormat('en', {
       weekday: 'long',
       month: 'long',
       day: 'numeric',

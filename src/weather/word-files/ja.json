@@ -319,7 +319,6 @@
   "Normal range: {low}° to {high}°": "通常の範囲: {low}°〜{high}°",
   "Now": "現在",
   "Now, {time}": "現在、{time}",
-  "Observed radar": "レーダー観測",
   "On {day}, the average humidity will be {average}%.": "{day}の平均湿度は{average}%の見込みです。",
   "On {day}, the average pressure will be {average} all day.": "{day}の気圧は終日平均{average}の見込みです。",
   "On {day}, the average pressure will be {average}, and the lowest pressure will be {low}.": "{day}の平均気圧は{average}、最低気圧は{low}の見込みです。",

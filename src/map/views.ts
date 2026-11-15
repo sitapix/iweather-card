@@ -1000,7 +1000,7 @@ export class MapViews {
       ? {
           times: [...frames, ...ahead].map(frame => frame.time),
           step: RADAR_STEP,
-          title: phrase('Observed radar'),
+          title: phrase('Forecast'),
           clock: true,
           span: '1h',
         }
@@ -1021,7 +1021,7 @@ export class MapViews {
       const frame = Math.round(at),
         selected = shown.times[frame] ?? time,
         forecast = shown.span === '1h' && frame >= (this.radar?.frames.length ?? 0),
-        title = forecast ? say('Forecast') : say(shown.title),
+        title = say(shown.title),
         clock = { hour: 'numeric', minute: '2-digit', timeZone: ctx.timeZone, hour12: ctx.hour12 } as const,
         date = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: ctx.timeZone } as const;
       view.toggleAttribute('data-forecast', forecast);

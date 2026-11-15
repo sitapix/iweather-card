@@ -349,7 +349,6 @@
   "Normal range: {low}° to {high}°": "Normalbereich: {low}° bis {high}°",
   "Now": "Jetzt",
   "Now, {time}": "Jetzt, {time}",
-  "Observed radar": "Radarbeobachtungen",
   "On {day}, the average humidity will be {average}%.": "Am {day} liegt die durchschnittliche Luftfeuchtigkeit bei {average} %.",
   "On {day}, the average pressure will be {average} all day.": "Am {day} liegt der durchschnittliche Luftdruck den ganzen Tag bei {average}.",
   "On {day}, the average pressure will be {average}, and the lowest pressure will be {low}.": "Am {day} liegt der durchschnittliche Luftdruck bei {average}, der niedrigste bei {low}.",

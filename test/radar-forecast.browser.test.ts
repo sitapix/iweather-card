@@ -150,7 +150,7 @@ test('a real IEM forecast tile decodes without mistaking its palette for RainVie
   expect(new Set(levels).size).toBeGreaterThan(5);
 });
 
-test('the live map uses real future tiles, identifies each frame’s source, and seeks by valid time', async () => {
+test('the live map keeps its Forecast heading while seeking between observed and modeled frames', async () => {
   const card = await openMap();
   await vi.waitFor(() => expect(card.maps.shortForecast?.data?.run).toBe(run));
   const view = card.maps.largeView();
@@ -168,9 +168,9 @@ test('the live map uses real future tiles, identifies each frame’s source, and
   ]);
   card.maps.timelineTime = last;
   card.maps.syncWindTime();
-  expect(view.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
   const track = view.querySelector('.wind-track');
-  expect(track?.getAttribute('aria-valuetext')).toMatch(/^Observed radar, /);
+  expect(track?.getAttribute('aria-valuetext')).toMatch(/^Forecast, /);
   expect([...view.querySelectorAll<HTMLAnchorElement>('.map-attribution a')].map(link => link.hostname)).toEqual([
     'openfreemap.org',
     'openmaptiles.org',
@@ -179,7 +179,7 @@ test('the live map uses real future tiles, identifies each frame’s source, and
   card.maps.timelineTime = last + (run + 135 * MINUTE - last) / 4;
   card.maps.syncWindTime();
   expect(view.hasAttribute('data-forecast')).toBe(false);
-  expect(view.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
   track?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
   expect(card.maps.timelineTime).toBe(run + 135 * MINUTE);
   expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
@@ -191,7 +191,8 @@ test('the live map uses real future tiles, identifies each frame’s source, and
   expect(card.maps.gl?.map.getLayoutProperty('radar-gaps', 'visibility')).toBe('none');
   track?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
   expect(card.maps.timelineTime).toBe(last);
-  expect(view.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
+  expect(view.hasAttribute('data-forecast')).toBe(false);
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
 });
 
 test('the live map exposes the same four pan directions as the raster fallback', async () => {
@@ -226,7 +227,8 @@ test('a failed model tile removes future times instead of substituting the last 
   const view = card.maps.largeView();
   if (!view) throw new Error('No map');
   expect(card.maps.timelineOf(view)?.times.at(-1)).toBe(last);
-  expect(view.querySelector('.wind-when b')?.textContent).toBe('Observed radar');
+  expect(view.hasAttribute('data-forecast')).toBe(false);
+  expect(view.querySelector('.wind-when b')?.textContent).toBe('Forecast');
 });
 
 test('panning beyond the model domain removes future frames and restores the observed timeline', async () => {
@@ -263,6 +265,19 @@ test('the live 12-hour map replaces its first frame as forecast hours arrive and
   const card = await openMap();
   card.maps.chooseSpan('12h');
   await vi.waitFor(() => expect(vi.mocked(showRainSlots).mock.lastCall?.[1]).toHaveLength(1));
+  card.maps.timelineTime = first;
+  card.maps.syncWindTime();
+  const heading = card.maps.largeView()?.querySelector('.wind-when');
+  expect(heading?.querySelector('b')?.textContent).toBe('Forecast');
+  expect(heading?.querySelector('span')?.textContent).toBe(
+    new Intl.DateTimeFormat('en', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'America/Chicago',
+    }).format(first),
+  );
   finish();
   await vi.waitFor(() => expect(vi.mocked(showRainSlots).mock.lastCall?.[1]).toHaveLength(3));
   const map = card.maps.gl?.map;
