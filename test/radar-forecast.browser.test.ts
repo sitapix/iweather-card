@@ -231,6 +231,8 @@ test('a restored map reattaches both precipitation layers and resumes on the sam
   await lost;
   expect(card.maps.gl).toBeUndefined();
   card.maps.syncWindTime();
+  // A context can be given back only once the loss has been told in full, a task later.
+  await new Promise(done => setTimeout(done, 0));
   loss.restoreContext();
   await vi.waitFor(() => {
     expect(card.maps.gl?.map).toBe(map);

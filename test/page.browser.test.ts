@@ -253,6 +253,8 @@ test('a weather refresh preserves the open menu, focused choice and native timel
   expect(trigger.getAttribute('aria-expanded')).toBe('true');
   expect(card.root.activeElement).toBe(choice);
   choice.click();
+  // The wind's hours across the map come a moment after its layer is chosen, and its timeline with them.
+  await vi.waitFor(() => expect(part(card, '.radar.large input[type=range]')).toBeTruthy());
   const wind = part(card, '.radar.large'),
     track = part(card, '.radar.large input[type=range]');
   track.focus();

@@ -396,7 +396,8 @@ test('the ground is a picture, with the radar between it and the names', async (
   });
   expect(stills(card)[0]).toBe(ground);
   // A weather redraw can rebuild every frame while the ground and place names stay decoded.
-  const view = frame?.closest<HTMLElement>('.radar'),
+  // The frame that faded in took the first one's place, so the map is found from the ground.
+  const view = ground?.closest<HTMLElement>('.radar'),
     pan = view?.querySelector('.map-pan');
   if (!view || !pan) throw new Error('No precipitation map.');
   card.maps.drawn.delete(view);
