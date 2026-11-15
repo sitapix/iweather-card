@@ -1,7 +1,7 @@
 import { cloudAtlasWidth, cloudAtlasHeight, spriteRect } from './clouds.ts';
 import { type CloudAtlas, type Direction, type Tint, decode, lightWeights } from './cloud-decks.ts';
 import { context2d } from '../lib/canvas.ts';
-import { linkedProgram } from '../lib/webgl.ts';
+import { linkedProgram, unitQuad } from '../lib/webgl.ts';
 import { skyGl } from './sky-gl.ts';
 
 // Signed light maps and an opacity mask draw into the shared sky context.
@@ -115,17 +115,9 @@ export class CloudPainter {
     const width = cloudAtlasWidth(),
       plane = cloudAtlasHeight();
     if (Math.max(width, plane) > gl.getParameter(gl.MAX_TEXTURE_SIZE)) return false;
-    const program = linkedProgram(gl, 'cloud', VERTEX, FRAGMENT),
-      shape = gl.createVertexArray(),
-      corners = gl.createBuffer();
+    const program = linkedProgram(gl, 'cloud', VERTEX, FRAGMENT, ['a']),
+      { shape, corners } = unitQuad(gl);
     gl.useProgram(program);
-    gl.bindVertexArray(shape);
-    gl.bindBuffer(gl.ARRAY_BUFFER, corners);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
-    const a = gl.getAttribLocation(program, 'a');
-    gl.enableVertexAttribArray(a);
-    gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-    gl.bindVertexArray(null);
     const at = (name: Uniform) => gl.getUniformLocation(program, name),
       uniforms: Record<Uniform, WebGLUniformLocation | null> = {
         uQuad: at('uQuad'),

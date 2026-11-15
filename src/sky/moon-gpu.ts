@@ -1,5 +1,5 @@
 import { context2d } from '../lib/canvas.ts';
-import { linkedOrNull } from '../lib/webgl.ts';
+import { linkedOrNull, unitQuad } from '../lib/webgl.ts';
 import { skyGl } from './sky-gl.ts';
 
 // The tile and sheet moons, drawn on the GPU: a sphere wrapped in the near side's
@@ -47,8 +47,9 @@ const GLSL_DIGITS = 3;
 const glsl = (value: number) => value.toFixed(GLSL_DIGITS);
 
 const VERTEX = `#version 300 es
+in vec2 corner;
 void main() {
-  gl_Position = vec4(float(gl_VertexID & 1) * 2.0 - 1.0, float(gl_VertexID >> 1) * 2.0 - 1.0, 0.0, 1.0);
+  gl_Position = vec4(corner * 2.0 - 1.0, 0.0, 1.0);
 }`;
 const FRAGMENT = `#version 300 es
 precision highp float;
@@ -150,14 +151,14 @@ void main() {
 }`;
 // How far the baked normals lean, where 1 is as baked (relief already exaggerated threefold).
 const STRENGTH = 1.4;
-// The canvas is covered by one square, drawn as a strip of two triangles: its four corners
-// (the vertex shader places each from its index).
+// The canvas is covered by one square, drawn as a strip of two triangles.
 const CORNERS = 4;
 
 interface Gpu {
   gl: WebGL2RenderingContext;
   canvas: HTMLCanvasElement;
   program: WebGLProgram;
+  shape: WebGLVertexArrayObject;
   relief: WebGLTexture;
   at: Record<'size' | 'sun' | 'turn' | 'strength' | 'bright' | 'screened', WebGLUniformLocation | null>;
 }
@@ -166,7 +167,7 @@ let gpu: Promise<Gpu | null> | undefined;
 function setUp(): Promise<Gpu | null> {
   gpu ??= new Promise(resolve => {
     const sky = skyGl(true),
-      program = sky && linkedOrNull(sky.gl, 'moon', VERTEX, FRAGMENT);
+      program = sky && linkedOrNull(sky.gl, 'moon', VERTEX, FRAGMENT, ['corner']);
     if (!sky || !program) {
       resolve(null);
       return;
@@ -195,6 +196,7 @@ function setUp(): Promise<Gpu | null> {
         gl,
         canvas,
         program,
+        shape: unitQuad(gl).shape,
         relief,
         at: {
           size: at('size'),
@@ -237,7 +239,7 @@ export async function drawMoonGpu(
     canvas.height = Math.max(canvas.height, size);
   }
   gl.useProgram(set.program);
-  gl.bindVertexArray(null);
+  gl.bindVertexArray(set.shape);
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D, set.relief);
   gl.disable(gl.BLEND);
@@ -252,6 +254,7 @@ export async function drawMoonGpu(
   gl.uniform1i(at.bright, print === 'tile' ? 1 : 0);
   gl.uniform1i(at.screened, print === 'calendar' ? 1 : 0);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, CORNERS);
+  gl.bindVertexArray(null);
   const ctx = context2d(target);
   ctx.clearRect(0, 0, size, size);
   ctx.drawImage(canvas, 0, canvas.height - size, size, size, 0, 0, size, size);

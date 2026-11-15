@@ -219,6 +219,27 @@ test('the live map exposes the same four pan directions as the raster fallback',
   }
 });
 
+test('a restored map reattaches both precipitation layers and resumes on the same canvas', async () => {
+  const card = await openMap(),
+    map = card.maps.gl?.map;
+  if (!map) throw new Error('No live map');
+  const loss = map.getCanvas().getContext('webgl2')?.getExtension('WEBGL_lose_context');
+  if (!loss) throw new Error('Cannot simulate context loss');
+  await vi.waitFor(() => expect(map.getLayer('rain-radar')).toBeDefined());
+  const lost = new Promise<void>(done => map.on('webglcontextlost', done));
+  loss.loseContext();
+  await lost;
+  expect(card.maps.gl).toBeUndefined();
+  card.maps.syncWindTime();
+  loss.restoreContext();
+  await vi.waitFor(() => {
+    expect(card.maps.gl?.map).toBe(map);
+    expect(map.getLayer('rain-radar')).toBeDefined();
+    expect(map.getLayer('rain-forecast')).toBeDefined();
+  });
+  await vi.waitFor(() => expect(card.maps.shortForecast?.data?.run).toBe(run));
+});
+
 test('a failed model tile removes future times instead of substituting the last observation', async () => {
   failTiles = true;
   const card = await openMap();

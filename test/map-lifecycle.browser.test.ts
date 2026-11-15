@@ -149,6 +149,8 @@ test('a replacement that loses its context too gives way to the card tiles', asy
   await vi.waitFor(() => expect(maps.glFailed).toBe(true), { timeout: GL_LOST_WAIT * 2 });
   expect(newMap).toHaveBeenCalledOnce();
   expect(maps.glPending).toBeUndefined();
+  maps.opening();
+  expect(maps.glFailed).toBe(false);
 });
 
 test('closing a map while its library is loading prevents a late map from being created', async () => {

@@ -11,15 +11,16 @@
 import { tilePoint, type ScalarField } from './sources.ts';
 import { scaleColour, RADAR_NONE, type Stop } from './field.ts';
 import { fieldGaps } from './coverage.ts';
-import { linkedOrNull } from '../lib/webgl.ts';
+import { linkedOrNull, unitQuad } from '../lib/webgl.ts';
 
 // The most stops a scale has, and a reading's colour between two of them blended from both.
 const STOPS = 12;
 const VERTEX = `#version 300 es
+in vec2 corner;
 uniform mat4 matrix;
 out vec2 place;
 void main() {
-  place = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1));
+  place = corner;
   gl_Position = matrix * vec4(place, 0.0, 1.0);
 }`;
 const FRAGMENT = `#version 300 es
@@ -128,8 +129,9 @@ const UNIFORMS = [
 ] as const;
 type Uniform = (typeof UNIFORMS)[number];
 
-// A quad is drawn as a strip of two triangles: its four corners (the vertex shader places each).
+// A quad is drawn as a strip of two triangles.
 const CORNERS = 4;
+const CLEAR_READING = new Float32Array([0, 0, 0, 0]);
 // A mat4's side, and the byte a channel's reading is stored in.
 const MAT = 4,
   BYTE = 255;
@@ -189,7 +191,7 @@ interface Mosaic {
   y: number;
   cols: number;
   rows: number;
-  texture: WebGLTexture;
+  texture: WebGLTexture | undefined;
   held: Held[];
   mipmapped: boolean;
 }
@@ -215,14 +217,15 @@ const mercatorY = (latitude: number) => {
 interface Gpu {
   gl: WebGL2RenderingContext;
   program: WebGLProgram;
-  shapes: WebGLVertexArrayObject;
+  shape: WebGLVertexArrayObject;
+  corners: WebGLBuffer;
   read: WebGLFramebuffer;
   write: WebGLFramebuffer;
   at: Record<Uniform, WebGLUniformLocation | null>;
   largest: number;
 }
 function setUp(gl: WebGL2RenderingContext): Gpu | null {
-  const program = linkedOrNull(gl, 'rain map', VERTEX, FRAGMENT);
+  const program = linkedOrNull(gl, 'rain map', VERTEX, FRAGMENT, ['corner']);
   if (!program) return null;
   const at = Object.fromEntries(
     UNIFORMS.map(name => [
@@ -234,7 +237,7 @@ function setUp(gl: WebGL2RenderingContext): Gpu | null {
   return {
     gl,
     program,
-    shapes: gl.createVertexArray(),
+    ...unitQuad(gl),
     read: gl.createFramebuffer(),
     write: gl.createFramebuffer(),
     at: {
@@ -272,6 +275,18 @@ function readings(gl: WebGL2RenderingContext, width: number, height: number, hal
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return texture;
+}
+// Partial tile uploads and overlap copies need a defined, dry background in the rest of level zero.
+function emptyMosaic({ gl, write }: Gpu, range: Range) {
+  const texture = readings(gl, range.cols * TILE, range.rows * TILE, null);
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, write);
+  gl.framebufferTexture2D(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+  gl.disable(gl.SCISSOR_TEST);
+  gl.colorMask(true, true, true, true);
+  gl.clearBufferfv(gl.COLOR, 0, CLEAR_READING);
+  gl.framebufferTexture2D(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
   return texture;
 }
 // The map's matrix, which takes its world's pixels, made to take a quad's corners from 0 to 1: a
@@ -328,6 +343,7 @@ export class RainLayer {
   private readonly come = new Map<string, Uint8Array | null>();
   private readonly asked = new Map<string, AbortController>();
   private readonly failed = new Map<string, { at: number; wait: number }>();
+  private readonly retries = new Set<number>();
   private removed = false;
   // Forecast frames may not fall back to an earlier observation when their tiles are missing.
   private forecastFrom = Infinity;
@@ -337,14 +353,6 @@ export class RainLayer {
     this.id = id;
     this.map = map;
     this.load = load;
-    // A context lost and given back is the same context with nothing in it: all of it is made again.
-    map.getCanvas().addEventListener('webglcontextrestored', () => {
-      this.gpu = undefined;
-      this.mosaics.clear();
-      this.dropped = [];
-      this.gridTextures = [];
-      this.gridDrawn = [];
-    });
   }
   // Observed and forecast frames by tile address, in `stops`. Empty hides them, keeping tiles
   // for when they return; frames that have gone are let go.
@@ -356,7 +364,7 @@ export class RainLayer {
     if (templates.length)
       for (const [template, mosaic] of this.mosaics)
         if (!templates.includes(template)) {
-          this.dropped.push(mosaic.texture);
+          if (mosaic.texture) this.dropped.push(mosaic.texture);
           this.mosaics.delete(template);
         }
     this.map.triggerRepaint();
@@ -396,13 +404,37 @@ export class RainLayer {
       view = { north: bounds.getNorth(), south: bounds.getSouth(), west: bounds.getWest(), east: bounds.getEast() };
     return fieldGaps(this.grid[from], view) || (share > 0 && fieldGaps(this.grid[to], view));
   }
+  onAdd() {
+    this.removed = false;
+  }
   onRemove() {
     this.removed = true;
     for (const asked of this.asked.values()) asked.abort();
     this.asked.clear();
+    for (const timer of this.retries) window.clearTimeout(timer);
+    this.retries.clear();
+    this.come.clear();
+    this.failed.clear();
+    const gpu = this.gpu;
+    if (gpu && !gpu.gl.isContextLost()) {
+      const { gl } = gpu;
+      for (const { texture } of this.mosaics.values()) if (texture) gl.deleteTexture(texture);
+      for (const texture of [...this.gridTextures, ...this.dropped]) gl.deleteTexture(texture);
+      gl.deleteFramebuffer(gpu.read);
+      gl.deleteFramebuffer(gpu.write);
+      gl.deleteVertexArray(gpu.shape);
+      gl.deleteBuffer(gpu.corners);
+      gl.deleteProgram(gpu.program);
+    }
+    this.gpu = undefined;
+    this.mosaics.clear();
+    this.dropped = [];
+    this.gridTextures = [];
+    this.gridDrawn = [];
   }
   // Before the map is drawn: the textures made ready, for which this may draw into them.
   prerender(gl: WebGL2RenderingContext) {
+    if (this.gpu === null || (!this.gpu && !this.grid.length && !this.radar.length)) return;
     if (this.gpu?.gl !== gl) {
       this.gpu = setUp(gl);
       this.mosaics.clear();
@@ -451,10 +483,12 @@ export class RainLayer {
     }
     const mosaics = this.radar.map(template => this.mosaics.get(template));
     if (!this.readyAt(this.at)) return;
-    const [from, to, share] = this.pair(this.radar.length, i => mosaics[i]?.held.every(whole) === true),
+    // While observations reload, an observed timestamp may only use another observation.
+    const count = this.at <= this.forecastFrom - 1 ? Math.min(this.forecastFrom, this.radar.length) : this.radar.length,
+      [from, to, share] = this.pair(count, i => mosaics[i]?.held.every(whole) === true),
       a = mosaics[from],
       b = mosaics[to];
-    if (!a || !b || !a.held.some(held => held !== 'none')) return;
+    if (!a?.texture || !b?.texture || !a.held.some(held => held !== 'none')) return;
     const across = 2 ** a.z;
     this.draw(gpu, input, world, {
       quad: { x: a.x / across, y: a.y / across, width: a.cols / across, height: a.rows / across },
@@ -502,7 +536,7 @@ export class RainLayer {
   ) {
     const { gl, at } = gpu;
     gl.useProgram(gpu.program);
-    gl.bindVertexArray(gpu.shapes);
+    gl.bindVertexArray(gpu.shape);
     look.textures.forEach((texture, unit) => {
       gl.activeTexture(gl.TEXTURE0 + unit);
       gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -602,6 +636,7 @@ export class RainLayer {
         if (!this.come.has(url)) return;
         const readings = this.come.get(url) ?? new Uint8Array(TILE * TILE);
         this.come.delete(url);
+        mosaic.texture ??= emptyMosaic(gpu, range);
         gl.bindTexture(gl.TEXTURE_2D, mosaic.texture);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
@@ -622,7 +657,7 @@ export class RainLayer {
       });
       // Once per changed forecast mosaic, across tile joins. Repaints and timeline scrubbing
       // reuse these averages; observed radar keeps its existing texture and interpolation.
-      if (frame >= this.forecastFrom && !mosaic.mipmapped) {
+      if (frame >= this.forecastFrom && mosaic.texture && !mosaic.mipmapped && mosaic.held.every(whole)) {
         gl.bindTexture(gl.TEXTURE_2D, mosaic.texture);
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
@@ -668,9 +703,11 @@ export class RainLayer {
       const wait = failedWait(this.failed.get(url)?.wait);
       this.failed.set(url, { at: Date.now(), wait });
       // Asked for again once its wait is up, even if nothing else draws the map before then.
-      setTimeout(() => {
+      const timer = window.setTimeout(() => {
+        this.retries.delete(timer);
         if (!this.removed) this.map.triggerRepaint();
       }, wait);
+      this.retries.add(timer);
     } finally {
       if (this.asked.get(url) === asked) this.asked.delete(url);
     }
@@ -680,9 +717,9 @@ export class RainLayer {
   // come.
   private remake(gpu: Gpu, range: Range, was: Mosaic | undefined): Mosaic {
     const { gl } = gpu,
-      texture = readings(gl, range.cols * TILE, range.rows * TILE, null),
       held: Held[] = Array.from({ length: range.cols * range.rows }, () => 'none');
-    if (was) {
+    let texture: WebGLTexture | undefined;
+    if (was?.texture) {
       // Both in the new range's texels.
       const scale = 2 ** (range.z - was.z),
         left = Math.max(0, (was.x * scale - range.x) * TILE),
@@ -690,6 +727,7 @@ export class RainLayer {
         right = Math.min(range.cols, (was.x + was.cols) * scale - range.x) * TILE,
         bottom = Math.min(range.rows, (was.y + was.rows) * scale - range.y) * TILE;
       if (right > left && bottom > top) {
+        texture = emptyMosaic(gpu, range);
         const back = (value: number, origin: number, from: number) => (value / TILE + origin) / scale - from;
         // A copy is cut to the scissor's box, which the map may have left set.
         gl.disable(gl.SCISSOR_TEST);

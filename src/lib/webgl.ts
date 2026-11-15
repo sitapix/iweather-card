@@ -54,3 +54,18 @@ export function linkedOrNull(...args: Parameters<typeof linkedProgram>): WebGLPr
     return null;
   }
 }
+
+// The four corners of a unit square, drawn as a triangle strip. Attribute zero is backed by
+// vertex data on every draw, including on desktop OpenGL implementations.
+export function unitQuad(gl: WebGL2RenderingContext) {
+  const shape = gl.createVertexArray(),
+    corners = gl.createBuffer();
+  gl.bindVertexArray(shape);
+  gl.bindBuffer(gl.ARRAY_BUFFER, corners);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+  gl.bindBuffer(gl.ARRAY_BUFFER, null);
+  return { shape, corners };
+}

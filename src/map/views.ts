@@ -473,6 +473,7 @@ export class MapViews {
   }
   // The map opens anew each time, not on a sheet that already shows it (see opensAt).
   opening() {
+    if (this.glReplaced) this.glFailed = false;
     this.glReplaced = false;
     this.opens = undefined;
     this.pin = 'open';
@@ -797,7 +798,8 @@ export class MapViews {
     // may take a hidden page's. One given back MapLibre draws again. One still gone a moment after
     // the page is in view is replaced by a new map; if that loses its own too, the card's own tiles
     // stand in for the live ground.
-    let lostWait: number | undefined;
+    let lostWait: number | undefined,
+      recovering = false;
     const replace = () => {
       if (this.glRequest !== request) return;
       const again = this.glReplaced;
@@ -811,17 +813,46 @@ export class MapViews {
     };
     const waitInView = () => {
       window.clearTimeout(lostWait);
-      lostWait = window.setTimeout(replace, GL_LOST_WAIT);
+      if (!document.hidden) lostWait = window.setTimeout(replace, GL_LOST_WAIT);
     };
     const forget = () => {
       window.clearTimeout(lostWait);
       document.removeEventListener('visibilitychange', waitInView);
     };
+    const useGround = () => {
+      if (this.glRequest !== request || this.glPending?.map !== map) return;
+      recovering = false;
+      forget();
+      this.glLoading = false;
+      const shown = this.largeView();
+      if (!shown || !this.card.isConnected) {
+        this.stopGl();
+        return;
+      }
+      this.glPending = undefined;
+      this.gl = { map, container };
+      this.drawn.delete(shown);
+      this.draw();
+    };
     map.on('webglcontextlost', () => {
-      if (document.hidden) document.addEventListener('visibilitychange', waitInView, { once: true });
-      else waitInView();
+      if (this.glRequest !== request) return;
+      recovering = true;
+      this.gl = undefined;
+      this.glPending = { map, container };
+      this.glLoading = true;
+      this.glField = undefined;
+      document.addEventListener('visibilitychange', waitInView);
+      waitInView();
+      this.draw();
     });
-    map.on('webglcontextrestored', forget);
+    // Restoring the context starts an asynchronous style rebuild. The raster map covers that
+    // interval, including redraws and timeline input while the style has no layers.
+    map.on('webglcontextrestored', () => {
+      if (recovering) waitInView();
+    });
+    map.on('style.load', () => {
+      if (recovering) useGround();
+    });
     map.on('remove', forget);
     // Its own pinch stays on for the styles it gives the ground, which keep the page from zooming
     // under two fingers, but never sees them: the card's pinch takes them first (see bindPinch).
@@ -896,19 +927,7 @@ export class MapViews {
     );
     // It takes over once its style and first tiles have come, the card's own tiles in front till
     // then; if the sheet has closed meanwhile, it goes.
-    map.on('load', () => {
-      if (this.glRequest !== request) return;
-      this.glLoading = false;
-      const shown = this.largeView();
-      if (!shown || !this.card.isConnected) {
-        this.stopGl();
-        return;
-      }
-      this.glPending = undefined;
-      this.gl = { map, container };
-      this.drawn.delete(shown);
-      this.draw();
-    });
+    map.on('load', useGround);
   }
   // A colour field in the live ground, made into an image only when it is a new one.
   showGlField(map: GlMap, field: ScalarField | undefined, stops: readonly Stop[]) {

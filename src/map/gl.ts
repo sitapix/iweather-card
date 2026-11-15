@@ -31,7 +31,16 @@ interface GlLayer {
 }
 export interface GlMap {
   on(
-    event: 'load' | 'movestart' | 'move' | 'moveend' | 'idle' | 'remove' | 'webglcontextlost' | 'webglcontextrestored',
+    event:
+      | 'load'
+      | 'style.load'
+      | 'movestart'
+      | 'move'
+      | 'moveend'
+      | 'idle'
+      | 'remove'
+      | 'webglcontextlost'
+      | 'webglcontextrestored',
     listener: () => void,
   ): unknown;
   once(event: 'load' | 'idle', listener: () => void): unknown;
@@ -123,14 +132,6 @@ const isMapLibre = (value: unknown): value is MapLibre =>
   typeof value.Map === 'function' &&
   'addProtocol' in value &&
   typeof value.addProtocol === 'function';
-// Asked once, on a context let go at once rather than left to count against the page's.
-const webGl = () => {
-  const gl =
-    document.createElement('canvas').getContext('webgl2') ?? document.createElement('canvas').getContext('webgl');
-  gl?.getExtension('WEBGL_lose_context')?.loseContext();
-  return Boolean(gl);
-};
-
 let loading: Promise<MapLibre | null> | undefined;
 // MapLibre, its styles put in `root` (they don't reach into a shadow root from the page).
 export function loadMapLibre(root: ShadowRoot): Promise<MapLibre | null> {
@@ -141,16 +142,17 @@ export function loadMapLibre(root: ShadowRoot): Promise<MapLibre | null> {
     link.dataset['maplibre'] = '';
     root.append(link);
   }
-  loading ??= webGl()
-    ? import(/* @vite-ignore */ mapLibre(__MAPLIBRE__.script)).then(
-        (module: unknown) => {
-          if (!isMapLibre(module)) return null;
-          module.addProtocol(GAP_SCHEME, gapTile);
-          return module;
-        },
-        () => null,
-      )
-    : Promise.resolve(null);
+  loading ??=
+    typeof WebGL2RenderingContext !== 'undefined'
+      ? import(/* @vite-ignore */ mapLibre(__MAPLIBRE__.script)).then(
+          (module: unknown) => {
+            if (!isMapLibre(module)) return null;
+            module.addProtocol(GAP_SCHEME, gapTile);
+            return module;
+          },
+          () => null,
+        )
+      : Promise.resolve(null);
   return loading;
 }
 
@@ -578,8 +580,6 @@ function rainOf(map: GlMap) {
       }),
       forecast: new RainLayer(RAIN.forecast, map, radarReadings),
     };
-    map.addLayer(layers.radar, firstOf(map, 'symbol'));
-    map.addLayer(layers.forecast, firstOf(map, 'line'));
     rainLayers.set(map, layers);
     // Tiles on their way stop coming once the map has gone.
     const { radar, forecast } = layers;
@@ -588,6 +588,9 @@ function rainOf(map: GlMap) {
       forecast.onRemove();
     });
   }
+  // A restored style contains its basemap and sources again. Custom layers must be reattached.
+  if (!map.getLayer(RAIN.radar)) map.addLayer(layers.radar, firstOf(map, 'symbol'));
+  if (!map.getLayer(RAIN.forecast)) map.addLayer(layers.forecast, firstOf(map, 'line'));
   return layers;
 }
 export function showRadar(
