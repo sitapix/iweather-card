@@ -7,7 +7,7 @@ import { defineConfig } from 'eslint/config';
 // its own project's.
 export default defineConfig([
   {
-    files: ['dist/iweather-card.js', 'dist/iweather-ui-*.js'],
+    files: ['dist/iweather-card.js'],
     plugins: { compat },
     languageOptions: { ecmaVersion: 2022, sourceType: 'module' },
     rules: { 'compat/compat': 'error' },

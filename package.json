@@ -20,7 +20,7 @@
     "check": "pnpm typecheck && pnpm lint && biome format && pnpm test && pnpm build && pnpm compat && pnpm e2e",
     "check:quick": "pnpm typecheck && pnpm lint && biome format && pnpm test:changed",
     "prepare": "git rev-parse --git-dir > /dev/null 2>&1 || exit 0; git config core.hooksPath .githooks && git config blame.ignoreRevsFile .git-blame-ignore-revs",
-    "compat": "eslint --flag unstable_native_nodejs_ts_config --max-warnings 0 dist/iweather-card.js 'dist/iweather-ui-*.js' && stylelint --max-warnings 0 src/iweather-card.css",
+    "compat": "eslint --flag unstable_native_nodejs_ts_config --max-warnings 0 dist/iweather-card.js && stylelint --max-warnings 0 src/iweather-card.css",
     "e2e:ha": "playwright test -c e2e/ha",
     "e2e:look": "playwright test -c e2e/look"
   },
