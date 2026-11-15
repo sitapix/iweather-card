@@ -1014,10 +1014,10 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .radar:not(.large){-webkit-mask-image:linear-gradient(#000 0 0);mask-image:linear-gradient(#000 0 0)}
 .radar-dot{position:absolute;left:var(--x,50%);top:var(--y,50%);width:12px;height:12px;border-radius:50%;background:#0a84ff;border:2.5px solid #fff;transform:translate(-50%,-50%);box-shadow:0 1px 6px #0008}
 .radar-credit{position:absolute;right:6px;bottom:4px;font-size:9px;color:#ffffff8c}
-/* The time of the radar frame shown, while the small map plays: in its corner, over the credit. */
-.map-foot{position:absolute;inset:auto 0 0;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:0 6px 4px 12px;pointer-events:none}
-.map-foot .radar-credit{position:static;align-self:flex-end;text-align:right}
-.map-when{font-size:14px;font-weight:600;color:#ffffffd9}.map-when:empty{display:none}
+/* The time of the radar frame shown, while the small map plays: in the corner at its foot, 10 px
+   in and 9 px up, in a soft shade that keeps it read over rain and names. */
+.map-foot{position:absolute;inset:auto 0 0;display:flex;padding:0 10px 9px;pointer-events:none}
+.map-when{font-size:14px;font-weight:600;color:#ffffffd9;text-shadow:0 0 6px #000000b3,0 0 14px #00000080}.map-when:empty{display:none}
 /* The forecast's hours in the small map's loop, hidden until its playhead blends them in. */
 .map-field.map-hour{opacity:0}
 .radar-note{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:600;color:#ffffffb3}
@@ -1077,7 +1077,7 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 /* Its thumb is a glass one, as the hourly panel's is (see glass-switch.ts). */
 .map-span .thumb{position:absolute;left:0;top:var(--y,2px);width:var(--w,40px);height:var(--h,26px);border-radius:999px;background:#fff;box-shadow:0 1px 3px #0002;transform:translateX(var(--x,2px));transition:background .2s,box-shadow .2s;pointer-events:none}
 .map-span[data-held] .thumb{background:transparent;box-shadow:0 0 0 .75px #00000059,inset 0 0 0 .75px #ffffff4d,inset 1px 1px 1px -.5px #ffffffb3,inset -1px -1px 1.5px -.5px #ffffff40,0 3px 10px -4px #0003}
-.radar:not([data-kind=wind],[data-night]) .radar-credit{color:#0009}.radar:not([data-kind=wind],[data-night]) .map-when{color:#000000b3}
+.radar:not([data-kind=wind],[data-night]) .radar-credit{color:#0009}.radar:not([data-kind=wind],[data-night]) .map-when{color:#000000b3;text-shadow:0 0 6px #ffffffcc,0 0 14px #ffffff99}
 .radar.large:not([data-kind=wind],[data-night]) .wind-time{background:#ffffff4d}
 /* On the pale maps the buttons' glass, near-white over near-white ground, takes a hairline edge
    and a white rim inside it, so it still reads as a button. */
