@@ -1427,24 +1427,25 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
    (see homeTints). Under 170 px tall it is a small card like any other. */
 .clock,.condition-symbol,.home-row,.figure-glass{display:none}
 @container card (min-height:170px){
- .weather[data-layout=homeview][data-daily]{--home-x:max(12px,min(9cqw,9cqh))}
+ .weather[data-layout=homeview][data-daily]{--home-x:max(12px,min(7.6cqw,7.6cqh))}
  .weather[data-layout=homeview][data-daily] :is(.forecast,.daily,.home,.location,.compact-meta,.brief,.brief-light){display:none}
  .weather[data-layout=homeview][data-daily] .weather-content{min-height:0}
  .weather[data-layout=homeview][data-daily] .hero{inset:0;height:auto;padding:0;align-items:stretch;justify-content:flex-start}
- .weather[data-layout=homeview][data-daily] .current{flex:1;display:grid;grid-template-areas:none;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto auto minmax(0,1fr);gap:0;align-items:center;justify-items:start;justify-content:normal;width:100%;max-width:none;min-height:0;padding:max(12px,min(8.5cqw,8.5cqh)) var(--home-x) 0;border-radius:inherit;text-align:left;line-height:1.15}
+ .weather[data-layout=homeview][data-daily] .current{flex:1;display:grid;grid-template-areas:none;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto auto minmax(0,1fr);gap:0;align-items:center;justify-items:start;justify-content:normal;width:100%;max-width:none;min-height:0;padding:max(12px,min(7cqw,7cqh)) var(--home-x) 0;border-radius:inherit;text-align:left;line-height:1.15}
  .weather[data-layout=homeview][data-daily] .reading{display:contents}
- .weather[data-layout=homeview][data-daily] .condition-symbol{grid-area:1 / 1;display:block;margin-right:min(1.6cqw,1.6cqh)}
+ .weather[data-layout=homeview][data-daily] .condition-symbol{grid-area:1 / 1;display:block;margin-right:min(2.4cqw,2.4cqh)}
  .weather[data-layout=homeview][data-daily] .condition-symbol svg{display:block;width:max(15px,min(5.8cqw,5.8cqh));height:max(15px,min(5.8cqw,5.8cqh));filter:brightness(0) invert(1)}
  .weather[data-layout=homeview][data-daily] .condition{grid-area:1 / 2;justify-self:start;max-width:100%;min-width:0;margin:0;font-size:max(13px,min(4.9cqw,4.9cqh));font-weight:600;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .weather[data-layout=homeview][data-daily] .condition:before{content:none}
  .weather[data-layout=homeview][data-daily] .range{grid-area:2 / 1 / 3 / 3;display:block;justify-self:start;margin:min(.5cqw,.5cqh) 0 0;color:var(--home-pale,#fff);font-size:max(12px,min(4.5cqw,4.5cqh));font-weight:500;white-space:pre;word-spacing:0}
  .weather[data-layout=homeview][data-daily] .stale{grid-area:3 / 1 / 4 / -1;max-width:100%;margin:2px 0 0;font-size:max(11px,min(3cqw,3cqh));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .weather[data-layout=homeview][data-daily] .clock{grid-area:1 / 3 / 3 / 4;display:block;align-self:start;justify-self:end;margin-left:12px;font-size:max(18px,min(8.4cqw,8.4cqh));font-weight:600;letter-spacing:-.01em;line-height:1}
- .weather[data-layout=homeview][data-daily] .temperature{grid-area:4 / 1 / 5 / -1;align-self:center;justify-self:start;padding:0;margin:0 0 0 -.03em;color:var(--home-tint,#fff);font-size:max(48px,min(36cqw,36cqh));font-weight:500;letter-spacing:-.02em;line-height:.9;text-shadow:none}
- .weather[data-layout=homeview][data-daily] .home-row{flex:none;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-items:start;gap:min(1cqw,1cqh);margin:0;padding:0 calc(var(--home-x) - min(3cqw,3cqh)) max(10px,min(7cqw,7cqh));pointer-events:auto;touch-action:pan-y;font-size:max(11px,min(4.5cqw,4.5cqh));font-weight:600;line-height:1.2;text-align:center;text-shadow:inherit}
+ .weather[data-layout=homeview][data-daily] .temperature{grid-area:4 / 1 / 5 / -1;align-self:center;justify-self:start;padding:0;margin:0 0 0 .03em;color:var(--home-tint,#fff);font-size:max(48px,min(36cqw,36cqh));font-weight:500;letter-spacing:-.02em;line-height:.9;text-shadow:none}
+ .weather[data-layout=homeview][data-daily] .home-row{flex:none;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-items:start;gap:min(1cqw,1cqh);margin:0;padding:0 max(8px,min(6cqw,6cqh)) max(10px,min(7cqw,7cqh));pointer-events:auto;touch-action:pan-y;font-size:max(11px,min(4.5cqw,4.5cqh));font-weight:600;line-height:1.2;text-align:center;text-shadow:inherit}
  .home-item{display:flex;flex-direction:column;align-items:center;min-width:0;margin:0;padding:0;border:0;border-radius:12px;background:none;font:inherit;line-height:inherit;text-shadow:inherit}.home-item,.home-item *{cursor:pointer}.home-item:active{opacity:.7}
  .home-item>span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .home-symbol{margin:min(1.2cqw,1.2cqh) 0;overflow:visible}
+ /* A symbol's ink runs past its box, so its room doesn't cut it as a line of words is cut. */
+ .home-item>.home-symbol{margin:min(1.2cqw,1.2cqh) 0;overflow:visible}
  .home-symbol svg{display:block;width:max(18px,min(7.6cqw,7.6cqh));height:max(18px,min(7.6cqw,7.6cqh))}
  .home-low{color:var(--home-pale,#fff)}
 }
