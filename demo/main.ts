@@ -22,7 +22,7 @@ import {
 
 const CARD_TAG = 'iweather-card';
 type Screen = 'phone' | 'tablet' | 'desktop';
-const LAYOUTS: readonly WeatherLayout[] = ['page', 'expanded', 'auto', 'compact', 'strip'];
+const LAYOUTS: readonly WeatherLayout[] = ['page', 'expanded', 'auto', 'homeview', 'compact', 'strip'];
 const SCREENS: readonly Screen[] = ['phone', 'tablet', 'desktop'];
 const UNIT_CHOICES: readonly Units[] = ['us', 'metric'];
 const THEMES: readonly Theme[] = ['light', 'dark'];

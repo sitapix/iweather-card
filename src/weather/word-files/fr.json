@@ -846,5 +846,8 @@
     "one": "Dans {count} heure",
     "many": "Dans {count} heures",
     "other": "Dans {count} heures"
-  }
+  },
+  "In {count}h": "Dans {count} h",
+  "In {count}d": "Dans {count} j",
+  "AQI": "IQA"
 }

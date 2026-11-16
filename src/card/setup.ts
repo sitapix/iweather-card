@@ -87,7 +87,7 @@ export function setupSource(config: Readonly<Record<string, unknown>>, hass: Hom
     ] as const;
   if (!features && sources.length && sources.every(source => source.attributes.supported_features === 0))
     return {
-      message: 'This source reports current weather only. You can add a forecast entity in Data sources.',
+      message: 'This source reports current weather only. Add a forecast entity in Data sources.',
       forecasts: [],
     };
   return { forecasts: forecasts.filter(([bit]) => features & bit).map(([, label]) => label) };

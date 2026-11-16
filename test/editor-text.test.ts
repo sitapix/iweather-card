@@ -22,7 +22,7 @@ const SETUP_WORDS = [
   'Add a weather integration in Settings → Devices & services, then choose its weather entity here.',
   'Home Assistant can’t find this weather entity. Choose another below.',
   'This weather entity is unavailable. Check its integration or choose another entity.',
-  'This source reports current weather only. You can add a forecast entity in Data sources.',
+  'This source reports current weather only. Add a forecast entity in Data sources.',
   'Supported forecasts',
   'Day and night',
   ...SETUP_PRESETS.flatMap(preset => [preset.label, preset.description]),
@@ -39,10 +39,14 @@ function wordsOf(items: readonly FormSchemaItem[], words = new Set<string>()): S
 }
 const everyWord = () => {
   const words = new Set([...OTHER_WORDS, ...SETUP_WORDS]);
-  for (const layout of ['auto', 'compact', 'strip', 'expanded', 'page'] as const)
+  for (const layout of ['auto', 'compact', 'strip', 'homeview', 'expanded', 'page'] as const)
     for (const averages of ['none', 'sensor', 'open-meteo'] as const)
       for (const map of ['none', 'rainviewer', 'local'] as const)
         wordsOf(schemaFor({ layout, averages, map, attributes: { temperature: 1 } }), words);
+  // The town names the map's pin alone once the place's name is hidden.
+  wordsOf(schemaFor({ layout: 'page', map: 'rainviewer', showName: false }), words);
+  // The air's scale shows once a sensor is set.
+  wordsOf(schemaFor({ layout: 'page', air: true }), words);
   // With nothing missing, the section is named without its count.
   wordsOf(schemaFor({ layout: 'page', attributes: undefined }), words);
   return [...words].filter(word => !word.includes(' missing') || word.includes('{count}'));

@@ -7,7 +7,9 @@ import {
   type EntityState,
   type HomeAssistant,
 } from './card/home-assistant.ts';
-import { CARD_TAG, CARD_TYPE, EDITOR_TAG, normalizeConfig, type CardConfig } from './card/config.ts';
+import { CARD_TAG, CARD_TYPE, EDITOR_TAG, normalizeConfig, type CardConfig, type HomeviewRow } from './card/config.ts';
+import { homeTints } from './card/home-view.ts';
+import type { GlassFigures } from './card/glass-figures.ts';
 import { bindPresses, type Press } from './card/actions.ts';
 import { ForecastSources, WeatherForecast } from './weather/forecast.ts';
 import { READING_OPTIONS, withSensors } from './weather/sources.ts';
@@ -90,8 +92,12 @@ const MIN_DAILY_ROWS = 2;
 const SKY_BELOW_HERO = 220;
 // A panel that starts past the first 30% of the card sits beside the conditions, not under.
 const BESIDE = 0.3;
+// How far a finger travels across the home view's foot, in px, to turn it rather than press it.
+const SWIPE = 30;
+// The layouts that show the weather now with no forecast panel under it.
+const ALONE: ReadonlySet<string> = new Set(['compact', 'strip', 'homeview']);
 // Masonry heights, in its 50px rows.
-const CARD_ROWS = { page: 16, expanded: 14, compact: 4, strip: 1, other: 6 } as const;
+const CARD_ROWS = { page: 16, expanded: 14, homeview: 8, compact: 4, strip: 1, other: 6 } as const;
 // A sections dashboard's size for the card in its 12 columns, and how small it may be made:
 // from a strip one row tall to the whole section, and as narrow as a quarter of it. The card
 // lays itself out for whatever size it is given (see the CSS); the full layout grows with its
@@ -100,6 +106,7 @@ const GRID = {
   page: { columns: 12, min_columns: 6, rows: 'auto' },
   compact: { columns: 12, min_columns: 6, rows: 3, min_rows: 2 },
   strip: { columns: 12, min_columns: 3, rows: 1, min_rows: 1 },
+  homeview: { columns: 6, min_columns: 3, rows: 6, min_rows: 3 },
   other: { columns: 12, rows: 6, min_columns: 3, min_rows: 1 },
 } as const;
 // Columns of today's sections grid in each of the grid's before Home Assistant 2024.11.
@@ -238,6 +245,13 @@ export class IWeatherCard extends HTMLElement {
   // Its settings as the dashboard gives them.
   private _settings: CardConfig | undefined;
   mode: Mode | undefined;
+  // The row of the home view's foot a swipe picked, until the settings change.
+  homeRow: HomeviewRow | undefined;
+  private _homeKey: string | undefined;
+  // The home view's temperature as glass: not yet asked for, on its way or not to be had (null),
+  // or here (see syncFigures).
+  private _figures: GlassFigures | null | undefined;
+  private _figuresAsked = false;
   private _rawHass: HomeAssistant | undefined;
   private _units: { raw: HomeAssistant; config: CardConfig | undefined; value: HomeAssistant } | undefined;
   visible = true;
@@ -360,10 +374,55 @@ export class IWeatherCard extends HTMLElement {
         () => this.config ?? {},
         press => this.pressed(press),
       );
+    this.bindHomeRow();
     bindForecastSwitch(this);
     this.bindPanels();
     // A pointer puts focus rings away, including when a closing sheet restores focus to its tile.
     this.root.addEventListener('pointerdown', () => this.toggleAttribute('data-pointer', true), true);
+  }
+  // The home view's foot: a press on a column opens its sheet, a day's on that day and a reading's
+  // own; a swipe across the row, or an arrow key on it, turns it from the days ahead to the readings
+  // now and back.
+  bindHomeRow() {
+    const row = this.parts.homeRow;
+    let from: { x: number; y: number } | undefined,
+      swiped = false;
+    const turn = () => {
+      const other = this.update?.home?.other;
+      if (other === undefined) return;
+      haptic(this, 'light');
+      this.homeRow = other;
+      this.render();
+    };
+    row.addEventListener('pointerdown', event => {
+      swiped = false;
+      from = event.isPrimary ? { x: event.clientX, y: event.clientY } : undefined;
+    });
+    row.addEventListener('pointerup', event => {
+      const across = from ? event.clientX - from.x : 0,
+        down = from ? event.clientY - from.y : 0;
+      from = undefined;
+      if (Math.abs(across) < SWIPE || Math.abs(across) < Math.abs(down)) return;
+      swiped = true;
+      turn();
+    });
+    row.addEventListener('pointercancel', () => {
+      from = undefined;
+    });
+    row.addEventListener('keydown', event => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') turn();
+    });
+    row.addEventListener('click', event => {
+      const item = targetOf(event, '.home-item'),
+        ctx = this.update?.ctx;
+      if (swiped || !item || !ctx || !this.update) return;
+      haptic(this, 'light');
+      const tile = item.dataset['tile'];
+      if (isTile(tile)) {
+        const { id, day, variant } = TILE_CARDS[tile].opens(ctx);
+        this.sheets.open(id, item, day, variant);
+      } else this.sheets.open(MODE_SHEET[this.update.strip.mode], item, item.dataset['key']);
+    });
   }
   // What the panels answer: a press opens what each shows in a sheet, and the hourly strip pages.
   bindPanels() {
@@ -536,6 +595,7 @@ export class IWeatherCard extends HTMLElement {
     const normalized = normalizeConfig(config);
     this._configKey = key;
     this._settings = normalized;
+    this.homeRow = undefined;
     this.applyConfig(withPickedUnits(normalized));
   }
   // The units its readings are shown in, as a sheet's options show and pick them.
@@ -629,6 +689,7 @@ export class IWeatherCard extends HTMLElement {
       this.fitHero();
       this._geometry = null;
       placeThumb(this.parts);
+      this.syncFigures();
       // A sky wider than tall takes the landscape decks, lower and broader. A page's sky is a whole
       // window's, which keeps the regular decks, its clouds across the top, however wide the window.
       const box = this.parts.sceneRoot.getBoundingClientRect(),
@@ -826,6 +887,7 @@ export class IWeatherCard extends HTMLElement {
         text: locale => this.localize(locale),
         mode: this.mode,
         narrow: Boolean(this._narrow),
+        homeRow: this.homeRow,
         id,
         records: this.records,
         now,
@@ -836,6 +898,7 @@ export class IWeatherCard extends HTMLElement {
     // Each part drawn apart, so one that fails leaves the rest, and itself as last drawn.
     safely(() => this.drawLabels(update.t));
     safely(() => this.drawConditions(update));
+    safely(() => this.drawHome(update));
     safely(() => this.forecastPanel.drawHeading(update));
     safely(() => this.forecastPanel.drawSummary(update));
     safely(() => this.alertPanel.draw(update));
@@ -855,6 +918,7 @@ export class IWeatherCard extends HTMLElement {
     safely(() => this.forecastPanel.drawHours(update));
     safely(() => this.drawScene(update));
     this.fitHero();
+    safely(() => this.syncFigures());
   }
   // The conditions over the sky, and the rest that follows the entity alone.
   drawConditions({ config, state, attrs, available, locale, timeZone, now, t, fmt, ctx, ...rest }: Update) {
@@ -863,12 +927,13 @@ export class IWeatherCard extends HTMLElement {
     const name = place || config.name || attrs.friendly_name || t('weather');
     const temperature = available && finite(attrs.temperature) ? `${fmt(attrs.temperature)}°` : '—';
     setText(parts.location, name);
-    parts.location.hidden = !config.show_name;
+    parts.location.hidden = !config.show_name || config.weather_layout === 'homeview';
     // Home Assistant's name for its home heads a small card's conditions (see the CSS), and the
     // page's over a town or city set for home, unless it says what the place name under it does.
     setText(parts.home, home);
     parts.home.hidden =
       !config.show_name ||
+      config.weather_layout === 'homeview' ||
       !home ||
       home.toLocaleLowerCase(locale) === name.trim().toLocaleLowerCase(locale) ||
       (config.weather_layout === 'page' && !(place && atHome));
@@ -947,10 +1012,32 @@ export class IWeatherCard extends HTMLElement {
     parts.range.hidden = !config.show_high_low || !available;
     parts.weather.dataset['available'] = String(available);
     parts.weather.dataset['night'] = String(rest.night);
-    const forecast = config.show_forecast && config.weather_layout !== 'compact' && config.weather_layout !== 'strip';
+    const forecast = config.show_forecast && !ALONE.has(config.weather_layout);
     parts.weather.dataset['forecast'] = String(forecast);
     parts.weather.dataset['scene'] = String(config.weather_scene);
     parts.forecast.hidden = !forecast;
+  }
+  // The home view's own parts: the weather's symbol beside its name, the time, and the foot's four
+  // columns, drawn again only when they change.
+  drawHome({ config, home, available }: Update) {
+    const { conditionSymbol, clock, homeRow } = this.parts,
+      shown = available ? home : undefined;
+    conditionSymbol.hidden = !shown;
+    clock.hidden = !shown || !config.show_clock;
+    homeRow.hidden = !shown || shown.columns.length === 0;
+    const key = JSON.stringify(shown);
+    if (this._homeKey === key) return;
+    this._homeKey = key;
+    conditionSymbol.innerHTML = shown?.symbol ?? '';
+    setText(clock, shown?.clock ?? '');
+    homeRow.dataset['row'] = shown?.row ?? '';
+    homeRow.innerHTML =
+      shown?.columns
+        .map(
+          ({ key, tile, label, html }) =>
+            `<button type="button" class="home-item" data-key="${key}"${tile ? ` data-tile="${tile}"` : ''} aria-label="${esc(label)}">${html}</button>`,
+        )
+        .join('') ?? '';
   }
   // The sky. A running animation fades between scenes; still renders cut straight over.
   drawScene({ inputs, config, ctx }: Update) {
@@ -994,6 +1081,10 @@ export class IWeatherCard extends HTMLElement {
         weather.style.setProperty(`--sky-${index}`, color);
       });
       weather.style.setProperty('--sky-stop', String(background.middleStop));
+      // The home view's figures take their colour from the sky behind them.
+      const { tint, pale } = homeTints(background.colors[1]);
+      weather.style.setProperty('--home-tint', tint);
+      weather.style.setProperty('--home-pale', pale);
       weather.dataset['starry'] = String(preset.stars >= STARRY);
       this.paint();
       this.syncEffects();
@@ -1292,6 +1383,43 @@ export class IWeatherCard extends HTMLElement {
       scroll: scrolled ? top : 0,
     });
     if (!glassFirst) this.glass.paint(phase);
+    if (this.parts.weather.dataset['figures'] === 'glass') this._figures?.paint(sky);
+  }
+  // The home view's temperature is glass over the sky, where there is a sky, the settings leave its
+  // refraction on and WebGL is to be had: the module comes when first wanted, and until it has, or
+  // if it never does, the figures show as plain type.
+  syncFigures() {
+    const { weather, temperature, figureGlass, sky } = this.parts,
+      config = this.config,
+      wanted =
+        config?.weather_layout === 'homeview' &&
+        config.weather_scene &&
+        config.glass_refraction &&
+        !config.low_power &&
+        this.update?.available === true &&
+        temperature.offsetHeight > 0;
+    if (wanted && !this._figuresAsked) {
+      this._figuresAsked = true;
+      void import('./card/glass-figures.ts')
+        .then(({ GlassFigures }) => {
+          this._figures = new GlassFigures(figureGlass);
+          this.syncFigures();
+          this.paint();
+        })
+        .catch(() => {
+          this._figures = null;
+        });
+    }
+    const glass = wanted && this._figures && !this._figures.lost ? this._figures : undefined;
+    figureGlass.hidden = !glass;
+    if (glass) {
+      const shaped = glass.shape(temperature, this.config?.glass_strength ?? 'standard');
+      if (shaped) glass.paint(sky);
+      if (weather.dataset['figures'] !== 'glass') {
+        weather.dataset['figures'] = 'glass';
+        glass.paint(sky);
+      }
+    } else delete weather.dataset['figures'];
   }
   syncEffects() {
     const wasAnimating = this.animating;
@@ -1347,14 +1475,12 @@ export class IWeatherCard extends HTMLElement {
   // The full layout grows with its tiles, so it leaves the sections grid's rows alone.
   getCardSize(): number {
     const layout = this.config?.weather_layout;
-    return layout === 'page' || layout === 'expanded' || layout === 'compact' || layout === 'strip'
-      ? CARD_ROWS[layout]
-      : CARD_ROWS.other;
+    return layout === undefined || layout === 'auto' ? CARD_ROWS.other : CARD_ROWS[layout];
   }
   // A sections dashboard's size for the card (see GRID).
   getGridOptions(): { columns: number; min_columns: number; rows: number | 'auto'; min_rows?: number } {
     const layout = this.config?.weather_layout;
-    return { ...(layout === 'page' || layout === 'compact' || layout === 'strip' ? GRID[layout] : GRID.other) };
+    return { ...(layout === undefined || layout === 'auto' || layout === 'expanded' ? GRID.other : GRID[layout]) };
   }
   // The same, for sections dashboards before Home Assistant 2024.11, whose grid had a column for every
   // three of today's. A height of its own is left out, for the card's own height.

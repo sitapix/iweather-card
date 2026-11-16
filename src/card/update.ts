@@ -1,4 +1,5 @@
-import type { CardConfig } from './config.ts';
+import type { CardConfig, HomeviewRow } from './config.ts';
+import { type HomeView, homeView } from './home-view.ts';
 import { dataUpdates } from '../weather/freshness.ts';
 import {
   type HomeAssistant,
@@ -95,6 +96,8 @@ export interface Update {
   // tiles that matter.
   alertsLead: boolean;
   nextHour: NextHourPanelData;
+  // The home view's clock and foot, in that layout.
+  home: HomeView | undefined;
   // What the tiles and sheets are written from.
   ctx: TileContext;
 }
@@ -120,6 +123,8 @@ export interface UpdateSources {
   // The view picked; a card too narrow for the switch shows conditions.
   mode: Mode | undefined;
   narrow: boolean;
+  // The row of the home view's foot a swipe picked, if one has.
+  homeRow?: HomeviewRow | undefined;
   id: string;
   records: Pick<WeatherRecords, 'earlier' | 'recent' | 'lastDay' | 'airYesterday' | 'recentRain' | 'climate'> &
     Partial<Pick<WeatherRecords, 'climateUnits' | 'airSupply' | 'airAwaited' | 'alerts' | 'minutes' | 'soFar'>>;
@@ -190,6 +195,7 @@ export function workOut({
   text,
   mode: chosen,
   narrow,
+  homeRow,
   id,
   records,
   now,
@@ -279,6 +285,49 @@ export function workOut({
       air: airNow({ config, hass, airSupply }),
       averaged: Boolean(records.climate ?? records.recentRain?.rain),
     });
+  const ctx: TileContext = {
+    id,
+    attrs,
+    hourly,
+    pastHours: forecasts(data.hourly?.earlier),
+    daily: days,
+    sun,
+    config,
+    hass,
+    locale,
+    numbers,
+    timeZone,
+    now,
+    freshness: dataUpdates(config, hass, now, supplementAt),
+    hour12: hour12Of(hass?.locale?.time_format),
+    fmt,
+    mode: strip.mode,
+    condition: state?.state,
+    latitude: place?.latitude,
+    longitude: place?.longitude,
+    atHome,
+    dark: hass?.themes?.darkMode ?? prefersDark,
+    pinName: atHome ? t('my_location') : placeName,
+    placeName,
+    // Both in the units shown, though asked for in others, until those come.
+    earlier: records.earlier && convertAttributesTo(records.earlier, attrs),
+    recent: records.recent,
+    lastDay: records.lastDay,
+    airYesterday: records.airYesterday?.value,
+    airSupply,
+    airAwaited: records.airAwaited ?? false,
+    nextHour: Boolean(nextHour.data),
+    // Undecided while the minute forecast is still on its way.
+    rainOutlook:
+      quartersComing && !nextHour.data
+        ? undefined
+        : rainOutlook(minuteSpans(nextHour.data?.series, quarters, now), hourly, now),
+    recentRain: records.recentRain?.rain,
+    climate:
+      records.climate && records.climateUnits
+        ? climateShown(records.climate, records.climateUnits, attrs)
+        : records.climate,
+  };
   return {
     config,
     hass,
@@ -311,48 +360,7 @@ export function workOut({
     alerts,
     alertsLead: alerts.some(alert => alertLevel(alert.severity) !== 'green'),
     nextHour,
-    ctx: {
-      id,
-      attrs,
-      hourly,
-      pastHours: forecasts(data.hourly?.earlier),
-      daily: days,
-      sun,
-      config,
-      hass,
-      locale,
-      numbers,
-      timeZone,
-      now,
-      freshness: dataUpdates(config, hass, now, supplementAt),
-      hour12: hour12Of(hass?.locale?.time_format),
-      fmt,
-      mode: strip.mode,
-      condition: state?.state,
-      latitude: place?.latitude,
-      longitude: place?.longitude,
-      atHome,
-      dark: hass?.themes?.darkMode ?? prefersDark,
-      pinName: atHome ? t('my_location') : placeName,
-      placeName,
-      // Both in the units shown, though asked for in others, until those come.
-      earlier: records.earlier && convertAttributesTo(records.earlier, attrs),
-      recent: records.recent,
-      lastDay: records.lastDay,
-      airYesterday: records.airYesterday?.value,
-      airSupply,
-      airAwaited: records.airAwaited ?? false,
-      nextHour: Boolean(nextHour.data),
-      // Undecided while the minute forecast is still on its way.
-      rainOutlook:
-        quartersComing && !nextHour.data
-          ? undefined
-          : rainOutlook(minuteSpans(nextHour.data?.series, quarters, now), hourly, now),
-      recentRain: records.recentRain?.rain,
-      climate:
-        records.climate && records.climateUnits
-          ? climateShown(records.climate, records.climateUnits, attrs)
-          : records.climate,
-    },
+    home: config.weather_layout === 'homeview' ? homeView(ctx, night, homeRow) : undefined,
+    ctx,
   };
 }

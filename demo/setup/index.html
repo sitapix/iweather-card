@@ -67,13 +67,14 @@ map: rainviewer</code></pre>
         <tr><td><code>auto</code></td><td>Whatever fits the space the dashboard gives it. The default.</td></tr>
         <tr><td><code>compact</code></td><td>A short tile: the place and temperature over the conditions and the day's high and low.</td></tr>
         <tr><td><code>strip</code></td><td>One line: the place, the temperature and the conditions.</td></tr>
+        <tr><td><code>homeview</code></td><td>The time, a large glass temperature and a row of the next four days or the readings now, for a screen read from across a room.</td></tr>
         <tr><td><code>expanded</code></td><td>The conditions, the hourly forecast and the daily list.</td></tr>
         <tr><td><code>page</code></td><td>Everything: alerts, forecasts, a map and detail tiles, in two to six columns.</td></tr>
       </tbody>
     </table>
 
     <h2 id="online">What it asks of the internet</h2>
-    <p>The <code>auto</code>, <code>compact</code>, <code>strip</code> and <code>expanded</code> layouts talk to Home Assistant alone. The page layout can fill what your weather entity leaves out from Open-Meteo, show radar from RainViewer, and in the United States show the National Weather Service's alerts. Your browser asks each one itself. Set <code>local_only: true</code> and the card asks none of them.</p>
+    <p>The <code>auto</code>, <code>compact</code>, <code>strip</code>, <code>homeview</code> and <code>expanded</code> layouts talk to Home Assistant alone. The page layout can fill what your weather entity leaves out from Open-Meteo, show radar from RainViewer, and in the United States show the National Weather Service's alerts. Your browser asks each one itself. Set <code>local_only: true</code> and the card asks none of them.</p>
 
     <h2 id="more">More</h2>
     <ul>

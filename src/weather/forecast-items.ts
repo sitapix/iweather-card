@@ -56,8 +56,9 @@ export function forecastTypes(
   config: { show_forecast: boolean; show_daily: boolean; show_high_low: boolean; weather_layout?: string },
 ): ForecastType[] {
   const hourly = Boolean(features & FORECAST_FEATURES.hourly),
-    // The full page's tiles and sheets read both, whether or not its panels show them.
-    page = config.weather_layout === 'page',
+    // The full page's tiles and sheets read both, whether or not its panels show them, and the home
+    // view's foot its days and the hours until something falls.
+    page = config.weather_layout === 'page' || config.weather_layout === 'homeview',
     wantsDays = page || config.show_daily || config.show_high_low || (config.show_forecast && !hourly),
     days: ForecastType[] = !wantsDays
       ? []

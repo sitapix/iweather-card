@@ -828,5 +828,8 @@
   "In {count} hours": {
     "one": "Om {count} timme",
     "other": "Om {count} timmar"
-  }
+  },
+  "In {count}h": "Om {count} tim",
+  "In {count}d": "Om {count} d",
+  "AQI": "AQI"
 }

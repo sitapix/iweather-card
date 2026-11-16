@@ -22,7 +22,7 @@ import { TILE_CARDS } from '../cards/index.ts';
 import { TILES } from '../cards/ids.ts';
 import { UNIT_KINDS, type UnitKind } from '../weather/units.ts';
 import { READINGS, missingReadings, readingOption, type Reading } from '../weather/sources.ts';
-import { isRecord } from '../lib/values.ts';
+import { isList, isRecord } from '../lib/values.ts';
 import { type EditorText, english } from './editor-words.ts';
 import type { EditedPart } from './editing.ts';
 
@@ -96,6 +96,21 @@ export interface EditorContext {
   map: MapSource;
   attributes: EntityAttributes | undefined;
   narrow: boolean;
+  // What the home view's form goes by: whether there is a live sky, whether it is drawn at low
+  // power, whether the temperature is glass, and whether an air quality sensor is set.
+  sky: boolean;
+  lowPower: boolean;
+  glass: boolean;
+  air: boolean;
+  // What the other forms go by: which forecasts and whether the place's name are shown, whether
+  // the card keeps to Home Assistant, whether Open-Meteo fills the forecast, and whether the page
+  // has its averages tile.
+  showForecast: boolean;
+  showDaily: boolean;
+  showName: boolean;
+  localOnly: boolean;
+  fill: boolean;
+  averagesTile: boolean;
 }
 // Three choices stand side by side, or two to a row where the editor is narrow, so their labels
 // aren't cut short. Four stand two by two.
@@ -106,27 +121,35 @@ const AVERAGES_SOURCES = ['none', OPEN_METEO, 'sensor'] as const;
 type AveragesSource = (typeof AVERAGES_SOURCES)[number];
 const isAveragesSource = (value: unknown): value is AveragesSource => AVERAGES_SOURCES.some(source => source === value);
 
-const forecastSection = (): FormSchemaItem =>
+// A forecast's length shows with the forecast, and the view while either is there to take it. The
+// page's tiles and sheets go by the days whether or not its list shows them.
+const forecastSection = ({ layout, showForecast, showDaily }: EditorContext): FormSchemaItem =>
   section(
     'Forecast',
     'mdi:calendar-clock',
     [
-      grid([flag('show_forecast', 'Hourly forecast'), amount('forecast_hours', 'Hours')]),
-      grid([flag('show_daily', 'Daily forecast'), amount('forecast_days', 'Days')]),
+      showForecast
+        ? grid([flag('show_forecast', 'Hourly forecast'), amount('forecast_hours', 'Hours')])
+        : flag('show_forecast', 'Hourly forecast'),
+      showDaily || layout === 'page'
+        ? grid([flag('show_daily', 'Daily forecast'), amount('forecast_days', 'Days')])
+        : flag('show_daily', 'Daily forecast'),
       flag('show_high_low', 'High and low'),
-      choice(
-        'weather_mode',
-        'Hourly view',
-        [
-          { value: 'auto', label: 'Automatic' },
-          { value: 'conditions', label: 'Conditions' },
-          { value: 'rain', label: 'Precipitation' },
-          { value: 'wind', label: 'Wind' },
-        ],
-        2,
-      ),
+      ...(showForecast || showDaily ? [forecastView()] : []),
     ],
     true,
+  );
+const forecastView = (): FormSchemaItem =>
+  choice(
+    'weather_mode',
+    'Hourly view',
+    [
+      { value: 'auto', label: 'Automatic' },
+      { value: 'conditions', label: 'Conditions' },
+      { value: 'rain', label: 'Precipitation' },
+      { value: 'wind', label: 'Wind' },
+    ],
+    2,
   );
 
 // The full page: three sections, for its tiles, the services it reaches out to, and the alerts
@@ -151,7 +174,7 @@ const pageSection = (columns: number): FormSchemaItem =>
         'top_padding',
         'Top padding (%)',
         { number: { ...TOP_PADDING_LIMITS, step: 1, mode: 'box' } },
-        'Space above the current weather. 50% is half the original spacing; 100% restores it.',
+        'Space above the current weather.',
       ),
       choice(
         'sheet_style',
@@ -184,17 +207,53 @@ const pageSection = (columns: number): FormSchemaItem =>
 // What the page asks of services outside Home Assistant, and the map, with its base tiles and
 // optional overlays. Local only comes first, as it overrules the rest.
 function servicesSection(context: EditorContext): FormSchemaItem {
+  // Each interval shows while the card asks its service: the radar's with the online map, and the
+  // forecast's while Open-Meteo fills it.
+  const online = !context.localOnly,
+    refreshes = [
+      ...(online && context.map === 'rainviewer'
+        ? [
+            field(
+              'radar_refresh_minutes',
+              'Radar refresh (minutes)',
+              { number: { ...REFRESH_LIMITS.radar_refresh_minutes, step: 1, mode: 'box' } },
+              'For RainViewer’s radar only. Your integrations update on their own schedules.',
+            ),
+          ]
+        : []),
+      ...(online && context.fill
+        ? [
+            field(
+              'forecast_refresh_minutes',
+              'Forecast refresh (minutes)',
+              { number: { ...REFRESH_LIMITS.forecast_refresh_minutes, step: 1, mode: 'box' } },
+              'For the forecast Open-Meteo fills in only. Your integrations update on their own schedules.',
+            ),
+          ]
+        : []),
+    ];
   return section('Map and online services', 'mdi:earth', [
     flag(
       'local_only',
       'Local only',
-      'The card contacts no outside service, whatever you set below: no Open-Meteo, no radar. The map appears only with map tiles of your own.',
+      'The card contacts no outside service, whatever you set below. Open-Meteo and the radar are off, and the map needs map tiles of your own.',
     ),
-    flag(
-      'open_meteo_forecast',
-      'Fill the forecast from Open-Meteo',
-      'When your weather entity leaves out rain chances, gusts or days. Its own values come first. The card sends the weather’s location to Open-Meteo.',
-    ),
+    ...(context.localOnly
+      ? []
+      : [
+          flag(
+            'open_meteo_forecast',
+            'Fill the forecast from Open-Meteo',
+            'Fills in rain chances, gusts or days your weather entity leaves out. Its own values come first. The card sends the weather’s location to Open-Meteo.',
+          ),
+        ]),
+    ...mapFields(context),
+    ...(refreshes.length ? [section('Refresh intervals', 'mdi:timer-sync-outline', refreshes)] : []),
+  ]);
+}
+// The map's settings. They stay without the map's tile, as the wind's and the air's sheets draw it too.
+function mapFields(context: EditorContext): FormSchemaItem[] {
+  return [
     select(
       'map',
       'Map',
@@ -209,7 +268,7 @@ function servicesSection(context: EditorContext): FormSchemaItem {
       ? []
       : [
           flag('map_wind_animation', 'Moving wind on the card', 'Off, the wind holds still until you open the map.'),
-          ...(context.map === 'local'
+          ...(context.map === 'local' || context.localOnly
             ? []
             : [
                 flag(
@@ -236,21 +295,7 @@ function servicesSection(context: EditorContext): FormSchemaItem {
             ),
           ]),
         ]),
-    section('Refresh intervals', 'mdi:timer-sync-outline', [
-      field(
-        'radar_refresh_minutes',
-        'Radar refresh (minutes)',
-        { number: { ...REFRESH_LIMITS.radar_refresh_minutes, step: 1, mode: 'box' } },
-        'How often the card checks RainViewer for new radar frames. Your integrations keep their own update intervals.',
-      ),
-      field(
-        'forecast_refresh_minutes',
-        'Forecast refresh (minutes)',
-        { number: { ...REFRESH_LIMITS.forecast_refresh_minutes, step: 1, mode: 'box' } },
-        'How often the card asks Open-Meteo for the forecast it fills in. Your integrations keep their own update intervals.',
-      ),
-    ]),
-  ]);
+  ];
 }
 
 // The page's alerts, next hour, air quality and averages. Averages come from nowhere, Open-Meteo
@@ -261,7 +306,7 @@ function sensorsSection(context: EditorContext): FormSchemaItem {
       'alert_entities',
       'Severe weather alerts',
       { entity: { multiple: true, domain: SETTING_DOMAINS.alert_entities } },
-      'Sensors from NWS Alerts, Meteoalarm or similar. Shown first on the page.',
+      'Sensors from NWS Alerts, Meteoalarm or similar. Alerts lead the page.',
     ),
     field(
       'next_hour_entity',
@@ -273,17 +318,25 @@ function sensorsSection(context: EditorContext): FormSchemaItem {
       'air_quality_entity',
       'Air quality index',
       { entity: { domain: SETTING_DOMAINS.air_quality_entity } },
-      'Compared with yesterday from history.',
+      'The tile compares it with yesterday’s, from history.',
     ),
-    select(
-      'air_quality_scale',
-      'Air quality scale',
-      [
-        { value: AIR_SCALE_AUTO, label: 'Automatic' },
-        ...AIR_SCALE_IDS.map(value => ({ value, label: AIR_SCALES[value].name })),
-      ],
-      'Automatic reads the scale from the sensor’s name, or else uses the US scale, which many services report worldwide.',
-    ),
+    // The scale is the sensor's, and the averages are their tile's.
+    ...(context.air ? [airScale()] : []),
+    ...(context.averagesTile ? averagesFields(context) : []),
+  ]);
+}
+const airScale = (): FormSchemaItem =>
+  select(
+    'air_quality_scale',
+    'Air quality scale',
+    [
+      { value: AIR_SCALE_AUTO, label: 'Automatic' },
+      ...AIR_SCALE_IDS.map(value => ({ value, label: AIR_SCALES[value].name })),
+    ],
+    'Automatic reads the scale from the sensor’s name, or else uses the US scale, which many services report worldwide.',
+  );
+function averagesFields(context: EditorContext): FormSchemaItem[] {
+  return [
     select(
       'averages_source',
       'Averages',
@@ -304,28 +357,60 @@ function sensorsSection(context: EditorContext): FormSchemaItem {
           ),
         ]
       : []),
-  ]);
+  ];
 }
 
-const lookSection = (columns: number, compact: boolean): FormSchemaItem =>
+// Each field shows where it changes something. The home view names no place; elsewhere a name
+// hidden needs no words, though the page's map still names its pin by the town. Without a sky
+// there is nothing to animate, to draw at low power, or to see through the raindrops, which low
+// power doesn't draw, and which only the layouts with panels have.
+const lookSection = (
+  columns: number,
+  { layout, showName, sky, lowPower, map }: EditorContext,
+  compact: boolean,
+  home: boolean,
+): FormSchemaItem =>
   section('Look', 'mdi:palette-outline', [
-    grid([flag('show_name', 'Place name'), text('name', 'Name', 'Instead of the weather entity’s name.')]),
-    text('place_name', 'Town or city', 'Shown as the place name. Overrides Name.'),
-    grid([flag('weather_scene', 'Live sky'), flag('weather_animation', 'Animation', 'Off with reduced motion.')]),
-    ...(compact
+    ...(home
+      ? []
+      : showName
+        ? [
+            grid([flag('show_name', 'Place name'), text('name', 'Name', 'Instead of the weather entity’s name.')]),
+            text(
+              'place_name',
+              'Town or city',
+              layout === 'page'
+                ? 'Heads the page under Home Assistant’s name for your home, and names the map’s pin.'
+                : 'Replaces Name.',
+            ),
+          ]
+        : [
+            flag('show_name', 'Place name'),
+            ...(layout === 'page' && map !== 'none'
+              ? [text('place_name', 'Town or city', 'Names the map’s pin.')]
+              : []),
+          ]),
+    ...(sky
+      ? [grid([flag('weather_scene', 'Live sky'), flag('weather_animation', 'Animation', 'Off with reduced motion.')])]
+      : [flag('weather_scene', 'Live sky')]),
+    ...(compact || home || !sky || lowPower
       ? []
       : [
           flag(
             'glass_refraction',
-            'Glass refraction',
-            'Distort the sky through raindrops. Off keeps droplets and highlights.',
+            'Raindrop refraction',
+            'In rain, each drop on the panels bends the sky behind it. Off, the drops still run but stay plain, which is lighter to draw.',
           ),
         ]),
-    flag(
-      'low_power',
-      'Low power',
-      'For a wall tablet or an older screen: a softer sky, fewer frames and less rain and snow.',
-    ),
+    ...(sky
+      ? [
+          flag(
+            'low_power',
+            'Low power',
+            'For a wall tablet or an older screen: a softer sky, fewer frames and less rain and snow.',
+          ),
+        ]
+      : []),
     ...(compact
       ? []
       : [
@@ -342,6 +427,70 @@ const lookSection = (columns: number, compact: boolean): FormSchemaItem =>
           ),
         ]),
   ]);
+
+// What the home view shows around its temperature.
+// Each field shows only where it changes something: the glass with a sky to bend, its strength
+// with the glass on, and the air's scale with a sensor to read.
+const homeSection = (columns: number, { sky, lowPower, glass, air }: EditorContext): FormSchemaItem => {
+  // Glass is made of the sky, and low power draws none.
+  const glassy = sky && !lowPower;
+  return homeFields(columns, glassy, glass, air);
+};
+const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean): FormSchemaItem =>
+  section(
+    'Home view',
+    'mdi:tablet-dashboard',
+    [
+      grid([flag('show_high_low', 'High and low'), flag('show_clock', 'Clock')]),
+      ...(sky
+        ? [flag('glass_refraction', 'Glass temperature', 'The temperature as glass that bends the sky behind it.')]
+        : []),
+      ...(sky && glass
+        ? [
+            choice(
+              'glass_strength',
+              'Glass strength',
+              [
+                { value: 'subtle', label: 'Subtle' },
+                { value: 'standard', label: 'Standard' },
+                { value: 'strong', label: 'Strong' },
+              ],
+              columns,
+              'A stronger glass has a wider bevel and bends the sky further.',
+            ),
+          ]
+        : []),
+      choice(
+        'homeview_row',
+        'Bottom row',
+        [
+          { value: 'days', label: 'Days ahead' },
+          { value: 'details', label: 'Readings now' },
+        ],
+        columns,
+        'The row along the foot starts here. A swipe across it turns to the other, and pressing a column opens its details.',
+      ),
+      choice(
+        'sheet_style',
+        'Details open as',
+        [
+          { value: 'auto', label: 'Automatic' },
+          { value: 'card', label: 'Over the card' },
+          { value: 'popover', label: 'Popover' },
+        ],
+        columns,
+        'Automatic slides a sheet up from the foot of the screen, and keeps it to the card once the card fills most of the screen.',
+      ),
+      field(
+        'air_quality_entity',
+        'Air quality index',
+        { entity: { domain: SETTING_DOMAINS.air_quality_entity } },
+        'Joins the readings in the bottom row. Without one, the UV index takes its place.',
+      ),
+      ...(air ? [airScale()] : []),
+    ],
+    true,
+  );
 
 const actionsSection = (expanded: boolean): FormSchemaItem =>
   section(
@@ -362,15 +511,18 @@ const UNIT_FIELDS = [
   ['pressure_unit', 'Pressure'],
   ['distance_unit', 'Distance'],
 ] as const satisfies readonly (readonly [UnitKind, string])[];
-const unitsSection = (compact: boolean): FormSchemaItem =>
+// Compact shows a temperature alone; the home view, the wind beside it and precipitation in its sheets.
+const HOME_UNITS: ReadonlySet<string> = new Set(['temperature_unit', 'wind_speed_unit', 'precipitation_unit']);
+const unitsSection = (compact: boolean, home = false): FormSchemaItem =>
   section(
     'Units',
     'mdi:ruler',
-    UNIT_FIELDS.filter(([name]) => !compact || name === 'temperature_unit').map(([name, label]) =>
-      select(name, label, [
-        { value: 'auto', label: 'Weather entity’s units' },
-        ...UNIT_KINDS[name].options.map(([value, text]) => ({ value, label: text })),
-      ]),
+    UNIT_FIELDS.filter(([name]) => (!compact || name === 'temperature_unit') && (!home || HOME_UNITS.has(name))).map(
+      ([name, label]) =>
+        select(name, label, [
+          { value: 'auto', label: 'Weather entity’s units' },
+          ...UNIT_KINDS[name].options.map(([value, text]) => ({ value, label: text })),
+        ]),
     ),
   );
 
@@ -387,11 +539,19 @@ const COMPACT_READINGS: ReadonlySet<Reading> = new Set([
   'cloud_coverage',
   'precipitation',
 ]);
-function sourcesSection(attributes: EntityAttributes | undefined, say: EditorText, compact: boolean): FormSchemaItem {
-  const readings = READINGS.filter(([attribute]) => !compact || COMPACT_READINGS.has(attribute)),
-    missing = (attributes ? missingReadings(attributes) : []).filter(
-      attribute => !compact || COMPACT_READINGS.has(attribute),
-    ),
+// The home view shows or opens every reading but the pressure.
+const HOME_READINGS: ReadonlySet<Reading> = new Set(
+  READINGS.map(([attribute]) => attribute).filter(each => each !== 'pressure'),
+);
+function sourcesSection(
+  attributes: EntityAttributes | undefined,
+  say: EditorText,
+  compact: boolean,
+  home = false,
+): FormSchemaItem {
+  const used = compact ? COMPACT_READINGS : home ? HOME_READINGS : undefined,
+    readings = READINGS.filter(([attribute]) => !used || used.has(attribute)),
+    missing = (attributes ? missingReadings(attributes) : []).filter(attribute => !used || used.has(attribute)),
     ordered = [...readings].sort(([a], [b]) => Number(missing.includes(b)) - Number(missing.includes(a))),
     fields = ordered.map(([attribute, , label]) =>
       field(
@@ -457,9 +617,20 @@ export function schemaFor(context: Partial<EditorContext> = {}, say: EditorText 
     map: context.map ?? 'none',
     attributes: context.attributes,
     narrow: context.narrow ?? false,
+    sky: context.sky ?? true,
+    lowPower: context.lowPower ?? false,
+    glass: context.glass ?? true,
+    air: context.air ?? false,
+    showForecast: context.showForecast ?? true,
+    showDaily: context.showDaily ?? true,
+    showName: context.showName ?? true,
+    localOnly: context.localOnly ?? false,
+    fill: context.fill ?? true,
+    averagesTile: context.averagesTile ?? true,
   };
   // Compact and the strip show the current weather alone, so they share a shorter form.
-  const compact = full.layout === 'compact' || full.layout === 'strip';
+  const compact = full.layout === 'compact' || full.layout === 'strip',
+    home = full.layout === 'homeview';
   return [
     { ...field('entity', 'Weather entity', { entity: { domain: SETTING_DOMAINS.entity } }), required: true },
     choice(
@@ -469,24 +640,31 @@ export function schemaFor(context: Partial<EditorContext> = {}, say: EditorText 
         { value: 'auto', label: 'Automatic' },
         { value: 'compact', label: 'Compact' },
         { value: 'strip', label: 'Strip' },
+        { value: 'homeview', label: 'Home view' },
         { value: 'expanded', label: 'Expanded' },
         { value: 'page', label: 'Full page' },
       ],
       2,
-      full.layout === 'strip'
-        ? 'Strip shows current weather in one line. The card keeps your settings for other layouts when you switch.'
-        : compact
-          ? 'Compact shows current weather only. The card keeps your settings for other layouts when you switch.'
-          : 'Automatic fits the card’s size. Full page adds alerts, tiles, averages and a map, and scrolls in place in a panel view.',
+      full.layout === 'homeview'
+        ? 'Home view shows the time, a large temperature and a row of days or readings, for a screen read from across a room. The card keeps your settings for other layouts when you switch.'
+        : full.layout === 'strip'
+          ? 'Strip shows current weather in one line. The card keeps your settings for other layouts when you switch.'
+          : compact
+            ? 'Compact shows current weather only. The card keeps your settings for other layouts when you switch.'
+            : 'Automatic fits the card’s size. Full page adds alerts, tiles, averages and a map, and scrolls in place in a panel view.',
     ),
-    ...(compact ? [actionsSection(true), flag('show_high_low', 'High and low')] : [forecastSection()]),
+    ...(home
+      ? [homeSection(columnsFor(full.narrow), full), actionsSection(false)]
+      : compact
+        ? [actionsSection(true), flag('show_high_low', 'High and low')]
+        : [forecastSection(full)]),
     ...(full.layout === 'page'
       ? [pageSection(columnsFor(full.narrow)), servicesSection(full), sensorsSection(full)]
       : []),
-    lookSection(columnsFor(full.narrow), compact),
-    ...(compact ? [] : [actionsSection(false)]),
-    unitsSection(compact),
-    sourcesSection(full.attributes, say, compact),
+    lookSection(columnsFor(full.narrow), full, compact, home),
+    ...(compact || home ? [] : [actionsSection(false)]),
+    unitsSection(compact, home),
+    sourcesSection(full.attributes, say, compact, home),
     advancedSection(compact),
   ];
 }
@@ -565,13 +743,23 @@ export function contextOf(
   attributes: EntityAttributes | undefined,
   narrow = false,
 ): EditorContext {
-  const { weather_layout: layout, averages_source: averages, map } = data;
+  const { weather_layout: layout, averages_source: averages, map, tiles } = data;
   return {
     layout: isLayout(layout) ? layout : 'auto',
     averages: isAveragesSource(averages) ? averages : 'none',
     map: isMapSource(map) ? map : 'none',
     attributes,
     narrow,
+    sky: data['weather_scene'] !== false,
+    lowPower: data['low_power'] === true,
+    glass: data['glass_refraction'] !== false,
+    air: typeof data['air_quality_entity'] === 'string' && data['air_quality_entity'] !== '',
+    showForecast: data['show_forecast'] !== false,
+    showDaily: data['show_daily'] !== false,
+    showName: data['show_name'] !== false,
+    localOnly: data['local_only'] === true,
+    fill: data['open_meteo_forecast'] !== false,
+    averagesTile: !isList(tiles) || tiles.includes('averages'),
   };
 }
 // Fields typed into: their changes reach the preview after a pause (see the editor).
@@ -599,6 +787,9 @@ const PARTS: Readonly<Record<string, EditedPart>> = {
   show_daily: 'daily',
   forecast_days: 'daily',
   show_high_low: 'conditions',
+  show_clock: 'conditions',
+  homeview_row: 'conditions',
+  glass_strength: 'conditions',
   show_name: 'conditions',
   name: 'conditions',
   place_name: 'conditions',
@@ -648,7 +839,7 @@ export function partsOf(item: unknown, layout?: WeatherLayout): EditedPart[] {
   if (!isRecord(item)) return [];
   const { name, schema } = item,
     part = typeof name === 'string' ? PARTS[name] : undefined;
-  if (part) return [layout === 'compact' || layout === 'strip' ? 'conditions' : part];
+  if (part) return [layout === 'compact' || layout === 'strip' || layout === 'homeview' ? 'conditions' : part];
   return Array.isArray(schema) ? [...new Set(schema.flatMap(item => partsOf(item, layout)))] : [];
 }
 // The parts settings changed.

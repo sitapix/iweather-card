@@ -1,6 +1,7 @@
 // Draws the README's pictures in docs/images from the preview pages: the full page at sunset, four
-// skies from the gallery (the rain one moving), and the sizes a sections dashboard offers. Run it
-// after a change to how the card looks: node scripts/readme-images.ts (about three minutes; needs
+// skies from the gallery (the rain one moving), the home view by day and by night, and the sizes a
+// sections dashboard offers. Run it after a change to how the card looks: node scripts/readme-images.ts,
+// or with the sets to draw again, of hero, skies, home and sizes (about three minutes for all; needs
 // Google Chrome, ffmpeg, cwebp and img2webp). It starts a dev server of its own, so `pnpm dev` can
 // stay up. The map's base tiles and its radar come from their services, as a reader's would. The
 // averages' history and the alerts are answered here, and Open-Meteo's forecast is refused, so each
@@ -31,6 +32,10 @@ const AT = Date.parse('2026-10-31T04:30:00Z'),
   FRAMES = 52,
   FADE = 12,
   DAY = 86_400_000;
+// The sets asked for, or every one.
+const asked_for = process.argv.slice(2),
+  wants = (set: string) => asked_for.length === 0 || asked_for.includes(set),
+  made: string[] = [];
 const OUT = fileURLToPath(new URL('../docs/images/', import.meta.url)),
   work = mkdtempSync(join(tmpdir(), 'readme-images-')),
   refused = new Set<string>(),
@@ -154,12 +159,14 @@ function scaled(under: string, width: number, to: string, over?: string, share =
   ]);
   return to;
 }
-const still = (png: string, name: string) =>
+const still = (png: string, name: string) => {
   run('cwebp', ['-quiet', '-q', '82', '-alpha_q', '100', '-m', '6', '-sharp_yuv', png, '-o', `${OUT}${name}.webp`]);
+  made.push(name);
+};
 
 try {
   // The full page at sunset, as the panel preview shows it in a 1280 × 876 window.
-  {
+  if (wants('hero')) {
     const page = await open(
       'index-panel.html#scene=19&place=St.%20Louis&alert=0&nowcast=0&averages=1&aqi=1&aqi_value=35&map=rainviewer',
       1280,
@@ -172,7 +179,7 @@ try {
   }
 
   // Four skies from the gallery, each card 390 × 720, named for a place.
-  {
+  if (wants('skies')) {
     const page = await open('index-gallery.html', 800, 1000),
       sky = async (title: string) => {
         await page.locator('nav button', { hasText: new RegExp(`^${title}$`) }).click();
@@ -229,11 +236,51 @@ try {
       '-o',
       `${OUT}sky-rain.webp`,
     ]);
+    made.push('sky-rain');
+    await page.context().close();
+  }
+
+  // The home view, a square 420 px a side: a sunny day over its readings, and a clear night over
+  // the days ahead.
+  if (wants('home')) {
+    const page = await open('index-gallery.html', 800, 1000);
+    for (const [title, name, row] of [
+      ['Sunny', 'home-day', 'details'],
+      ['Clear night', 'home-night', 'days'],
+    ] as const) {
+      await page.locator('nav button', { hasText: new RegExp(`^${title}$`) }).click();
+      const entity = `weather.scene_${Number(new URL(page.url()).hash.slice(1)) - 1}`;
+      await card(page).evaluate(
+        (element: IWeatherCard, [id, shown]: readonly [string, string]) => {
+          element.style.cssText = 'width:420px;height:420px;--ha-card-border-radius:44px';
+          element.setConfig({
+            type: 'custom:iweather-card',
+            entity: id,
+            weather_layout: 'homeview',
+            homeview_row: shown,
+            air_quality_entity: 'sensor.air_quality_index',
+          });
+          // An air quality sensor, which the gallery's house has none of.
+          const house = element.readHass;
+          if (house)
+            element.hass = {
+              ...house,
+              states: {
+                ...house.states,
+                'sensor.air_quality_index': { entity_id: 'sensor.air_quality_index', state: '42', attributes: {} },
+              },
+            };
+        },
+        [entity, row] as const,
+      );
+      await settled(page);
+      still(await shot(page, name), name);
+    }
     await page.context().close();
   }
 
   // Sunny at the sizes a 500 px section offers: 4, 6 and 12 columns by 1, 2 and 3 rows.
-  {
+  if (wants('sizes')) {
     const page = await open('index-sizes.html', 1600, 1200, MORNING);
     await page.selectOption('select[name=scene]', { label: 'Sunny' });
     await page.evaluate(() => {
@@ -261,7 +308,7 @@ try {
   rmSync(work, { recursive: true, force: true });
 }
 
-for (const name of ['hero', 'sky-sunny', 'sky-rain', 'sky-snow', 'sky-night', 'sizes'])
+for (const name of made)
   console.log(`docs/images/${name}.webp  ${Math.round(statSync(`${OUT}${name}.webp`).size / 1024)} KB`);
 if (refused.size) console.log(`Refused: ${[...refused].join(', ')}`);
 if (faults.length) console.log(faults.join('\n'));

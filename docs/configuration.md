@@ -1,6 +1,6 @@
 # Configuration
 
-Every option here is also in the visual editor, which writes only the settings that differ from their defaults. The editor shows the **Full page**, **Map and online services** and **Alerts and sensors** sections when the layout is `page`. While you edit, the preview shows the part of the card a setting changes: it scrolls there when the preview sits beside the form, and rings it for a moment.
+Every option here is also in the visual editor, which writes only the settings that differ from their defaults. The editor shows the **Full page**, **Map and online services** and **Alerts and sensors** sections when the layout is `page`. Within each layout it shows a setting only while that setting changes something: a forecast's length with the forecast, the air quality scale once a sensor is set, the averages while the page has their tile, and so on. A hidden setting keeps its value. While you edit, the preview shows the part of the card a setting changes: it scrolls there when the preview sits beside the form, and rings it for a moment.
 
 - [Card](#card)
 - [Forecast](#forecast)
@@ -9,6 +9,7 @@ Every option here is also in the visual editor, which writes only the settings t
 - [Units](#units)
 - [Data sources](#data-sources)
 - [Advanced](#advanced)
+- [Home view](#home-view)
 - [The full-page layout](#the-full-page-layout)
 - [Tiles and sheets](#tiles-and-sheets)
 - [Alerts](#alerts)
@@ -24,7 +25,7 @@ Every option here is also in the visual editor, which writes only the settings t
 | Option | Default | Description |
 |---|---|---|
 | `entity` | required | Any `weather.*` entity |
-| `weather_layout` | `auto` | `auto`, `compact`, `strip` for one line, `expanded`, or `page` for the full-page layout with detail tiles |
+| `weather_layout` | `auto` | `auto`, `compact`, `strip` for one line, `homeview` for [a screen read from across a room](#the-home-view), `expanded`, or `page` for the full-page layout with detail tiles |
 
 ## Forecast
 
@@ -45,7 +46,7 @@ These apply to the `page` layout.
 |---|---|---|
 | `size` | `standard` | How large the page draws: `standard`, `large` (a quarter larger) or `extra_large` (half as large again), for a screen seen from across a room. Text, tiles and gaps scale together, so fewer columns fit. |
 | `top_padding` | `50` | Space above the current weather, as a percentage of the original spacing: `0`–`200`. The default halves it; `100` restores the original. Text size and the gap below the weather stay the same. |
-| `sheet_style` | `auto` | How a tile opens its details: `auto` (a sheet on a phone, a popover anywhere larger), `sheet` or `popover`. A sheet slides up from the foot of the screen, and goes when pulled down by a finger or a mouse. |
+| `sheet_style` | `auto` | How a tile opens its details: `auto` (a sheet on a phone, a popover anywhere larger), `sheet`, `card` (a sheet that covers the card and no more) or `popover`. A sheet slides up from the foot of the screen, and goes when pulled down by a finger or a mouse. |
 | `tiles` | all, in the default order | The [tiles](#tiles-and-sheets) to show, in this order |
 | `alert_entities` | none | Sensors or binary sensors with weather alerts. Without them, the page shows the National Weather Service's alerts in the United States. See [Alerts](#alerts). |
 | `next_hour_entity` | none | A weather entity whose forecast steps less than an hour, or a sensor listing minute-by-minute precipitation. See [Next-hour precipitation](#next-hour-precipitation). |
@@ -61,6 +62,20 @@ These apply to the `page` layout.
 | `map_precipitation_animation` | `true` | Play the card's precipitation map from now on, with the time in its corner as it plays: while precipitation is falling, the latest radar carried on fifty minutes at the speed and heading it moves; otherwise the forecast's next 12 hours. Whether it is falling, and how far out the map looks, comes from the next hour's minute-by-minute forecast where there is one, then the hourly forecast. It never shows the past. Off, it shows the latest observation until you open the map. Follows `weather_animation` and reduced-motion preferences. |
 | `map_tile_url` | OpenStreetMap | Base map template, an `https` URL with `{z}`, `{x}` and `{y}`, such as `https://tiles.example.com/{z}/{x}/{y}.png`. The card shows your tiles as they come on every theme, so pick dark ones for a dark theme. |
 | `map_layers` | none | Tile overlays for each map kind from any service: `precipitation`, `wind`, `air_quality` and `temperature`, each an `https` URL with `{z}`, `{x}` and `{y}` |
+
+## Home view
+
+These apply to the `homeview` layout. See [The home view](#the-home-view).
+
+| Option | Default | Description |
+|---|---|---|
+| `homeview_row` | `days` | What the row along the foot opens on: `days` for the next four days, or `details` for the readings now. Swiping across the row turns it to the other. |
+| `show_clock` | `true` | The time at the upper right |
+| `glass_refraction` | `true` | Draw the temperature as glass that bends the sky behind it. `false`, `low_power`, or a browser without WebGL shows plain figures in the sky's colour. |
+| `show_high_low` | `true` | Today's high and low under the condition |
+| `glass_strength` | `standard` | How deep the glass temperature is cut and how far it bends the sky: `subtle`, `standard` or `strong` |
+| `sheet_style` | `auto` | How a column opens its details. In this layout `auto` slides a sheet up from the foot of the screen, and once the card takes up at least 80% of the screen's width and height, as on a tablet it has to itself, the sheet covers the card exactly. `card` always keeps the sheet to the card, `sheet` always gives the screen's, and `popover` opens one beside the column. |
+| `air_quality_entity` | none | A sensor reporting an air quality index, shown among the readings |
 
 ## Look
 
@@ -129,6 +144,23 @@ time_zone: Europe/Paris
 ```
 
 More than 10 km from home, the zone's name heads the page and names the map's pin, unless `place_name` gives another. Set `time_zone` too: the card can't tell a place's time zone by itself, so forecast hours otherwise follow yours.
+
+## The home view
+
+`weather_layout: homeview` is for a wall tablet or a small screen on a shelf. Over the live sky it shows the condition with today's high and low, the time, and the temperature as large as the card allows, in the sky's own colour. Along the foot are four columns:
+
+- **Days** (`homeview_row: days`): the next four days, each with its symbol, high and low.
+- **Readings** (`homeview_row: details`): how long until rain or snow, the wind, the humidity and the air quality index. A reading the weather doesn't have is left out, and the UV index fills in. The air quality index comes from `air_quality_entity`; this layout asks no outside service for one.
+
+Pressing a column opens its details: a day opens that day's forecast, and a reading its own sheet, such as the air quality's. Swiping across the row, or an arrow key on it, turns it from one to the other. Tapping anywhere above it does what `tap_action` says. The card is square unless the dashboard or `--iweather-height` gives it a height, and every size in it follows the card's shorter side, so it keeps its proportions at any size. Shorter than 250 px it lets go of the row, and under 170 px it reads as any small card does.
+
+```yaml
+type: custom:iweather-card
+entity: weather.home
+weather_layout: homeview
+homeview_row: details
+air_quality_entity: sensor.air_quality_index
+```
 
 ## The full-page layout
 

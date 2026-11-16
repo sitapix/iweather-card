@@ -150,13 +150,8 @@ export class IWeatherCardEditor extends HTMLElement {
     const entity = this._config['entity'],
       attributes = typeof entity === 'string' ? this.readHass?.states[entity]?.attributes : undefined,
       context = contextOf(this._data, attributes, this._narrow),
-      key = JSON.stringify([
-        context.layout,
-        context.averages,
-        context.map,
-        context.narrow,
-        attributes ? missingReadings(attributes) : null,
-      ]);
+      // Everything the form's shape goes by, the attributes as the readings they leave out.
+      key = JSON.stringify([{ ...context, attributes: null }, attributes ? missingReadings(attributes) : null]);
     if (this._schemaKey === key) return;
     this._schemaKey = key;
     this._form.schema = inWords(schemaFor(context, this._say), this._say);

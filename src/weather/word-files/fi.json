@@ -828,5 +828,8 @@
   "In {count} hours": {
     "one": "{count} tunnin kuluttua",
     "other": "{count} tunnin kuluttua"
-  }
+  },
+  "In {count}h": "{count} t päästä",
+  "In {count}d": "{count} pv päästä",
+  "AQI": "AQI"
 }

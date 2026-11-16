@@ -846,5 +846,8 @@
     "one": "Tra {count} ora",
     "many": "Tra {count} ore",
     "other": "Tra {count} ore"
-  }
+  },
+  "In {count}h": "Tra {count} h",
+  "In {count}d": "Tra {count} g",
+  "AQI": "IQA"
 }

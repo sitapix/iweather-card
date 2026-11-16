@@ -864,5 +864,8 @@
     "few": "Za {count} hodiny",
     "many": "Za {count} hodiny",
     "other": "Za {count} hodin"
-  }
+  },
+  "In {count}h": "Za {count} h",
+  "In {count}d": "Za {count} d",
+  "AQI": "AQI"
 }
