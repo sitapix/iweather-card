@@ -2,6 +2,7 @@ import { languageOf } from '../src/weather/language.ts';
 import type { WeatherLayout } from '../src/card/config.ts';
 import { House } from './house.ts';
 import { type Place, findPlaces, liveWeather } from './live.ts';
+import { SYMBOLS, type SymbolName } from '../src/weather/symbols.ts';
 import {
   DEFAULT_WEATHER,
   LANGUAGES,
@@ -29,6 +30,22 @@ const THEMES: readonly Theme[] = ['light', 'dark'];
 const HOURS = 24;
 const MINUTE = 60_000;
 const OPENING_HOUR = 13;
+// Each sample weather's symbol, the card's own. Wind with cloud has the wind over a cloud.
+const WEATHER_SYMBOLS: Readonly<Record<string, readonly SymbolName[]>> = {
+  clear: ['sun'],
+  'partly-cloudy': ['cloud-sun'],
+  cloudy: ['cloud'],
+  fog: ['fog'],
+  rain: ['rain'],
+  downpour: ['heavy-rain'],
+  thunderstorm: ['storm-rain'],
+  lightning: ['sun-storm'],
+  snow: ['snow'],
+  sleet: ['sleet'],
+  hail: ['hail'],
+  windy: ['wind'],
+  'wind-and-cloud': ['cloud', 'wind'],
+};
 // The countries that measure in °F and miles.
 const FAHRENHEIT_REGIONS = /-(us|lr|mm)$/i;
 // How long a position may be, and how long to wait for one.
@@ -123,7 +140,8 @@ const form = query('form.controls', HTMLFormElement),
   hourInput = query('input[name=hour]', HTMLInputElement),
   status = query('.real-status', HTMLParagraphElement),
   places = query('ul.places', HTMLUListElement),
-  back = query('button.back', HTMLButtonElement),
+  real = query('fieldset.real', HTMLFieldSetElement),
+  alertLabel = query('label.check', HTMLLabelElement),
   here = query('button.here', HTMLButtonElement),
   search = query('input[name=place]', HTMLInputElement),
   alertBox = query('input[name=alert]', HTMLInputElement),
@@ -132,7 +150,10 @@ const form = query('form.controls', HTMLFormElement),
 
 // The controls, from the sample's weathers and the card's languages.
 query('[data-name=weather]', HTMLDivElement).innerHTML = WEATHERS.map(
-  weather => `<label><input type="radio" name="weather" value="${weather.id}"><span>${weather.label}</span></label>`,
+  weather =>
+    `<label><input type="radio" name="weather" value="${weather.id}"><span><i>${(WEATHER_SYMBOLS[weather.id] ?? [])
+      .map(name => SYMBOLS[name])
+      .join('')}</i>${weather.label}</span></label>`,
 ).join('');
 query('select[name=language]', HTMLSelectElement).innerHTML = LANGUAGES.map(
   ([language, name]) => `<option value="${language}" lang="${language}">${name}</option>`,
@@ -194,6 +215,8 @@ function sampleFor({ weather, hour, units }: Choices, now: number): World {
 // The card, once its file has loaded and defined it.
 const shown: { card?: HTMLElementTagNameMap[typeof CARD_TAG] } = {};
 let shownSettings = '';
+// Whether the controls are the sample's or a real place's; the sample shows until a place answers.
+let source: 'sample' | 'real' = 'sample';
 // The place whose real weather shows, and its weather once it came, in the units it came in.
 let live: { place: Place; units: Units; world: World | null } | undefined;
 let request: AbortController | undefined;
@@ -214,10 +237,17 @@ function render(): void {
   document.documentElement.dataset['theme'] = choices.theme;
   clock.value = live ? 'Now' : clockFormat.format(Date.UTC(2000, 0, 1, choices.hour));
   hourInput.setAttribute('aria-valuetext', clock.value);
+  // Only the page layout shows alerts.
   alertBox.disabled = choices.layout !== 'page';
+  alertLabel.hidden = alertBox.disabled;
   form.dataset['live'] = String(live !== undefined);
-  for (const fieldset of form.querySelectorAll<HTMLFieldSetElement>('fieldset.weather, fieldset.time'))
+  const which = form.elements.namedItem('source');
+  if (which instanceof RadioNodeList) which.value = source;
+  real.hidden = source === 'sample';
+  for (const fieldset of form.querySelectorAll<HTMLFieldSetElement>('fieldset.weather, fieldset.time')) {
     fieldset.disabled = live !== undefined;
+    fieldset.hidden = source === 'real';
+  }
   history.replaceState(null, '', toHash(choices) || `${location.pathname}${location.search}`);
 
   const settings = cardSettings(choices),
@@ -243,7 +273,7 @@ async function showPlace(place: Place): Promise<void> {
   const units = read().units,
     signal = nextRequest();
   live = { place, units, world: live?.place === place ? live.world : null };
-  back.hidden = false;
+  source = 'real';
   status.textContent = `Asking for the weather at ${place.name}…`;
   render();
   try {
@@ -255,7 +285,6 @@ async function showPlace(place: Place): Promise<void> {
   } catch {
     if (signal.aborted) return;
     live = undefined;
-    back.hidden = true;
     status.textContent = `Open-Meteo sent nothing for ${place.name}, so the sample weather is back.`;
   }
   render();
@@ -264,7 +293,7 @@ async function showPlace(place: Place): Promise<void> {
 function sample(): void {
   request?.abort();
   live = undefined;
-  back.hidden = true;
+  source = 'sample';
   places.hidden = true;
   status.textContent = '';
   render();
@@ -325,13 +354,23 @@ here.addEventListener('click', () => {
     { maximumAge: LOCATION_AGE, timeout: LOCATION_WAIT },
   );
 });
-back.addEventListener('click', sample);
 
-form.addEventListener('input', event => {
-  if (event.target === search) return;
+// Some of the form's controls stand outside it, over the card and in the bar across the top.
+document.addEventListener('input', event => {
+  const { target } = event;
+  if (target === search || !(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
+  if (target.form !== form) return;
+  if (target.name === 'source') {
+    if (target.value === 'sample') sample();
+    else {
+      source = 'real';
+      render();
+      search.focus();
+    }
+    return;
+  }
   // Real weather in other units is asked for again, as an integration would send it.
-  if (live && event.target instanceof HTMLInputElement && event.target.name === 'units' && read().units !== live.units)
-    void showPlace(live.place);
+  if (live && target.name === 'units' && read().units !== live.units) void showPlace(live.place);
   else render();
 });
 

@@ -149,6 +149,9 @@ test('the controls drive the card, and the settings and the address follow', asy
     'type: custom:iweather-card\nentity: weather.home\nweather_layout: compact',
   );
   expect(new URLSearchParams(new URL(demo.url()).hash.slice(1)).get('weather')).toBe('clear');
+
+  // Only the page layout shows an alert, so no other offers one.
+  await expect(demo.locator('input[name=alert]')).toBeHidden();
 });
 
 test('a scene in the address opens as it was left', async ({ demo }) => {
@@ -165,6 +168,12 @@ test('a place found by name shows its own weather, until the sample is asked bac
   await expect(hero.locator('.location')).toHaveText('Chicago');
   expect(asked, 'nothing asked before the visitor asks').toEqual([]);
 
+  // The search stands in for the sample's weathers once real weather is asked for.
+  await expect(demo.locator('input[name=place]')).toBeHidden();
+  await choose(demo, 'source', 'Real weather');
+  await expect(demo.locator('[data-name=weather]')).toBeHidden();
+  await expect(hero.locator('.location')).toHaveText('Chicago');
+  expect(asked, 'nothing asked before a place is').toEqual([]);
   await demo.locator('input[name=place]').fill('Paris');
   await demo.getByRole('button', { name: 'Look up' }).click();
   await demo.getByRole('button', { name: 'Paris, Île-de-France, France' }).click();
@@ -175,8 +184,9 @@ test('a place found by name shows its own weather, until the sample is asked bac
   await expect(demo.locator('output[name=clock]')).toHaveText('Now');
   expect(asked.some(url => url.includes('latitude=48.850') && url.includes('temperature_unit=fahrenheit'))).toBe(true);
 
-  await demo.getByRole('button', { name: 'Back to sample weather' }).click();
+  await choose(demo, 'source', 'Sample');
   await expect(hero.locator('.location')).toHaveText('Chicago');
+  await expect(demo.locator('[data-name=weather]')).toBeVisible();
   await expect(demo.locator('[data-name=weather] input').first()).toBeEnabled();
   await expect(hero.locator('.condition')).toHaveText('Snow');
   await expect(demo.locator('output[name=clock]')).toHaveText('10 PM');
@@ -220,6 +230,7 @@ test('a late location reply leaves a newer town search in place', async ({ demo,
     });
   });
   await demo.goto(`${SITE}/#layout=expanded&units=us&language=en`);
+  await choose(demo, 'source', 'Real weather');
   await demo.getByRole('button', { name: 'Use my location' }).click();
   await demo.getByRole('searchbox').fill('Paris');
   await demo.getByRole('button', { name: 'Look up' }).click();

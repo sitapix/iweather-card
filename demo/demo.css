@@ -92,6 +92,37 @@ pre {
   display: flex;
   gap: 18px;
 }
+/* What a visitor sets once: units, the dashboard's theme and the language. On a narrow screen they
+   take a row of their own under the name. */
+.prefs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.prefs select {
+  width: auto;
+  max-width: 150px;
+  padding: 5px 8px;
+  font-size: 13.5px;
+}
+.prefs .segments span {
+  padding: 4px 10px;
+}
+@media (max-width: 700px) {
+  .top {
+    flex-wrap: wrap;
+  }
+  .prefs {
+    order: 1;
+    width: 100%;
+    margin-left: 0;
+  }
+  .prefs select {
+    flex: 1;
+    max-width: none;
+  }
+}
 .top nav a {
   color: var(--muted);
   text-decoration: none;
@@ -111,12 +142,16 @@ footer {
    card, then the controls, then the YAML. */
 .bench {
   display: grid;
-  grid-template: 'stage controls' auto 'settings controls' 1fr / minmax(0, 1fr) 340px;
+  grid-template: 'stage controls' auto 'settings controls' 1fr / minmax(0, 1fr) 360px;
   gap: 24px;
   align-items: start;
 }
-.stage {
+.show {
+  display: grid;
   grid-area: stage;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
 }
 .controls {
   grid-area: controls;
@@ -130,11 +165,50 @@ footer {
   }
 }
 
+/* Over the card, what frames it: its layout, the alert the page layout can show, and the screen it
+   stands on. */
+.stage-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.stage-bar [data-name='layout'] {
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: 600px;
+}
+.screen {
+  margin-left: auto;
+}
+.screen span {
+  padding: 5px 12px;
+}
+.screen svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+/* The screen's name is read out, and shown as the pointer rests on it. */
+.screen b {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* The dashboard the card stands on. The page layout scrolls inside a screen's height; the
    others take the height they take on a dashboard, at a column's width. */
 .stage {
   --frame-height: min(900px, calc(100dvh - 48px));
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   align-content: start;
   min-height: 420px;
@@ -186,7 +260,7 @@ footer {
     border-radius: 0;
   }
   /* A phone shows the card at its own width. */
-  .controls .screen {
+  .stage-bar .screen {
     display: none;
   }
 }
@@ -209,17 +283,6 @@ footer {
     max-height: none;
   }
 }
-/* Under the card on a screen with the width for it, the controls stand two abreast. */
-@media (min-width: 641px) and (max-width: 980px) {
-  .controls {
-    grid-template-columns: 1fr 1fr;
-    column-gap: 28px;
-  }
-  /* The weathers stand as tall as the search and the time of day together. */
-  .controls .weather {
-    grid-row: span 2;
-  }
-}
 fieldset {
   min-width: 0;
   margin: 0;
@@ -236,17 +299,14 @@ legend {
   font-size: 14px;
   font-weight: 600;
 }
-.pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
 
-/* Choices drawn as segments, over radio buttons. */
-.segments {
+/* Choices drawn as segments and tiles, over radio buttons. */
+.segments,
+.tiles {
   position: relative;
 }
-.segments input {
+.segments input,
+.tiles input {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -266,19 +326,6 @@ legend {
   grid-auto-flow: row;
   gap: 2px;
 }
-/* The weathers stand three to a row, so that they read across in columns; the thirteenth, the
-   longest name, has a row to itself. */
-.segments[data-name='weather'] {
-  grid-template-columns: repeat(3, 1fr);
-  grid-auto-flow: row;
-  gap: 2px;
-}
-.segments[data-name='weather'] label:last-child {
-  grid-column: 1 / -1;
-}
-.segments[data-name='weather'] span {
-  white-space: nowrap;
-}
 .segments span {
   display: block;
   padding: 5px 4px;
@@ -291,12 +338,62 @@ legend {
   background: var(--panel);
   font-weight: 600;
 }
-.segments input:focus-visible + span {
+.segments input:focus-visible + span,
+.tiles input:focus-visible + span {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 fieldset:disabled span {
   cursor: default;
+}
+
+/* The sample's weathers, each under the card's own symbol on a patch of sky, as many to a row as
+   fit. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 4px;
+}
+.tiles span {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  height: 100%;
+  padding: 8px 0;
+  border-radius: 12px;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.tiles span:hover {
+  background: var(--chip);
+}
+.tiles i {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: linear-gradient(#2c6cc0, #6aa8e4);
+}
+.tiles svg {
+  grid-area: 1 / 1;
+  width: 24px;
+  height: 24px;
+}
+/* The cloud behind the wind. */
+.tiles svg:not(:last-child) {
+  opacity: 0.5;
+}
+.tiles input:checked + span {
+  background: var(--chip);
+  font-weight: 600;
+}
+.tiles input:checked + span i {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .hour {
@@ -305,21 +402,58 @@ fieldset:disabled span {
   align-items: center;
   gap: 10px;
 }
+/* The slider's track is the day's sky: night, dawn, day, dusk and night again. */
 .hour input {
   width: 100%;
-  accent-color: var(--accent);
+  height: 22px;
+  margin: 0;
+  appearance: none;
+  background: none;
+  cursor: pointer;
+  --sky: linear-gradient(
+    90deg,
+    #0b1030 0%,
+    #1b2a5c 18%,
+    #f2a160 27%,
+    #6fb1ee 38%,
+    #4c97e6 62%,
+    #f08e52 77%,
+    #1b2a5c 86%,
+    #0b1030 100%
+  );
+}
+.hour input::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--sky);
+}
+.hour input::-moz-range-track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--sky);
+}
+.hour input::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: -5px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  appearance: none;
+  background: var(--accent);
+  box-shadow: 0 1px 4px #0006;
+}
+.hour input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 4px #0006;
 }
 .hour output {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   text-align: right;
-}
-.marks {
-  display: flex;
-  justify-content: space-between;
-  margin-right: 62px;
-  color: var(--muted);
-  font-size: 11px;
 }
 
 select,
@@ -385,9 +519,6 @@ button:hover {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
-}
-.back {
-  justify-self: start;
 }
 .check {
   display: flex;
