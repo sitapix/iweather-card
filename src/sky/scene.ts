@@ -502,12 +502,17 @@ export const moonAcross = (progress: number): number => {
 };
 // Where the moon sits on a card `width` × `height`: `across` is its share of the card's
 // width (on its arc, see arcX; without a location, a fixed spot), and its altitude in
-// `degrees` sets its height (see moonHeight), never below the middle of the card or the
-// open sky `sky`. Both are shares of the card itself, so a card of any shape shows it.
+// `degrees` sets its height (see moonHeight), never below the open sky `sky`, or the middle
+// of the card where that sky is too short for it. Both are shares of the card itself, so a
+// card of any shape shows it.
 // A disc `r` across that would sit behind the conditions' `text` moves beside them, on its
 // own side if there is room in the open sky there, else the other; with room on neither it
 // rises clear of them, cut off by the top if need be. One in the `sun`'s glow rises off
 // the card. It never moves down.
+// The open sky holds the whole moon when it is this many of its radii tall, and the moon then
+// keeps its centre this many radii above the sky's foot.
+const MOON_ROOM = 3;
+const MOON_CLEAR = 1.25;
 export function moonPlace(
   width: number,
   height: number,
@@ -518,8 +523,12 @@ export function moonPlace(
   r: number,
   sun?: SunSpot,
 ): Glow {
+  // Where the open sky has room for the whole disc, it stays in it, a little clear of the
+  // panels below: they would cut it off, not show it through.
+  const foot = sky.y + sky.height,
+    floor = sky.height >= r * MOON_ROOM ? foot - r * MOON_CLEAR : Math.max(foot, height * 0.5) - r;
   let x = width * (across ?? 0.75),
-    y = Math.min(height * moonHeight(degrees, across ?? 0.75), Math.max(sky.y + sky.height, height * 0.5) - r);
+    y = Math.min(height * moonHeight(degrees, across ?? 0.75), floor);
   if (text && x + r > text.x && x - r < text.x + text.width && y + r > text.y && y - r < text.y + text.height) {
     const left = text.x - r * 1.4,
       right = text.x + text.width + r * 1.4,
@@ -1460,7 +1469,7 @@ export class WeatherScene {
     text?: Rect,
     sun?: SunSpot,
     phase = this.preset?.moonPhase ?? moonPhase(),
-    radius = clamp(Math.max(width, height) * 0.027, 12, 48),
+    radius = clamp(Math.max(width, height) * 0.038, 12, 48),
   ): void {
     const p = this.preset;
     if (!p) return;
