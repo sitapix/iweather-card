@@ -1,7 +1,7 @@
 import { HOUR, MINUTE } from '../lib/time.ts';
 import { finite } from '../lib/values.ts';
 import type { ForecastEntry } from '../card/home-assistant.ts';
-import { conditionPrecipitation } from './precipitation.ts';
+import { wet } from './precipitation.ts';
 
 // How soon precipitation comes, which sets how the small precipitation map plays and how far out it
 // looks: falling now, starting within the hour, within three hours or six, or not in sight; unknown
@@ -24,23 +24,19 @@ export interface MinuteSpan {
 const WITHIN = { threeHours: 3, sixHours: 6 } as const;
 export function rainOutlook(
   minutes: readonly MinuteSpan[],
-  hourly: readonly ForecastEntry[],
+  hourly: readonly (ForecastEntry & { time?: number })[],
   now: number,
 ): RainOutlook {
   if (minutes.some(span => span.wet && span.start <= now && now < span.end)) return 'now';
   const next = minutes.find(span => span.wet && span.start > now);
   if (next && next.start - now < HOUR) return 'nextHour';
   if (hourly.length === 0) return 'unknown';
-  const start = Math.min(
-    ...hourly.flatMap(entry => {
-      const time = Date.parse(entry.datetime ?? '');
-      return Number.isFinite(time) &&
-        time >= now - HOUR &&
-        ((entry.precipitation ?? 0) > 0 || conditionPrecipitation(entry.condition) !== undefined)
-        ? [time]
-        : [];
-    }),
-  );
+  let start = Infinity;
+  for (const entry of hourly) {
+    if (!wet(entry)) continue;
+    const time = entry.time ?? Date.parse(entry.datetime ?? '');
+    if (time >= now - HOUR && time < start) start = time;
+  }
   if (!Number.isFinite(start)) return 'none';
   const hours = start <= now ? 0 : Math.max(1, Math.trunc((start - now) / HOUR));
   return hours < WITHIN.threeHours ? 'nextThreeHours' : hours < WITHIN.sixHours ? 'nextSixHours' : 'none';

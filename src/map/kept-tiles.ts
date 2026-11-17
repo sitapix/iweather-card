@@ -1,8 +1,8 @@
 // Forecast tiles kept in the browser between visits. A tile of a model's run never changes, so once
 // fetched it is read from IndexedDB rather than the network, for a day; anything older is let go
-// when the store is first opened. Where IndexedDB isn't there or refuses (Node, some private
+// in batches while the store is in use. Where IndexedDB isn't there or refuses (Node, some private
 // windows), every tile is simply fetched.
-import { DAY, SECOND } from '../lib/time.ts';
+import { DAY, HOUR, MINUTE, SECOND } from '../lib/time.ts';
 
 const DATABASE = 'iweather-forecast',
   STORE = 'tiles',
@@ -10,34 +10,57 @@ const DATABASE = 'iweather-forecast',
   VERSION = 2,
   // Enough for two themes and several screen sizes, including a sheet.
   MAX_STILLS = 12;
-// Longer than this to open the store, or to find a tile in it, and it is passed over for the rest of
-// the visit: some browsers have been seen to leave an open hanging, and tiles mustn't wait on that.
+// Longer than this to open the store, or to find a tile in it, and it is passed over until a later attempt.
+// Some browsers leave an open hanging and tiles mustn't wait on that.
 export const STORE_WAIT = 5 * SECOND;
 
 let opened: Promise<IDBDatabase | null> | undefined;
+let current: IDBDatabase | undefined;
+let retryAt = 0;
+// The wait before the next attempt doubles with each failure in a row, up to an hour: an open that
+// hangs holds every tile asked for meanwhile for STORE_WAIT, which mustn't come round each minute.
+let retryWait = MINUTE;
+let pruneAt = 0;
+const PRUNE_BATCH = 128;
+
+function forget(store: IDBDatabase) {
+  if (current !== store) return;
+  opened = undefined;
+  current = undefined;
+}
 
 function passOver() {
-  opened = Promise.resolve(null);
+  retryAt = Date.now() + retryWait;
+  retryWait = Math.min(retryWait * 2, HOUR);
+}
+
+function pruneDue(store: IDBDatabase) {
+  if (Date.now() < pruneAt) return;
+  pruneAt = Date.now() + HOUR;
+  try {
+    prune(store, STORE);
+    prune(store, STILLS);
+  } catch {}
 }
 
 // An index cursor visits only expired keys without copying tile bytes during startup.
 function prune(database: IDBDatabase, name: string) {
   const store = database.transaction(name, 'readwrite').objectStore(name);
   const cursor = store.index('at').openKeyCursor(IDBKeyRange.upperBound(Date.now() - DAY, true));
+  let removed = 0;
   cursor.onsuccess = () => {
     const item = cursor.result;
     if (!item) return;
     store.delete(item.primaryKey);
-    item.continue();
+    if (++removed < PRUNE_BATCH) item.continue();
+    else pruneAt = Math.min(pruneAt, Date.now() + MINUTE);
   };
 }
 
 function database(): Promise<IDBDatabase | null> {
-  opened ??= new Promise(resolve => {
-    if (typeof indexedDB === 'undefined') {
-      resolve(null);
-      return;
-    }
+  if (Date.now() < retryAt || typeof indexedDB === 'undefined') return Promise.resolve(null);
+  if (current) pruneDue(current);
+  opened ??= new Promise<IDBDatabase | null>(resolve => {
     let late = false;
     const timer = setTimeout(() => {
         late = true;
@@ -66,15 +89,14 @@ function database(): Promise<IDBDatabase | null> {
         }
         // Closed by the browser, or asked to make way for a newer version in another tab, it is
         // opened again when next needed.
-        store.onclose = () => {
-          opened = undefined;
-        };
+        current = store;
+        retryWait = MINUTE;
+        store.onclose = () => forget(store);
         store.onversionchange = () => {
+          forget(store);
           store.close();
-          opened = undefined;
         };
-        prune(store, STORE);
-        prune(store, STILLS);
+        pruneDue(store);
         done(store);
       };
       // Held up by an older version open in another tab.
@@ -86,6 +108,12 @@ function database(): Promise<IDBDatabase | null> {
     } catch {
       done(null);
     }
+  }).then(store => {
+    if (!store) {
+      opened = undefined;
+      passOver();
+    }
+    return store;
   });
   return opened;
 }
@@ -96,7 +124,11 @@ async function kept(key: string, name = STORE): Promise<unknown> {
   if (!store) return undefined;
   return new Promise(resolve => {
     const timer = setTimeout(() => {
-        passOver();
+        if (current === store) {
+          forget(store);
+          passOver();
+          store.close();
+        }
         resolve(undefined);
       }, STORE_WAIT),
       done = (value: unknown) => {

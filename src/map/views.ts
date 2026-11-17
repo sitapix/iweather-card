@@ -445,6 +445,9 @@ export class MapViews {
           : undefined;
     return ctx ? mapView(ctx, layer)?.inputs : undefined;
   }
+  private inSight() {
+    return !document.hidden && (this.card.visible || this.card.root.querySelector('dialog[open] .radar') !== null);
+  }
   // The large map on show. A closed sheet keeps the markup of the last map it showed.
   largeView() {
     return this.card.root.querySelector<HTMLElement>('dialog[open] .radar.large');
@@ -532,15 +535,21 @@ export class MapViews {
   async loadRadar(now: number) {
     const { card } = this,
       config = card.config,
-      enabled = () => card.isConnected && card.config?.map === 'rainviewer' && card.config.weather_layout === 'page',
-      visible = () => card.visible && !document.hidden;
+      enabled = () => card.isConnected && card.config?.map === 'rainviewer' && card.config.weather_layout === 'page';
     if (!config || !enabled()) {
       this.invalidateRadar();
       return;
     }
-    if (visible()) void this.checkReach();
-    if (!visible() || this.radarAsked || (this.radar && now - this.radar.at < config.radar_refresh_minutes * MINUTE))
-      return;
+    if (!this.inSight()) return;
+    const nearby = [...card.root.querySelectorAll<HTMLElement>('.radar')].some(
+      view =>
+        !view.closest('dialog:not([open])') &&
+        this.nearView(view) &&
+        (!view.closest('dialog') || view.classList.contains('large') || view.dataset['kind'] === 'precipitation'),
+    );
+    if (!nearby) return;
+    void this.checkReach();
+    if (this.radarAsked || (this.radar && now - this.radar.at < config.radar_refresh_minutes * MINUTE)) return;
     const radar: Radar = { at: now, frames: this.radar?.frames ?? [] },
       asked = new AbortController();
     this.radarAsked = asked;
@@ -553,7 +562,7 @@ export class MapViews {
     this.radarAsked = undefined;
     if (!enabled()) return;
     this.radar = radar;
-    if (visible()) this.draw();
+    if (this.inSight()) this.draw();
   }
   // The short forecast is confined to IEM's raster and HRRR's model domain. A view outside
   // either stays on observed radar; the 12-hour view retains its worldwide forecast sources. The
@@ -606,7 +615,7 @@ export class MapViews {
     this.forecastAsked = undefined;
     // A failed refresh can retain a still-fresh run; nextRadarFrames independently rejects its age.
     this.shortForecast = { at: now, data: data ?? this.shortForecast?.data ?? null };
-    if (this.card.isConnected && this.card.visible && !document.hidden) this.draw();
+    if (this.card.isConnected && this.inSight()) this.draw();
   }
   // One unavailable model tile invalidates the forecast, rather than showing an old observation
   // under a future timestamp. Retry metadata on its normal interval, never on every animation tick.
@@ -624,8 +633,8 @@ export class MapViews {
   private gridVisible(view: HTMLElement, sized = false) {
     return (
       this.card.isConnected &&
-      this.card.visible &&
       !document.hidden &&
+      (this.card.visible || Boolean(view.closest('dialog[open]'))) &&
       this.card.config?.map === 'rainviewer' &&
       this.card.root.contains(view) &&
       this.nearby.get(view) !== false &&
@@ -1310,7 +1319,7 @@ export class MapViews {
           moving: () => animate || (large && (this.timelinePlay !== 0 || this.timelineScrub)),
           // Not while the map moves, hiding them (see the styles).
           active: () =>
-            this.card.visible &&
+            (this.card.visible || (large && this.inSight())) &&
             !document.hidden &&
             !canvas.closest('.map-old') &&
             (!large || this.largeView() === view) &&
@@ -1370,7 +1379,7 @@ export class MapViews {
   // fills the view again once it has it. Until then the ground it had stays.
   async drawStill(key: string, view: MapStillView, look: GroundLook, owner?: HTMLElement) {
     const { card } = this;
-    if (this.stillDrawing || !card.visible || document.hidden) return;
+    if (this.stillDrawing || !this.inSight()) return;
     const controller = new AbortController(),
       drawing = { key, owner, controller };
     this.stillDrawing = drawing;
@@ -1651,7 +1660,7 @@ export class MapViews {
             () =>
               Boolean(
                 card.isConnected &&
-                  card.visible &&
+                  (card.visible || Boolean(view.closest('dialog[open]'))) &&
                   !document.hidden &&
                   view.isConnected &&
                   card.config &&
@@ -1736,7 +1745,9 @@ export class MapViews {
   }
   // Start fetching shortly before the dashboard tile scrolls into view. Dialogs draw immediately.
   private nearView(view: HTMLElement) {
-    if (view.closest('dialog') || typeof IntersectionObserver === 'undefined') return true;
+    if (view.closest('dialog')) return true;
+    if (!this.card.visible) return false;
+    if (typeof IntersectionObserver === 'undefined') return true;
     if (!this.nearby.has(view)) {
       const rect = view.getBoundingClientRect();
       this.nearby.set(
@@ -1785,7 +1796,7 @@ export class MapViews {
       } else preview.update();
     void this.loadRadar(Date.now());
     if (!this.largeView() || config.map !== 'rainviewer' || config.map_tile_url) this.stopGl();
-    if (!card.isConnected || !card.visible || document.hidden) {
+    if (!card.isConnected || !this.inSight()) {
       this.releaseGrids();
       this.playTimeline(false);
       return;

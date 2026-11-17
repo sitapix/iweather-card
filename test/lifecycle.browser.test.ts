@@ -753,6 +753,30 @@ test('a hidden page releases rain textures and a still card acquires them on its
   expect(card.root.querySelector('canvas.drops')).toBe(drops);
 });
 
+// Only the last move is tested: the margin that lets the card catch up before it shows widens the
+// window's own edge, and a test page is a frame inside one, which clips the card first.
+test('weather updates far out of view coalesce and the card catches up as it comes back', async () => {
+  const card = page({ local_only: true, weather_scene: false, tiles: [] }),
+    hass = hassWith(),
+    home = hass.states['weather.home'];
+  if (!home) throw new Error('No weather entity.');
+  card.hass = hass;
+  card.style.transform = 'translateY(10000px)';
+  await vi.waitFor(() => expect(card.visible).toBe(false));
+  await new Promise(requestAnimationFrame);
+  const draw = vi.spyOn(card, 'drawConditions');
+  for (let temperature = 70; temperature < 78; temperature++)
+    card.hass = {
+      ...hass,
+      states: { ...hass.states, 'weather.home': { ...home, attributes: { ...home.attributes, temperature } } },
+    };
+  expect(draw).not.toHaveBeenCalled();
+  card.style.transform = '';
+  await vi.waitFor(() => expect(card.visible).toBe(true));
+  expect(card.update?.attrs.temperature).toBe(77);
+  expect(draw).toHaveBeenCalled();
+});
+
 test('an offscreen rainy card releases its textures and acquires them on its next visible paint', async () => {
   // Deliver the real on-screen and offscreen entries together, as a quick move can.
   // The newest entry must win even when an earlier one says the card is still visible.

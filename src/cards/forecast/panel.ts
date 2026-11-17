@@ -35,7 +35,7 @@ import { forecastSummary } from '../../weather/summary.ts';
 import { dateFormat } from '../../lib/formats.ts';
 import { finite } from '../../lib/values.ts';
 import { placeThumb } from './switch.ts';
-import { dateKey } from '../../weather/forecast-items.ts';
+import { dateKey, forecastHours } from '../../weather/forecast-items.ts';
 import { dailyDetail, placeInDay } from './day-detail.ts';
 import { temperatureRange } from '../../weather/temperature-colors.ts';
 import { pageTarget } from '../../weather/forecast.ts';
@@ -180,7 +180,7 @@ export class ForecastPanel {
   }
   drawDaily({ attrs, locale, numbers, timeZone, now, t, fmt, named, data, days, hass, strip: { mode } }: Update) {
     const detail = dailyDetail(
-      [...(data.hourly?.earlier ?? []), ...(data.hourly?.forecast ?? [])],
+      forecastHours(data.hourly?.earlier, data.hourly?.forecast),
       days,
       timeZone,
       hass?.config,
@@ -351,7 +351,7 @@ export class ForecastPanel {
     if (!frame.width) return;
     if (rows.mode === 'rain')
       hours.insertAdjacentHTML('afterbegin', `${rainMarks(frame, rain)}${rainLabels(frame, labels)}`);
-    else {
+    else if (wind) {
       const { chart, pills } = windChart(wind, frame);
       hours.insertAdjacentHTML('afterbegin', chart);
       [...hours.querySelectorAll<HTMLElement>(':scope > .hour')].forEach((entry, index) => {

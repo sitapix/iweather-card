@@ -1,4 +1,5 @@
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
+import { CloudAtlas } from '../src/sky/cloud-decks.ts';
 import { scenePreset } from '../src/sky/sky.ts';
 import { WeatherScene } from '../src/sky/scene.ts';
 import { dropletTier, frostEffect } from '../src/sky/droplets.ts';
@@ -32,6 +33,63 @@ test('wind adjusts the fall angle only in the conditions that use it', () => {
   expect(angle('tropical storm', 60)).toBeCloseTo(60);
   expect(angle('hurricane', 0)).toBeCloseTo(90);
   expect(angle('hurricane', 60)).toBeCloseTo(90);
+});
+
+test('a cloudless moonlit sky requests its moon once when shown and repaints when it arrives', async () => {
+  const previous = WeatherScene.moon,
+    load = vi.fn(() => Promise.resolve(true)),
+    repaint = vi.fn(),
+    scene = new WeatherScene(null, repaint),
+    night = { condition: 'clear-night', night: true, elevation: -40, moonAltitude: 45, moonPhase: 0.5 };
+  WeatherScene.moon = { load, sprite: () => null };
+  try {
+    scene.prepare(night, { artwork: false });
+    expect(load).not.toHaveBeenCalled();
+    scene.prepare(night);
+    scene.prepare(night);
+    expect(scene.hasClouds).toBe(false);
+    expect(load).toHaveBeenCalledOnce();
+    await Promise.resolve();
+    expect(repaint).toHaveBeenCalledOnce();
+  } finally {
+    WeatherScene.moon = previous;
+  }
+});
+
+test('a cold clear-to-cloudy fade starts when the atlas answers, then outgoing clouds finish their fade', async () => {
+  const atlas = new CloudAtlas([], { now: false }),
+    repaint = vi.fn(),
+    scene = new WeatherScene(null, repaint);
+  vi.spyOn(atlas, 'restore').mockImplementation(() => {});
+  const previous = WeatherScene.atlas,
+    gpu = WeatherScene.gpuClouds;
+  WeatherScene.atlas = atlas;
+  WeatherScene.gpuClouds = false;
+  try {
+    scene.prepare({ condition: 'unavailable' }, { artwork: false });
+    scene.prepare({ condition: 'sunny' }, { animate: true });
+    expect(scene.hasClouds).toBe(false);
+    scene.prepare({ condition: 'cloudy' }, { animate: true });
+    expect(scene.hasClouds).toBe(true);
+    scene.painter();
+    scene.advance(1000);
+    scene.advance(3000);
+    expect(scene.fadeProgress(3000)).toBe(0);
+    atlas.drawable();
+    await atlas.ready;
+    expect(repaint).toHaveBeenCalledOnce();
+    expect(scene.fadeProgress(4000)).toBe(0);
+    expect(scene.fadeProgress(4400)).toBeCloseTo(0.5);
+    scene.advance(5000);
+    scene.prepare({ condition: 'sunny' }, { animate: true });
+    scene.advance(5100);
+    expect(scene.hasClouds).toBe(true);
+    scene.advance(6100);
+    expect(scene.hasClouds).toBe(false);
+  } finally {
+    WeatherScene.atlas = previous;
+    WeatherScene.gpuClouds = gpu;
+  }
 });
 
 test('emitter switches, glass and frame cadence follow their respective inputs', () => {

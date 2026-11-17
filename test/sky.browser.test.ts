@@ -96,6 +96,47 @@ test('the signed light maps send the key and fill to opposite sides of the same 
   expect(center(lit)).toEqual(center(reversed));
 });
 
+test('a cloudless high-density sky skips its cloud layer and preserves blizzard precipitation on both sides', () => {
+  const scene = new WeatherScene(document.createElement('canvas')),
+    painter = vi.spyOn(scene, 'painter'),
+    layer = vi.spyOn(scene, 'cloudCanvas'),
+    fall = vi.spyOn(scene, 'paintPrecipitation');
+  for (const condition of ['sunny', 'Hot', 'Frigid', 'blizzard']) {
+    scene.prepare({ condition, elevation: 30 });
+    scene.paint(320, 240, 2);
+  }
+  expect(painter).not.toHaveBeenCalled();
+  expect(layer).not.toHaveBeenCalled();
+  expect(fall.mock.calls.map(call => call[4])).toEqual(['back', 'front']);
+});
+
+test('a still sky keeps its last completed pixels while the first cloudy frame is loading', async () => {
+  const saved = WeatherScene.atlas,
+    atlas = new CloudAtlas([], { now: false }),
+    canvas = document.createElement('canvas'),
+    repaint = vi.fn(),
+    scene = new WeatherScene(canvas, repaint);
+  vi.spyOn(atlas, 'restore').mockImplementation(() => {});
+  WeatherScene.atlas = atlas;
+  try {
+    scene.prepare({ condition: 'sunny', elevation: 30 });
+    scene.paint(80, 60, 1);
+    const sample = () => context2d(canvas).getImageData(0, 0, 80, 60).data,
+      before = sample();
+    scene.prepare(OVERCAST);
+    scene.painter();
+    scene.paint(80, 60, 1);
+    expect(sample()).toEqual(before);
+    atlas.drawable();
+    await atlas.ready;
+    expect(repaint).toHaveBeenCalledOnce();
+    scene.paint(80, 60, 1);
+    expect(sample()).not.toEqual(before);
+  } finally {
+    WeatherScene.atlas = saved;
+  }
+});
+
 test('low power gives up frames and sharpness, and a third of the fall stays', () => {
   const canvas = document.createElement('canvas'),
     scene = new WeatherScene(canvas),

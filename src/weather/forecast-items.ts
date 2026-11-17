@@ -36,13 +36,43 @@ export type DailyItem = TimedEntry & {
 
 export type Sun = Pick<EntityState, 'state' | 'attributes'>;
 
-export function forecasts(entries: readonly ForecastEntry[] | undefined): TimedEntry[] {
+const emptyForecast: readonly TimedEntry[] = [];
+const timed = new WeakMap<readonly ForecastEntry[], readonly TimedEntry[]>();
+const joined = new WeakMap<readonly TimedEntry[], { past: readonly TimedEntry[]; hours: readonly TimedEntry[] }>();
+
+export function forecasts(entries: readonly ForecastEntry[] | undefined): readonly TimedEntry[] {
+  if (!entries || entries.length === 0) return emptyForecast;
+  const held = timed.get(entries);
+  if (held) return held;
   const unique = new Map<number, TimedEntry>();
-  for (const entry of entries ?? []) {
+  for (const entry of entries) {
     const time = Date.parse(entry.datetime ?? '');
     if (Number.isFinite(time)) unique.set(time, { ...entry, time });
   }
-  return [...unique.values()].sort((a, b) => a.time - b.time);
+  const sorted = [...unique.values()].sort((a, b) => a.time - b.time);
+  timed.set(entries, sorted);
+  timed.set(sorted, sorted);
+  return sorted;
+}
+
+// Earlier hours and the forecast share one timeline. A forecast wins a duplicated instant.
+export function forecastHours(
+  earlier: readonly ForecastEntry[] | undefined,
+  future: readonly ForecastEntry[] | undefined,
+) {
+  const past = forecasts(earlier),
+    ahead = forecasts(future);
+  if (!past.length) return ahead;
+  if (!ahead.length) return past;
+  const last = joined.get(ahead);
+  if (last?.past === past) return last.hours;
+  const byTime = new Map<number, TimedEntry>();
+  for (const entry of past) byTime.set(entry.time, entry);
+  for (const entry of ahead) byTime.set(entry.time, entry);
+  const hours = [...byTime.values()].sort((a, b) => a.time - b.time);
+  timed.set(hours, hours);
+  joined.set(ahead, { past, hours });
+  return hours;
 }
 
 // The hours a sentence speaks of, from the one under way: two days at most, as its clock names no

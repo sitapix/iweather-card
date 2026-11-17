@@ -72,6 +72,9 @@ import { type Update, workOut } from './card/update.ts';
 import { type Parts, type Geometry, cardMarkup, partsOf, NARROW } from './card/parts.ts';
 import { PAGE_COLUMNS, type PageFit, pageFit } from './card/page-grid.ts';
 
+// How near the view a card out of it catches up with the weather. `scrollMargin` widens the edges of
+// a dashboard that scrolls inside the window, where the browser has it; `rootMargin` the window's own.
+const NEAR: IntersectionObserverInit & { scrollMargin?: string } = { rootMargin: '200px', scrollMargin: '200px' };
 // How long a tile is held before it opens without being let go: the map sooner (see press).
 const HOLD = { tile: 1100, map: 350 } as const;
 // The pinned reading stands either side of a bar, 11 px off it. The bar, larger than the words,
@@ -269,6 +272,10 @@ export class IWeatherCard extends HTMLElement {
   private _configKey: string | undefined;
   private _resize: ResizeObserver | undefined;
   private _intersection: IntersectionObserver | undefined;
+  // A pending update can draw just before the card comes back into view.
+  private _proximity: IntersectionObserver | undefined;
+  private _nearby = false;
+  private _renderDue = false;
   motion: MediaQueryList | undefined;
   // The screen's colour scheme, which the maps follow where Home Assistant doesn't say its theme.
   scheme: MediaQueryList | undefined;
@@ -316,6 +323,7 @@ export class IWeatherCard extends HTMLElement {
       () => {
         this._tick();
         if (this.inSight) this.render();
+        else this._renderDue = true;
       },
       MINUTE - (Date.now() % MINUTE) + PAST_THE_MINUTE,
     );
@@ -333,13 +341,9 @@ export class IWeatherCard extends HTMLElement {
     this.parts = partsOf(this.root);
     this.alertPanel = new AlertPanel(this.parts.alert);
     this.nextHourPanel = new NextHourPanel(this.parts.nextHour);
-    this.scene = new WeatherScene(this.parts.sky);
-    // The cloud sprite atlas decodes once for every card; the sky repaints when it is ready.
-    // The GPU takes the maps itself, so they are decoded for the 2D drawing only if it can't.
-    WeatherScene.atlas ??= new CloudAtlas(CLOUD_MAPS, { now: !WeatherScene.gpuClouds });
+    this.scene = new WeatherScene(this.parts.sky, () => this.paint());
     // The moon's photograph, given to the scene as the cloud atlas is.
     WeatherScene.moon ??= { load: loadSkyMoon, sprite: skyMoon };
-    void WeatherScene.atlas.ready.then(() => this.paint());
     // A browser can drop what a canvas holds, as on a wall tablet whose screen sleeps, and hand it
     // back blank: the layers kept for it went too.
     this.parts.sky.addEventListener('contextrestored', () => {
@@ -457,8 +461,8 @@ export class IWeatherCard extends HTMLElement {
       open: openNextHour,
     });
     this.parts.retry.addEventListener('click', () => {
-      this.forecasts.stop();
-      this.sync();
+      this.forecasts.main.retry();
+      this.forecasts.extra.retry();
     });
     this.parts.hours.addEventListener('scroll', () => this.forecastPanel.fade(), { passive: true });
     for (const [arrow, forward] of [
@@ -557,7 +561,11 @@ export class IWeatherCard extends HTMLElement {
     if (entityId) fireEvent(this, EVENTS.moreInfo, { entityId });
   }
   get inSight(): boolean {
-    return this.visible && !document.hidden;
+    return (
+      this.isConnected &&
+      !document.hidden &&
+      (this.visible || Boolean(this.sheets.detail?.dialog.open || this.sheets.dock?.dialog.open))
+    );
   }
   // The configured time zone, else Home Assistant's; unset leaves the browser's own.
   // The card's own zone where it sets one; else the one the user's profile picks, their device's or
@@ -677,7 +685,8 @@ export class IWeatherCard extends HTMLElement {
     // An entity back in the state it was in, changed since: it has been somewhere else, perhaps made
     // anew by its integration reloading, which the page can miss when both come close together.
     for (const id of [this.config?.entity, this.config?.forecast_entity])
-      if (id !== undefined && madeAgain(old?.states[id], value.states[id])) this.forecasts.renew(id);
+      if (id !== undefined && madeAgain(old?.states[id], value.states[id]))
+        this.forecasts.renew(id, value.states[id]?.last_changed);
   }
   connectedCallback() {
     window.clearTimeout(this._leaving);
@@ -740,6 +749,14 @@ export class IWeatherCard extends HTMLElement {
       this.syncEffects();
     });
     this._intersection.observe(this);
+    this._proximity = new IntersectionObserver(entries => {
+      this._nearby = entries.at(-1)?.isIntersecting ?? false;
+      if (this._nearby && this._renderDue) this.render();
+    }, NEAR);
+    this._proximity.observe(this);
+    // Until the observer first says where it is, a card joining the page counts as near, so that it
+    // joins drawn from the weather as it is now.
+    this._nearby = true;
     this.motion = matchMedia('(prefers-reduced-motion: reduce)');
     this.motion.addEventListener('change', this._onVisibility);
     this.scheme = matchMedia('(prefers-color-scheme: dark)');
@@ -758,6 +775,8 @@ export class IWeatherCard extends HTMLElement {
     this.parts.content.removeEventListener('scroll', this._onScroll);
     this.pageScroll.cancel();
     this._intersection?.disconnect();
+    this._proximity?.disconnect();
+    this._nearby = false;
     this.motion?.removeEventListener('change', this._onVisibility);
     this.scheme?.removeEventListener('change', this._onVisibility);
     document.removeEventListener('keydown', this._onKey, true);
@@ -812,10 +831,8 @@ export class IWeatherCard extends HTMLElement {
     // front of the reader. After that, as one a visibility condition hides, it draws and fetches
     // nothing until it is back (see connectedCallback).
     if (!this.isConnected && this.update) return;
-    void this.records.loadClimate();
-    void this.records.loadRecentRain();
     this.render();
-    this.syncEffects();
+    if (!this._renderDue) this.syncEffects();
   }
   // The card's text in a language, kept while the language holds.
   localize(locale: string | undefined): WeatherText {
@@ -856,6 +873,11 @@ export class IWeatherCard extends HTMLElement {
   render() {
     const config = this.config;
     if (!config) return;
+    if (this.update && !this.inSight && !(this._nearby && this.isConnected && !document.hidden)) {
+      this._renderDue = true;
+      return;
+    }
+    this._renderDue = false;
     // Panels may appear, move or resize; measure again on the next frame.
     this._geometry = null;
     this.pageScroll.layout = null;
@@ -866,6 +888,8 @@ export class IWeatherCard extends HTMLElement {
     // Out of sight, nothing is asked for; coming back draws again, which asks for what is due.
     void this.records.loadSupplement(now);
     if (this.inSight) {
+      void this.records.loadClimate();
+      void this.records.loadRecentRain();
       void this.records.loadAirSupply(now);
       void this.records.loadNwsAlerts(now);
       void this.records.loadMinutes(now);
@@ -1042,11 +1066,13 @@ export class IWeatherCard extends HTMLElement {
   // The sky. A running animation fades between scenes; still renders cut straight over.
   drawScene({ inputs, config, ctx }: Update) {
     const sceneKey = this.scene.key,
-      tile = config.weather_layout === 'compact' || config.weather_layout === 'strip';
+      tile = config.weather_layout === 'compact' || config.weather_layout === 'strip',
+      artwork = config.weather_scene && this.isConnected && this.visible && !document.hidden && Boolean(this._rawHass);
     this.scene.prepare(
       { ...inputs, tile, windowClass: this._windowClass },
       {
         animate: this.animating,
+        artwork,
         wide: this._wide ?? false,
         textScale: tile ? listTextScale(parseFloat(getComputedStyle(document.documentElement).fontSize)) : 1,
         location: JSON.stringify([config.entity, config.zone, ctx.latitude, ctx.longitude]),
@@ -1054,7 +1080,11 @@ export class IWeatherCard extends HTMLElement {
     );
     const preset = this.scene.preset,
       background = this.scene.background;
-    if (preset) {
+    if (preset && artwork) {
+      if (this.scene.hasClouds) {
+        WeatherScene.atlas ??= new CloudAtlas(CLOUD_MAPS, { now: false });
+        this.scene.painter();
+      }
       const art = [
         preset.wind ? 'wind' : undefined,
         preset.look.layers.includes('nearParticles') ? 'near' : undefined,
@@ -1107,13 +1137,10 @@ export class IWeatherCard extends HTMLElement {
       dailyRows = Math.max(MIN_DAILY_ROWS, Math.ceil(listed / DAYS_PER_ROW));
     this.parts.weather.style.setProperty('--daily-rows', page ? String(dailyRows) : '');
     const { records } = this;
-    if (page) {
+    if (page && this.isConnected && !document.hidden) {
       void records.loadEarlier(now);
       void records.loadRecent(now);
       void records.loadAirYesterday(now);
-      void this.maps.loadRadar(now);
-      // Drawing the wind map asks for its wind, again once it is an hour old (see MapViews.loadGrid).
-      if (mapView(ctx)?.kind === 'wind') this.maps.draw();
     }
     if (!page) {
       // Off the page, no tiles, going by what is drawn: a redraw asked for on the way out (as the
@@ -1171,7 +1198,12 @@ export class IWeatherCard extends HTMLElement {
         Boolean(nextHour.data),
       ]);
     this.sheets.renderAll();
-    if (key === this._tilesKey) return;
+    if (key === this._tilesKey) {
+      // An unchanged map can still be due for its next radar frame or wind grid.
+      if (this._tiles.has('map') && mapView(ctx)?.kind === 'wind') this.maps.draw();
+      else void this.maps.loadRadar(now);
+      return;
+    }
     this._tilesKey = key;
     // A tile drawn from the same as last time stays as it is, so that one tile changing leaves
     // the others alone: the map's streaks, scattered afresh each time it is drawn, among them.
@@ -1343,7 +1375,7 @@ export class IWeatherCard extends HTMLElement {
   paint(phase = this.animating ? performance.now() : 0) {
     if (!this.isConnected || !this.config?.weather_scene || !this.scene.key) return;
     // A resize or weather update can ask for a frame after the sky has gone offscreen.
-    this._paintPending = !this.inSight;
+    this._paintPending = !this.visible || document.hidden;
     if (this._paintPending) return;
     const { width, height, open, covered, edges, text } = this.geometry();
     if (!width || !height) return;
