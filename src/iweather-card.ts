@@ -114,6 +114,15 @@ const GRID = {
 } as const;
 // Columns of today's sections grid in each of the grid's before Home Assistant 2024.11.
 const OLD_GRID_COLUMN = 3;
+// The device's own time zone. Asking builds a date formatter, and the panels ask on every frame of
+// the sky, so the answer is kept a minute: a device changes zone rarely, and is followed within that.
+let zoneKept: { zone: string; until: number } | undefined;
+function deviceZone(): string {
+  const now = Date.now();
+  if (!zoneKept || now >= zoneKept.until)
+    zoneKept = { zone: Intl.DateTimeFormat().resolvedOptions().timeZone, until: now + MINUTE };
+  return zoneKept.zone;
+}
 // Each card's own id, for the ids its markup gives charts.
 let cardCount = 0;
 // One animation clock for every card on the page: frames are drawn together, in step
@@ -572,7 +581,7 @@ export class IWeatherCard extends HTMLElement {
   // Home Assistant's.
   get timeZone(): string | undefined {
     if (this.config?.time_zone) return this.config.time_zone;
-    if (this._rawHass?.locale?.time_zone === 'local') return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (this._rawHass?.locale?.time_zone === 'local') return deviceZone();
     return this._rawHass?.config?.time_zone || undefined;
   }
   get layout(): string | undefined {

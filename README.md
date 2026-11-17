@@ -57,6 +57,8 @@ The button opens this repository in HACS on your own Home Assistant. Install **i
    pnpm build   # writes them to dist/
    ```
 
+   Optionally run `pnpm compress` after the build. It writes a `.gz` and a `.br` beside each script and style, which Home Assistant then sends in place of the larger file: the card's own file travels at about a quarter of its size. Run it again after every build, as a compressed file left from an older build is sent in place of the newer file of the same name.
+
 2. Copy them all to one folder, such as `/config/www/iweather/`. The card loads its cloud and moon images, the map and its translations from that folder, so keep the files together.
 3. Go to **Settings → Dashboards → ⋮ → Resources** and add `/local/iweather/iweather-card.js` as a **JavaScript module**.
 

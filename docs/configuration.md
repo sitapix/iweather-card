@@ -73,7 +73,7 @@ These apply to the `homeview` layout. See [The home view](#the-home-view).
 | `show_clock` | `true` | The time at the upper right |
 | `glass_refraction` | `true` | Draw the temperature as glass that bends the sky behind it. `false`, `low_power`, or a browser without WebGL shows plain figures in the sky's colour. |
 | `show_high_low` | `true` | Today's high and low under the condition |
-| `glass_strength` | `standard` | How deep the glass temperature is cut and how far it bends the sky: `subtle`, `standard` or `strong` |
+| `glass_strength` | `standard` | How deep the glass temperature is cut and how far it bends the sky: `subtle`, `standard` or `strong`, or `clear` for the deepest cut without the white tint, which is harder to read over a dark sky |
 | `sheet_style` | `auto` | How a column opens its details. In this layout `auto` slides a sheet up from the foot of the screen, and once the card takes up at least 80% of the screen's width and height, as on a tablet it has to itself, the sheet covers the card exactly. `card` always keeps the sheet to the card, `sheet` always gives the screen's, and `popover` opens one beside the column. |
 | `air_quality_entity` | none | A sensor reporting an air quality index, shown among the readings |
 

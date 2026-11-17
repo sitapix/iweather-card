@@ -454,6 +454,7 @@ const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean)
                 { value: 'subtle', label: 'Subtle' },
                 { value: 'standard', label: 'Standard' },
                 { value: 'strong', label: 'Strong' },
+                { value: 'clear', label: 'Clear' },
               ],
               columns,
               'A stronger glass has a wider bevel and bends the sky further.',

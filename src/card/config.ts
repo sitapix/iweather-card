@@ -56,8 +56,9 @@ const WEATHER_MODES = ['auto', 'conditions', 'rain', 'wind'] as const;
 const WEATHER_LAYOUTS = ['auto', 'compact', 'strip', 'homeview', 'expanded', 'page'] as const;
 // What the home view's foot opens on: the days ahead, or the readings now. A swipe turns it to the other.
 const HOMEVIEW_ROWS = ['days', 'details'] as const;
-// How deep the home view's glass temperature is cut, and how far it bends the sky.
-const GLASS_STRENGTHS = ['subtle', 'standard', 'strong'] as const;
+// How deep the home view's glass temperature is cut, and how far it bends the sky; clear is cut
+// as deep as strong, and left without the white that the others are lifted by.
+const GLASS_STRENGTHS = ['subtle', 'standard', 'strong', 'clear'] as const;
 // How large the full page draws: standard, or larger for a screen seen from across a room.
 const PAGE_SIZES = ['standard', 'large', 'extra_large'] as const;
 // A sheet from the foot of the screen, one that covers the card and no more, or a popover.
