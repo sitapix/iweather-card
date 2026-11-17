@@ -55,16 +55,18 @@ void main() {
   color += vec3(1.0) * u_rim * pow(edge, 1.6) * (0.5 * max(facing, 0.0) + 0.18 * max(-facing, 0.0));
   gl_FragColor = vec4(clamp(color, 0.0, 1.0) * mask, mask);
 }`;
-// The canvas reaches a bevel and a half past the figures, the height field is the figures blurred
-// by .55 of the bevel, and the body is lifted 30% toward white. Past two device pixels to one there
-// is nothing more to see.
-const GLASS = { pad: 1.5, blur: 0.55, lift: 0.3, sharpest: 2 } as const;
+// The canvas reaches a bevel and a half past the figures, and the height field is the figures
+// blurred by .55 of the bevel. Past two device pixels to one there is nothing more to see.
+const GLASS = { pad: 1.5, blur: 0.55, sharpest: 2 } as const;
 // What the strength set changes: the bevel as a share of the figures' size, how many bevels the sky
-// bends by, and how bright the rim is lit.
-const STRENGTHS: Readonly<Record<GlassStrength, { bevel: number; refraction: number; rim: number }>> = {
-  subtle: { bevel: 0.04, refraction: 1, rim: 0.65 },
-  standard: { bevel: 0.06, refraction: 1.6, rim: 1 },
-  strong: { bevel: 0.085, refraction: 2.4, rim: 1.4 },
+// bends by, how bright the rim is lit, and how far the body is lifted toward white. The lift is
+// what reads from across a room, over a dark sky most of all; clear glass gives nearly all of it
+// up, and is read by its deeper bend and brighter rim alone.
+const STRENGTHS: Readonly<Record<GlassStrength, { bevel: number; refraction: number; rim: number; lift: number }>> = {
+  subtle: { bevel: 0.04, refraction: 1, rim: 0.65, lift: 0.3 },
+  standard: { bevel: 0.06, refraction: 1.6, rim: 1, lift: 0.3 },
+  strong: { bevel: 0.085, refraction: 2.4, rim: 1.4, lift: 0.3 },
+  clear: { bevel: 0.085, refraction: 3, rim: 1.7, lift: 0.03 },
 };
 const CORNERS = 4,
   RGBA = 4,
@@ -123,7 +125,6 @@ export class GlassFigures {
     this.figures = this.texture();
     gl.uniform1i(this.at.u_background, 0);
     gl.uniform1i(this.at.u_shape, 1);
-    gl.uniform1f(this.at.u_lift, GLASS.lift);
     canvas.addEventListener('webglcontextlost', () => {
       this.lost = true;
     });
@@ -211,6 +212,7 @@ export class GlassFigures {
     gl.uniform1f(this.at.u_bevel, bevel * dpr);
     gl.uniform1f(this.at.u_refraction, bevel * cut.refraction);
     gl.uniform1f(this.at.u_rim, cut.rim);
+    gl.uniform1f(this.at.u_lift, cut.lift);
     gl.viewport(0, 0, w, h);
     this.size = { width, height, bevel };
     return true;
