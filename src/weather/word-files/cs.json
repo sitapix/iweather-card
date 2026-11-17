@@ -63,6 +63,7 @@
     "many": "Platné výstrahy: {events}.",
     "other": "Platné výstrahy: {events}."
   },
+  "An animated sky follows the local weather. See hourly forecasts and up to ten days of highs and lows.": "Animovaná obloha odpovídá počasí v místě předpovědi. Prohlédněte si hodinovou předpověď i denní maxima a minima až na deset dní.",
   "An odorless gas left by fuel that doesn’t burn completely, mostly in vehicle exhaust. Breathed in, it keeps the blood from carrying oxygen.": "Plyn bez zápachu, který vzniká při nedokonalém spalování paliva, hlavně ve výfukových plynech vozidel. Při vdechnutí brání krvi v přenosu kyslíku.",
   "Assess the situation and take precautions if necessary.": "Posuďte situaci a v případě potřeby proveďte opatření.",
   "Astronomical Twilight": "Astronomický soumrak",
@@ -155,7 +156,6 @@
   "For {month}, the average daily low is {low}, and the average daily high is {high}.": "{month}: průměrné denní minimum je {low} a průměrné denní maximum {high}.",
   "For {month}, the average total precipitation is {amount}.": "{month}: průměrný úhrn srážek je {amount}.",
   "Forecast": "Předpověď",
-  "Forecast with live scenery, hourly conditions, precipitation and wind, and a 10-day outlook.": "Předpověď s živým pozadím, hodinovými podmínkami, srážkami a větrem a výhledem na 10 dní.",
   "Forms near the ground when sunlight acts on pollution from vehicles and industry, so it climbs on hot, still afternoons. It irritates the airways.": "Vzniká u země, když sluneční světlo působí na emise z vozidel a průmyslu, proto jeho množství stoupá za horkých, bezvětrných odpolední. Dráždí dýchací cesty.",
   "France (IQA)": "Francie (IQA)",
   "Fresh breeze": "Čerstvý vítr",

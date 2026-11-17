@@ -9,21 +9,21 @@ export const SETUP_PRESETS = [
     id: 'compact',
     label: 'Compact',
     icon: 'mdi:card-outline',
-    description: 'Current weather in a small space.',
+    description: 'Temperature, conditions and today’s high and low.',
     config: { weather_layout: 'compact', show_name: true, show_high_low: true },
   },
   {
     id: 'forecast',
     label: 'Expanded',
     icon: 'mdi:weather-partly-cloudy',
-    description: 'Hourly weather and a five-day outlook.',
+    description: 'The next 24 hours and a five-day forecast.',
     config: { weather_layout: 'expanded', show_forecast: true, show_daily: true, forecast_hours: 24, forecast_days: 5 },
   },
   {
     id: 'page',
     label: 'Full page',
     icon: 'mdi:view-dashboard-variant',
-    description: 'Ten days and detail tiles. Best in a panel view.',
+    description: 'Up to ten days of weather, with alerts and detail tiles.',
     config: {
       weather_layout: 'page',
       size: 'standard',
@@ -37,7 +37,7 @@ export const SETUP_PRESETS = [
     id: 'wall',
     label: 'Wall tablet',
     icon: 'mdi:tablet-dashboard',
-    description: 'Larger text and a gentler sky for an always-on display.',
+    description: 'Large text and low-power animation for an always-on screen.',
     config: {
       weather_layout: 'page',
       size: 'extra_large',
@@ -87,7 +87,8 @@ export function setupSource(config: Readonly<Record<string, unknown>>, hass: Hom
     ] as const;
   if (!features && sources.length && sources.every(source => source.attributes.supported_features === 0))
     return {
-      message: 'This source reports current weather only. Add a forecast entity in Data sources.',
+      message:
+        'This entity reports current weather only. To add a forecast, choose a second weather entity in Data sources.',
       forecasts: [],
     };
   return { forecasts: forecasts.filter(([bit]) => features & bit).map(([, label]) => label) };

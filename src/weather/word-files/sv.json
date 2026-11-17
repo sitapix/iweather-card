@@ -55,6 +55,7 @@
     "one": "Varning gäller: {events}.",
     "other": "Varningar gäller: {events}."
   },
+  "An animated sky follows the local weather. See hourly forecasts and up to ten days of highs and lows.": "En animerad himmel följer det lokala vädret. Se timprognoser och högsta och lägsta temperatur upp till tio dygn framåt.",
   "An odorless gas left by fuel that doesn’t burn completely, mostly in vehicle exhaust. Breathed in, it keeps the blood from carrying oxygen.": "En luktfri gas som bildas när bränsle inte förbränns fullständigt, mest i avgaser från fordon. Inandad hindrar den blodet från att transportera syre.",
   "Assess the situation and take precautions if necessary.": "Bedöm läget och vidta försiktighetsåtgärder vid behov.",
   "Astronomical Twilight": "Astronomisk skymning",
@@ -147,7 +148,6 @@
   "For {month}, the average daily low is {low}, and the average daily high is {high}.": "För {month} är den genomsnittliga lägsta temperaturen per dag {low} och den genomsnittliga högsta {high}.",
   "For {month}, the average total precipitation is {amount}.": "För {month} är den genomsnittliga totala nederbörden {amount}.",
   "Forecast": "Prognos",
-  "Forecast with live scenery, hourly conditions, precipitation and wind, and a 10-day outlook.": "Prognos med levande miljö, förhållanden per timme, nederbörd och vind samt en tiodygnsöversikt.",
   "Forms near the ground when sunlight acts on pollution from vehicles and industry, so it climbs on hot, still afternoons. It irritates the airways.": "Bildas nära marken när solljus verkar på föroreningar från fordon och industri, så halterna stiger under varma, stilla eftermiddagar. Den irriterar luftvägarna.",
   "France (IQA)": "Frankrike (IQA)",
   "Fresh breeze": "Frisk bris",

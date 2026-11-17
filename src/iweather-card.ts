@@ -1567,7 +1567,9 @@ if (!window.customStrategies.some(strategy => strategy.type === STRATEGY))
     strategyType: 'dashboard',
     name: 'iWeather',
     get description() {
-      return say('Forecast with live scenery, hourly conditions, precipitation and wind, and a 10-day outlook.');
+      return say(
+        'An animated sky follows the local weather. See hourly forecasts and up to ten days of highs and lows.',
+      );
     },
     documentationURL: 'https://github.com/sitapix/iweather-card#readme',
   });
@@ -1585,7 +1587,9 @@ if (!window.customCards.some(card => card.type === CARD_TAG))
     name: 'iWeather',
     // Read each time a picker lists it, so it can come in the page's language.
     get description() {
-      return say('Forecast with live scenery, hourly conditions, precipitation and wind, and a 10-day outlook.');
+      return say(
+        'An animated sky follows the local weather. See hourly forecasts and up to ten days of highs and lows.',
+      );
     },
     preview: true,
     documentationURL: 'https://github.com/sitapix/iweather-card#readme',

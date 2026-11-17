@@ -14,15 +14,15 @@ const LANGUAGES = Object.fromEntries(
 );
 const SETUP_WORDS = [
   'Quick setup',
-  'Choose a starting point. Your sources, units, privacy and actions stay as they are.',
+  'Choose a preset for this card. You can undo it until your next edit.',
   'Undo',
-  'Starting point applied.',
+  'Preset applied.',
   'Previous settings restored.',
   'Choose a weather entity below.',
   'Add a weather integration in Settings → Devices & services, then choose its weather entity here.',
   'Home Assistant can’t find this weather entity. Choose another below.',
   'This weather entity is unavailable. Check its integration or choose another entity.',
-  'This source reports current weather only. Add a forecast entity in Data sources.',
+  'This entity reports current weather only. To add a forecast, choose a second weather entity in Data sources.',
   'Supported forecasts',
   'Day and night',
   ...SETUP_PRESETS.flatMap(preset => [preset.label, preset.description]),
@@ -47,9 +47,10 @@ const everyWord = () => {
   wordsOf(schemaFor({ layout: 'page', map: 'rainviewer', showName: false }), words);
   // The air's scale shows once a sensor is set.
   wordsOf(schemaFor({ layout: 'page', air: true }), words);
+  wordsOf(schemaFor({ layout: 'page', localOnly: true }), words);
   // With nothing missing, the section is named without its count.
   wordsOf(schemaFor({ layout: 'page', attributes: undefined }), words);
-  return [...words].filter(word => !word.includes(' missing') || word.includes('{count}'));
+  return [...words].filter(word => !/^Data sources · \d+ missing$/u.test(word));
 };
 
 test('the editor has a file for every language the card speaks', () => {
