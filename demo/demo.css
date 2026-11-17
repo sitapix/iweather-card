@@ -11,6 +11,8 @@
   --accent: #1f5fd6;
   --on-accent: #fff;
   --dashboard: #e6e8ec;
+  --edge: #0000000f;
+  --lift: 0 1px 3px #00000024;
   --shadow: 0 1px 2px #0000000f, 0 8px 24px -12px #0000002e;
   font: 15px/1.5 system-ui, sans-serif;
 }
@@ -25,6 +27,8 @@
   --accent: #6f9bff;
   --on-accent: #0d0f12;
   --dashboard: #08090b;
+  --edge: #ffffff12;
+  --lift: 0 1px 3px #0000008c;
   --shadow: 0 1px 2px #0006, 0 8px 24px -12px #000c;
 }
 @media (prefers-color-scheme: dark) {
@@ -39,6 +43,8 @@
     --accent: #6f9bff;
     --on-accent: #0d0f12;
     --dashboard: #08090b;
+    --edge: #ffffff12;
+    --lift: 0 1px 3px #0000008c;
   }
 }
 
@@ -336,6 +342,9 @@ legend {
 }
 .segments input:checked + span {
   background: var(--panel);
+  box-shadow:
+    var(--lift),
+    inset 0 0 0 1px var(--edge);
   font-weight: 600;
 }
 .segments input:focus-visible + span,
@@ -622,4 +631,92 @@ footer p {
   display: block;
   max-width: 100%;
   height: auto;
+}
+
+/* Surfaces carry a hairline at their edge, so they part from what is under them without a border's
+   weight. */
+.stage,
+.controls,
+.settings pre,
+.doc pre {
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+/* What is pressed gives a little under the finger, at once, and comes back as it lifts. */
+.segments span,
+.tiles span,
+.tiles i,
+button {
+  transition:
+    transform 0.12s ease-out,
+    background-color 0.15s ease-out;
+}
+.segments label:active span,
+.tiles label:active i,
+button:active {
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  .segments span,
+  .tiles span,
+  .tiles i,
+  button {
+    transition: none;
+  }
+  .segments label:active span,
+  .tiles label:active i,
+  button:active {
+    transform: none;
+  }
+}
+
+/* Corners as superellipses where the browser draws them, their curve starting further along each
+   edge and never meeting it at a point. One reads tighter than a circle's arc of the same radius,
+   so each is larger here; elsewhere the plain round corners above stand. */
+@supports (corner-shape: squircle) {
+  .stage,
+  .controls,
+  .segments,
+  .segments span,
+  .tiles span,
+  .tiles i,
+  button,
+  select,
+  input[type='search'],
+  .settings pre,
+  .doc pre {
+    corner-shape: squircle;
+  }
+  .stage {
+    border-radius: 40px;
+  }
+  .controls {
+    border-radius: 26px;
+  }
+  .segments {
+    border-radius: 17px;
+  }
+  .segments span {
+    border-radius: 13px;
+  }
+  .tiles span {
+    border-radius: 20px;
+  }
+  .tiles i {
+    border-radius: 17px;
+  }
+  button,
+  select,
+  input[type='search'] {
+    border-radius: 16px;
+  }
+  .settings pre,
+  .doc pre {
+    border-radius: 18px;
+  }
+  @media (max-width: 600px) {
+    .stage {
+      border-radius: 0;
+    }
+  }
 }
