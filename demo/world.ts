@@ -186,7 +186,7 @@ export const WEATHERS: readonly Weather[] = [
   },
   {
     id: 'wind-and-cloud',
-    label: 'Wind and cloud',
+    label: 'Windy and cloudy',
     condition: CONDITION.windyVariant,
     high: 58,
     humidity: 60,
@@ -472,13 +472,13 @@ interface Alert {
 const ALERT_HOURS = 6;
 const QUIET_ALERT: Alert = {
   Event: 'Special Weather Statement',
-  Headline: 'Gusty winds and a sharp change in temperature this evening.',
+  Headline: 'Expect gusty winds and a sharp temperature change this evening.',
   Severity: 'Minor',
 };
 const CONDITION_ALERTS: Partial<Record<WeatherCondition, Alert>> = {
   [CONDITION.lightningRainy]: {
     Event: 'Severe Thunderstorm Warning',
-    Headline: 'Storms with hail to an inch across and gusts to 60 mph are moving east at 30 mph.',
+    Headline: 'Storms moving east at 30 mph could bring one-inch hail and wind gusts up to 60 mph.',
     Severity: 'Severe',
   },
   [CONDITION.lightning]: {
@@ -493,12 +493,12 @@ const CONDITION_ALERTS: Partial<Record<WeatherCondition, Alert>> = {
   },
   [CONDITION.rainy]: {
     Event: 'Flood Advisory',
-    Headline: 'Ponding on roads and in poorly drained areas through the afternoon.',
+    Headline: 'Water may collect on roads and in low-lying areas this afternoon.',
     Severity: 'Minor',
   },
   [CONDITION.snowy]: {
     Event: 'Winter Storm Warning',
-    Headline: 'Six to ten inches of snow, with travel very difficult tonight.',
+    Headline: 'Six to ten inches of snow could make travel difficult tonight.',
     Severity: 'Severe',
   },
   [CONDITION.snowyRainy]: {
@@ -508,22 +508,22 @@ const CONDITION_ALERTS: Partial<Record<WeatherCondition, Alert>> = {
   },
   [CONDITION.hail]: {
     Event: 'Severe Thunderstorm Warning',
-    Headline: 'Hail the size of golf balls with these storms.',
+    Headline: 'These storms could bring hail the size of golf balls.',
     Severity: 'Severe',
   },
   [CONDITION.fog]: {
     Event: 'Dense Fog Advisory',
-    Headline: 'Visibility a quarter mile or less until mid-morning.',
+    Headline: 'Fog could reduce visibility to a quarter mile or less until midmorning.',
     Severity: 'Minor',
   },
   [CONDITION.windy]: {
     Event: 'Wind Advisory',
-    Headline: 'Gusts to 50 mph could blow around loose objects.',
+    Headline: 'Gusts up to 50 mph could blow loose objects around.',
     Severity: 'Moderate',
   },
   [CONDITION.windyVariant]: {
     Event: 'High Wind Warning',
-    Headline: 'Gusts to 65 mph could bring down trees and power lines.',
+    Headline: 'Gusts up to 65 mph could bring down trees and power lines.',
     Severity: 'Severe',
   },
 };

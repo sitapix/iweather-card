@@ -51,8 +51,6 @@ const FAHRENHEIT_REGIONS = /-(us|lr|mm)$/i;
 // How long a position may be, and how long to wait for one.
 const LOCATION_AGE = 10 * 60 * 1000;
 const LOCATION_WAIT = 15 * 1000;
-// How long the copy button says it copied.
-const COPIED_FOR = 3000;
 
 interface Choices {
   weather: string;
@@ -86,7 +84,8 @@ function opening(): Choices {
     weather: DEFAULT_WEATHER,
     hour: OPENING_HOUR,
     layout: 'page',
-    screen: matchMedia('(max-width: 700px)').matches ? 'phone' : 'desktop',
+    // The default fills the preview as the window resizes. Phone and tablet widths are opt-in.
+    screen: 'desktop',
     turned: false,
     units: FAHRENHEIT_REGIONS.test(first) || first === 'en' ? 'us' : 'metric',
     theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
@@ -150,19 +149,37 @@ const form = query('form.controls', HTMLFormElement),
   search = query('input[name=place]', HTMLInputElement),
   alertBox = query('input[name=alert]', HTMLInputElement),
   turnBox = query('input[name=turned]', HTMLInputElement),
+  settingsDialog = query('dialog.settings', HTMLDialogElement),
+  getYaml = query('#get-yaml', HTMLButtonElement),
+  alertNote = query('.alert-note', HTMLElement),
   copy = query('button.copy', HTMLButtonElement),
   copyFeedback = query('.copy-feedback', HTMLElement);
 
 // The controls, from the sample's weathers and the card's languages.
 query('[data-name=weather]', HTMLDivElement).innerHTML = WEATHERS.map(
   weather =>
-    `<label><input type="radio" name="weather" value="${weather.id}"><span><i>${(WEATHER_SYMBOLS[weather.id] ?? [])
+    `<label><input type="radio" name="weather" value="${weather.id}"><span><i aria-hidden="true">${(
+      WEATHER_SYMBOLS[weather.id] ?? []
+    )
       .map(name => SYMBOLS[name])
       .join('')}</i>${weather.label}</span></label>`,
 ).join('');
 query('select[name=language]', HTMLSelectElement).innerHTML = LANGUAGES.map(
   ([language, name]) => `<option value="${language}" lang="${language}">${name}</option>`,
 ).join('');
+
+// On narrow screens the same radio choices are available in native menus.
+const compactPickers = (['layout', 'weather'] as const).map(name => {
+  const picker = query(`#${name}-picker`, HTMLSelectElement);
+  for (const radio of form.querySelectorAll<HTMLInputElement>(`input[name=${name}]`)) {
+    picker.add(new Option(radio.labels?.[0]?.textContent.trim() || radio.value, radio.value));
+  }
+  picker.addEventListener('input', () => {
+    const radios = form.elements.namedItem(name);
+    if (radios instanceof RadioNodeList) radios.value = picker.value;
+  });
+  return { name, picker };
+});
 
 function show(choices: Choices): void {
   for (const [name, value] of Object.entries(choices)) {
@@ -238,10 +255,10 @@ const clockFormat = new Intl.DateTimeFormat('en', { hour: 'numeric', timeZone: '
 function render(): void {
   const choices = read(),
     now = Date.now();
+  for (const { name, picker } of compactPickers) picker.value = choices[name];
   stage.dataset['screen'] = choices.screen;
   stage.dataset['layout'] = choices.layout;
   const turns = choices.layout === 'page' && choices.screen !== 'desktop';
-  // Greyed where it does nothing, and still in its place, so the bar holds its shape.
   turnBox.disabled = !turns;
   stage.dataset['turned'] = String(turns && choices.turned);
   document.documentElement.dataset['theme'] = choices.theme;
@@ -249,10 +266,10 @@ function render(): void {
   hourInput.setAttribute('aria-valuetext', clock.value);
   // Only the page layout shows alerts.
   alertBox.disabled = choices.layout !== 'page';
-  form.dataset['live'] = String(live !== undefined);
   const which = form.elements.namedItem('source');
   if (which instanceof RadioNodeList) which.value = source;
   real.hidden = source === 'sample';
+  real.disabled = real.hidden;
   for (const fieldset of form.querySelectorAll<HTMLFieldSetElement>('fieldset.weather, fieldset.time')) {
     fieldset.disabled = live !== undefined;
     fieldset.hidden = source === 'real';
@@ -261,6 +278,7 @@ function render(): void {
 
   const settings = cardSettings(choices),
     written = yaml(settings);
+  alertNote.hidden = !('alert_entities' in settings);
   if (code.textContent !== written) code.textContent = written;
   const { card } = shown;
   if (!card) return;
@@ -283,18 +301,18 @@ async function showPlace(place: Place): Promise<void> {
     signal = nextRequest();
   live = { place, units, world: live?.place === place ? live.world : null };
   source = 'real';
-  status.textContent = `Asking for the weather at ${place.name}…`;
+  status.textContent = 'Loading forecast…';
   render();
   try {
     const world = await liveWeather(place, units, url => fetch(url, { signal }), Date.now());
     // Another place, or the sample, was asked for meanwhile.
     if (signal.aborted) return;
     live = { place, units, world };
-    status.textContent = `The weather at ${[place.name, place.detail].filter(Boolean).join(', ')} now, from Open-Meteo.`;
+    status.textContent = `${[place.name, place.detail].filter(Boolean).join(', ')} · Forecast from Open-Meteo`;
   } catch {
     if (signal.aborted) return;
     live = undefined;
-    status.textContent = `Open-Meteo sent nothing for ${place.name}, so the sample weather is back.`;
+    status.textContent = 'Couldn’t load the forecast. Showing sample weather.';
   }
   render();
 }
@@ -311,22 +329,26 @@ function sample(): void {
 form.addEventListener('submit', event => {
   event.preventDefault();
   const words = search.value.trim();
-  if (!words) return;
+  if (!words) {
+    status.textContent = 'Enter a town or city to search.';
+    search.focus();
+    return;
+  }
   const signal = nextRequest();
-  status.textContent = `Looking for ${words}…`;
+  status.textContent = `Searching for “${words}”…`;
   findPlaces(words, url => fetch(url, { signal }))
     .then(found => {
       if (signal.aborted) return;
       const [first] = found;
       if (!first) {
-        status.textContent = `Open-Meteo knows no place called ${words}.`;
+        status.textContent = `No matches for “${words}”. Try a nearby town or a different spelling.`;
         return;
       }
       if (found.length === 1) {
         void showPlace(first);
         return;
       }
-      status.textContent = 'Which one?';
+      status.textContent = 'Choose a location to see its forecast.';
       places.replaceChildren(
         ...found.map(place => {
           const item = document.createElement('li'),
@@ -341,40 +363,38 @@ form.addEventListener('submit', event => {
       places.hidden = false;
     })
     .catch(() => {
-      if (!signal.aborted) status.textContent = 'Open-Meteo didn’t answer. Try again in a moment.';
+      if (!signal.aborted) status.textContent = 'Location search is unavailable. Try again in a moment.';
     });
 });
 
 here.addEventListener('click', () => {
   if (!('geolocation' in navigator)) {
-    status.textContent = 'This browser can’t tell where you are.';
+    status.textContent = 'This browser can’t provide your location. Search for a town or city.';
     return;
   }
   const signal = nextRequest();
-  status.textContent = 'Asking where you are…';
+  status.textContent = 'Getting your location…';
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => {
       if (!signal.aborted)
         void showPlace({ name: 'Your location', detail: '', latitude: coords.latitude, longitude: coords.longitude });
     },
     () => {
-      if (!signal.aborted) status.textContent = 'Location unavailable. Look up a town or city instead.';
+      if (!signal.aborted) status.textContent = 'Couldn’t get your location. Search for a town or city.';
     },
     { maximumAge: LOCATION_AGE, timeout: LOCATION_WAIT },
   );
 });
 
-// Some of the form's controls stand outside it, over the card and in the bar across the top.
-document.addEventListener('input', event => {
+form.addEventListener('input', event => {
   const { target } = event;
   if (target === search || !(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
-  if (target.form !== form) return;
   if (target.name === 'source') {
     if (target.value === 'sample') sample();
     else {
       source = 'real';
+      status.textContent = 'Showing sample weather until you choose a location.';
       render();
-      search.focus();
     }
     return;
   }
@@ -383,23 +403,25 @@ document.addEventListener('input', event => {
   else render();
 });
 
-let feedbackTimer: number | undefined;
+getYaml.addEventListener('click', () => {
+  copyFeedback.textContent = '';
+  settingsDialog.showModal();
+});
+settingsDialog.addEventListener('close', () => getYaml.focus({ preventScroll: true }));
+
 async function copyYaml() {
   let message: string;
   try {
     await navigator.clipboard.writeText(code.textContent);
-    message = 'Copied';
+    message = 'YAML copied';
   } catch {
-    message = 'Select the YAML and copy it manually.';
+    const selection = document.getSelection();
+    selection?.selectAllChildren(code);
+    message = selection?.toString() ? 'YAML selected. Use your device’s Copy command.' : 'Select the YAML to copy it.';
   }
-  clearTimeout(feedbackTimer);
   copyFeedback.textContent = '';
   requestAnimationFrame(() => {
-    copyFeedback.textContent = message;
-    clearTimeout(feedbackTimer);
-    feedbackTimer = window.setTimeout(() => {
-      copyFeedback.textContent = '';
-    }, COPIED_FOR);
+    if (settingsDialog.open) copyFeedback.textContent = message;
   });
 }
 if ('CommandEvent' in window && 'commandForElement' in HTMLButtonElement.prototype)

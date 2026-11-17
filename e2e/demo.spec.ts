@@ -95,8 +95,11 @@ const test = base.extend<{ asked: string[]; demo: Page }>({
 });
 
 const card = (page: Page): Locator => page.locator('iweather-card');
-const choose = (page: Page, group: string, label: string) =>
-  page.locator(`[data-name=${group}] label`, { hasText: new RegExp(`^${label}$`) }).click();
+async function choose(page: Page, group: string, label: string) {
+  const picker = page.locator(`#${group}-picker`);
+  if (await picker.isVisible()) await picker.selectOption({ label });
+  else await page.locator(`[data-name=${group}] label`, { hasText: new RegExp(`^${label}$`) }).click();
+}
 
 test('the demo controls work while the card file is still downloading', async ({ demo }) => {
   let resume: (() => void) | undefined;
@@ -110,6 +113,14 @@ test('the demo controls work while the card file is still downloading', async ({
   await demo.goto(`${SITE}/#layout=expanded&language=en`, { waitUntil: 'commit' });
   try {
     await expect(demo.locator('code.yaml')).toContainText('weather_layout: expanded');
+    await choose(demo, 'layout', 'Full page');
+    await demo.getByText('Display options', { exact: true }).click();
+    await demo.getByRole('checkbox', { name: 'Sample alert' }).check();
+    await demo.getByRole('button', { name: 'Get YAML' }).click();
+    const dialog = demo.getByRole('dialog', { name: 'Dashboard YAML' });
+    await expect(dialog.locator('code.yaml')).toContainText('alert_entities:');
+    await expect(dialog.getByText(/your own alert sensor/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Close' }).click();
     await choose(demo, 'layout', 'Compact');
     await expect(demo.locator('code.yaml')).toContainText('weather_layout: compact');
     await choose(demo, 'weather', 'Snow');
@@ -135,8 +146,9 @@ test('the controls drive the card, and the settings and the address follow', asy
   await demo.locator('input[name=hour]').fill('22');
   await expect(hero.locator('.condition')).toHaveText('Clear');
   await expect(demo.locator('output[name=clock]')).toHaveText('10 PM');
-  await expect(demo.getByRole('slider', { name: 'Hour' })).toHaveAttribute('aria-valuetext', '10 PM');
+  await expect(demo.getByRole('slider', { name: 'Time of day' })).toHaveAttribute('aria-valuetext', '10 PM');
 
+  await demo.getByText('Display options', { exact: true }).click();
   await choose(demo, 'units', '°C');
   await expect(card(demo).getByText('Temperature (°C)').first()).toBeVisible();
   await demo.locator('select[name=language]').selectOption('de');
@@ -163,6 +175,44 @@ test('a scene in the address opens as it was left', async ({ demo }) => {
   await expect(demo.locator('output[name=clock]')).toHaveText('9 AM');
 });
 
+test('the compact pickers and desktop controls share the same scene', async ({ demo }) => {
+  await demo.setViewportSize({ width: 390, height: 844 });
+  await demo.goto(`${SITE}/#layout=expanded&weather=fog&language=en`);
+  const layout = demo.getByRole('combobox', { name: 'Card layout' }),
+    weather = demo.getByRole('combobox', { name: 'Weather condition' });
+  await expect(weather).toBeInViewport();
+  await expect(weather).toHaveValue('fog');
+  await expect(demo.getByRole('region', { name: 'Card preview' })).toBeInViewport();
+  await weather.selectOption('snow');
+  await demo.setViewportSize({ width: 1280, height: 800 });
+  await expect(demo.getByRole('radio', { name: 'Snow' })).toBeChecked();
+  await choose(demo, 'layout', 'Compact');
+  await demo.setViewportSize({ width: 390, height: 844 });
+  await expect(layout).toHaveValue('compact');
+  await expect(weather).toHaveValue('snow');
+});
+
+test('the full-page preview reserves room for the selected screen while the card loads', async ({ demo }) => {
+  await demo.route('**/iweather-card.js', route => route.fulfill({ contentType: 'text/javascript', body: '' }));
+  await demo.setViewportSize({ width: 320, height: 568 });
+  await demo.goto(`${SITE}/#layout=page&language=en`);
+  const preview = demo.getByRole('region', { name: 'Card preview' }).locator('.frame');
+  await expect(preview.getByRole('status')).toHaveText('Loading weather preview…');
+  const available = await demo
+    .getByRole('banner')
+    .evaluate(header => innerHeight - header.getBoundingClientRect().height);
+  expect(await preview.evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(available);
+  await demo.setViewportSize({ width: 1280, height: 800 });
+  const wide = await preview.evaluate(element => element.getBoundingClientRect().width);
+  await demo.getByText('Display options', { exact: true }).click();
+  await choose(demo, 'screen', 'Phone');
+  const phone = await preview.evaluate(element => element.getBoundingClientRect().width);
+  expect(phone).toBeLessThan(wide);
+  await demo.setViewportSize({ width: 390, height: 844 });
+  await demo.setViewportSize({ width: 1280, height: 800 });
+  await expect(preview).toHaveCSS('width', `${phone}px`);
+});
+
 test('a place found by name shows its own weather, until the sample is asked back', async ({ demo, asked }) => {
   await demo.goto(`${SITE}/#weather=snow&hour=22&layout=expanded&units=us&language=en`);
   const hero = card(demo).locator('.hero');
@@ -171,12 +221,17 @@ test('a place found by name shows its own weather, until the sample is asked bac
 
   // The search stands in for the sample's weathers once real weather is asked for.
   await expect(demo.locator('input[name=place]')).toBeHidden();
-  await choose(demo, 'source', 'Real weather');
+  await choose(demo, 'source', 'Live forecast');
   await expect(demo.locator('[data-name=weather]')).toBeHidden();
   await expect(hero.locator('.location')).toHaveText('Chicago');
+  await expect(demo.locator('.real-status')).toHaveText('Showing sample weather until you choose a location.');
+  const search = demo.getByRole('searchbox');
+  await demo.getByRole('button', { name: 'Search' }).click();
+  await expect(search).toBeFocused();
+  await expect(demo.locator('.real-status')).toHaveText('Enter a town or city to search.');
   expect(asked, 'nothing asked before a place is').toEqual([]);
-  await demo.locator('input[name=place]').fill('Paris');
-  await demo.getByRole('button', { name: 'Look up' }).click();
+  await search.fill('Paris');
+  await demo.getByRole('button', { name: 'Search' }).click();
   await demo.getByRole('button', { name: 'Paris, Île-de-France, France' }).click();
   await expect(hero.locator('.location')).toHaveText('Paris');
   await expect(hero.locator('.condition')).toHaveText('Rain');
@@ -185,20 +240,26 @@ test('a place found by name shows its own weather, until the sample is asked bac
   await expect(demo.locator('output[name=clock]')).toHaveText('Now');
   expect(asked.some(url => url.includes('latitude=48.850') && url.includes('temperature_unit=fahrenheit'))).toBe(true);
 
-  await choose(demo, 'source', 'Sample');
+  await choose(demo, 'source', 'Sample weather');
   await expect(hero.locator('.location')).toHaveText('Chicago');
-  await expect(demo.locator('[data-name=weather]')).toBeVisible();
+  await expect(demo.locator('fieldset.weather')).toBeVisible();
   await expect(demo.locator('[data-name=weather] input').first()).toBeEnabled();
   await expect(hero.locator('.condition')).toHaveText('Snow');
   await expect(demo.locator('output[name=clock]')).toHaveText('10 PM');
 });
 
-test('copying YAML reports success and still offers manual copying without a clipboard', async ({ demo }) => {
+test('the YAML dialog shows the current layout and supports keyboard and manual copying', async ({ demo }) => {
   await demo.goto(`${SITE}/#layout=expanded&language=en`);
-  const copy = demo.getByRole('button', { name: 'Copy YAML' }),
+  const getYaml = demo.getByRole('button', { name: 'Get YAML' }),
+    dialog = demo.getByRole('dialog', { name: 'Dashboard YAML' }),
+    copy = demo.getByRole('button', { name: 'Copy YAML' }),
     feedback = demo.locator('.copy-feedback'),
     yaml = demo.locator('code.yaml');
-  await expect(yaml).toContainText('entity: weather.home');
+  await getYaml.click();
+  await expect(dialog).toBeVisible();
+  await expect(copy).toBeFocused();
+  await expect(yaml).toContainText('weather_layout: expanded');
+  await expect(dialog.getByText(/your own alert sensor/)).toBeHidden();
   await demo.evaluate(() => {
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -211,13 +272,22 @@ test('copying YAML reports success and still offers manual copying without a cli
     });
   });
   await copy.click();
-  await expect(feedback).toHaveText('Copied');
+  await expect(feedback).toHaveText('YAML copied');
   await expect(demo.locator('body')).toHaveAttribute('data-copied', (await yaml.textContent()) ?? '');
   await demo.evaluate(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
   });
   await copy.click();
-  await expect(feedback).toHaveText(/manually/);
+  await expect(feedback).toHaveText('YAML selected. Use your device’s Copy command.');
+  expect(await demo.evaluate(() => document.getSelection()?.toString())).toBe(await yaml.textContent());
+  await demo.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(getYaml).toBeFocused();
+  await choose(demo, 'layout', 'Strip');
+  await getYaml.click();
+  await expect(yaml).toContainText('weather_layout: strip');
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(dialog).toBeHidden();
 });
 
 test('a late location reply leaves a newer town search in place', async ({ demo, asked }) => {
@@ -231,10 +301,10 @@ test('a late location reply leaves a newer town search in place', async ({ demo,
     });
   });
   await demo.goto(`${SITE}/#layout=expanded&units=us&language=en`);
-  await choose(demo, 'source', 'Real weather');
+  await choose(demo, 'source', 'Live forecast');
   await demo.getByRole('button', { name: 'Use my location' }).click();
   await demo.getByRole('searchbox').fill('Paris');
-  await demo.getByRole('button', { name: 'Look up' }).click();
+  await demo.getByRole('button', { name: 'Search' }).click();
   const paris = demo.getByRole('button', { name: 'Paris, Île-de-France, France' });
   await expect(paris).toBeVisible();
   await demo.evaluate(() => dispatchEvent(new Event('test-location')));
