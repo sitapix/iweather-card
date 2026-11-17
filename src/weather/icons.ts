@@ -15,7 +15,7 @@ import { finite } from '../lib/values.ts';
 const KIND_SYMBOLS: Readonly<Record<SkyKind, readonly [day: SymbolName, night: SymbolName]>> = {
   clear: ['sun', 'moon'],
   hot: ['hot', 'moon'],
-  frigid: ['sun', 'moon'],
+  frigid: ['cold', 'cold'],
   mostlyClear: ['sun', 'moon'],
   partlyCloudyMidAltitude: ['cloud-sun', 'cloud-moon'],
   partlyCloudyLowAltitude: ['cloud-sun', 'cloud-moon'],
@@ -31,7 +31,7 @@ const KIND_SYMBOLS: Readonly<Record<SkyKind, readonly [day: SymbolName, night: S
   haze: ['sun-haze', 'moon-haze'],
   smoky: ['smoke', 'smoke'],
   drizzle: ['drizzle', 'drizzle'],
-  blowingDust: ['wind', 'wind'],
+  blowingDust: ['sun-dust', 'moon-dust'],
   freezingDrizzle: ['drizzle', 'drizzle'],
   freezingRain: ['sleet', 'sleet'],
   rain: ['rain', 'rain'],
@@ -51,13 +51,14 @@ const KIND_SYMBOLS: Readonly<Record<SkyKind, readonly [day: SymbolName, night: S
   thunderstorms: ['storm-rain', 'storm-rain'],
   strongStorms: ['strong-storm', 'strong-storm'],
   hurricane: ['hurricane', 'hurricane'],
-  tropicalStorm: ['hurricane', 'hurricane'],
+  tropicalStorm: ['tropical-storm', 'tropical-storm'],
 };
 // Conditions whose own symbol says more than their sky does.
 const CONDITION_SYMBOLS: Readonly<Record<string, SymbolName>> = {
   windy: 'wind',
   'windy-variant': 'wind',
   exceptional: 'warning',
+  tornado: 'tornado',
   sunrise: 'sunrise',
   sunset: 'sunset',
 };
