@@ -80,7 +80,7 @@ const redrawn = async (card: IWeatherCard) => {
 
 test('only compact and strip apply the tile sky when switching layouts', () => {
   const card = page({ weather_layout: 'compact' });
-  for (const layout of ['compact', 'strip', 'expanded', 'auto', 'page'] as const) {
+  for (const layout of ['compact', 'strip', 'homeview', 'expanded', 'auto', 'page'] as const) {
     card.setConfig({ ...card.config, weather_layout: layout });
     const raw = card.scene.preset?.sky,
       background = card.scene.background;

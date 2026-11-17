@@ -54,19 +54,21 @@ test('refresh controls stay in a collapsed section under online services with bo
     assert.notEqual(refresh.expanded, true);
     assert.equal(refresh.name, '');
     assert.ok(refresh.schema);
+    // The radar's interval shows only with the map that asks for radar.
     assert.deepEqual(
       refresh.schema.map(item => item.name),
-      intervals.map(item => item.name),
+      intervals.filter(item => map === 'rainviewer' || item.name !== 'radar_refresh_minutes').map(item => item.name),
     );
     for (const field of refresh.schema) {
       const interval = intervals.find(item => item.name === field.name);
       assert.ok(interval);
       assert.deepEqual(field.selector, { number: { min: interval.min, max: interval.max, step: 1, mode: 'box' } });
       assert.match(field.label ?? '', /\(minutes\)$/u);
-      assert.match(field.helper ?? '', /Your integrations keep their own update intervals\./u);
+      assert.match(field.helper ?? '', /Your integrations update on their own schedules\./u);
     }
-    assert.match(refresh.schema[0]?.helper ?? '', /RainViewer.*new radar frames/u);
-    assert.match(refresh.schema[1]?.helper ?? '', /Open-Meteo for the forecast it fills in/u);
+    const radar = refresh.schema.find(item => item.name === 'radar_refresh_minutes');
+    if (radar) assert.match(radar.helper ?? '', /RainViewer’s radar/u);
+    assert.match(refresh.schema.at(-1)?.helper ?? '', /forecast Open-Meteo fills in/u);
     assert.doesNotMatch(services?.schema?.find(item => item.name === 'open_meteo_forecast')?.helper ?? '', /hourly/u);
   }
   for (const layout of ['auto', 'compact', 'expanded'] as const)

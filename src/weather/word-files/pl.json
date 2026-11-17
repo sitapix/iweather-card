@@ -864,5 +864,8 @@
     "few": "Za {count} godziny",
     "many": "Za {count} godzin",
     "other": "Za {count} godziny"
-  }
+  },
+  "In {count}h": "Za {count} godz.",
+  "In {count}d": "Za {count} d",
+  "AQI": "AQI"
 }

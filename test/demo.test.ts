@@ -122,7 +122,7 @@ test('the settings shown are the ones the card takes, and read as YAML', () => {
     ].join('\n'),
   );
   assert.equal(yaml(cardSettings({ layout: 'auto', alert: true })), 'type: custom:iweather-card\nentity: weather.home');
-  for (const layout of ['page', 'expanded', 'auto', 'compact', 'strip'] as const) {
+  for (const layout of ['page', 'expanded', 'auto', 'homeview', 'compact', 'strip'] as const) {
     const settings = cardSettings({ layout, alert: true });
     assert.equal(normalizeConfig(settings).weather_layout, layout);
   }

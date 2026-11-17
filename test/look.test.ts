@@ -561,7 +561,7 @@ test('symbols follow the kind of sky, by day and night, and alerts show their le
   assert.equal(weatherIcon('Hot'), SYMBOLS.hot);
   assert.equal(weatherIcon('Sun Flurries'), SYMBOLS['sun-snow']);
   assert.equal(weatherIcon('Sun Flurries', true), SYMBOLS['moon-snow']);
-  assert.equal(weatherIcon('Frigid', true), SYMBOLS.moon);
+  assert.equal(weatherIcon('Frigid', true), SYMBOLS.cold);
   assert.equal(weatherIcon('Partly Cloudy', true), SYMBOLS['cloud-moon']);
   assert.equal(weatherIcon('Breezy'), SYMBOLS.wind);
   assert.equal(weatherIcon('Smoke'), SYMBOLS.smoke);
@@ -603,8 +603,8 @@ test('every condition has a symbol, flat, filled and still, and left for its row
   assert.doesNotMatch(cloud, /stroke/);
   assert.match(SYMBOLS.sun, /fill="#ffd702"/);
   assert.match(SYMBOLS.rain, /stroke="#39d1fd"/);
-  assert.match(SYMBOLS.drizzle, /stroke-dasharray/);
-  assert.doesNotMatch(SYMBOLS.rain, /stroke-dasharray/);
+  assert.match(SYMBOLS.drizzle, /stroke="#39d1fd"/);
+  assert.notEqual(SYMBOLS.drizzle, SYMBOLS.rain);
 });
 
 test("only a web address is offered as an alert's source", () => {

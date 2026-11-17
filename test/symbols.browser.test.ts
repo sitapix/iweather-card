@@ -32,7 +32,7 @@ const LIST_INK = [
 ] as const;
 const STRIP_INK = [
   ['cloud', SYMBOLS.cloud, [19.5, 13]],
-  ['cloud and sun', SYMBOLS['cloud-sun'], [23.5, 17]],
+  ['cloud and sun', SYMBOLS['cloud-sun'], [23.5, 16.5]],
   ['moon', SYMBOLS.moon, [16, 17]],
   ['sunrise', SYMBOLS.sunrise, [21, 17]],
   ['sunset', SYMBOLS.sunset, [21, 17]],

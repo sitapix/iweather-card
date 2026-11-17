@@ -2,7 +2,7 @@ import { expect, test } from './card.ts';
 
 // A preview or masonry card has a width but no parent height to inherit. Check the
 // surface and its contents: a nonzero host alone can still hide an empty surface.
-for (const layout of ['compact', 'strip', 'auto', 'expanded', 'page'] as const)
+for (const layout of ['compact', 'strip', 'homeview', 'auto', 'expanded', 'page'] as const)
   test.describe(`${layout} without a dashboard height`, () => {
     test.use({ config: { local_only: true } });
 
@@ -12,7 +12,7 @@ for (const layout of ['compact', 'strip', 'auto', 'expanded', 'page'] as const)
         if (!host) throw new Error('No card.');
         host.setConfig({ ...host.config, weather_layout: layout });
       }, layout);
-      if (layout === 'compact' || layout === 'strip') {
+      if (layout === 'compact' || layout === 'strip' || layout === 'homeview') {
         await expect(card.locator('.forecast')).toBeHidden();
         await expect(card.locator('.daily')).toBeHidden();
       } else await expect(card.locator('.hour').first()).toBeVisible();
@@ -28,7 +28,7 @@ for (const layout of ['compact', 'strip', 'auto', 'expanded', 'page'] as const)
             card.evaluate(host => {
               const bounds = host.getBoundingClientRect(),
                 surface = host.shadowRoot?.querySelector('.weather')?.getBoundingClientRect(),
-                brief = ['compact', 'strip'].includes(host.getAttribute('data-layout') ?? ''),
+                brief = ['compact', 'strip', 'homeview'].includes(host.getAttribute('data-layout') ?? ''),
                 selectors = brief ? ['.current'] : ['.current', '.forecast'];
               if (host.getAttribute('data-layout') === 'expanded' || host.getAttribute('data-layout') === 'page')
                 selectors.push('.daily');

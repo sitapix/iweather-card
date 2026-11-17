@@ -53,10 +53,15 @@ const PATTERNS: Readonly<Record<EntitySetting, RegExp>> = {
 };
 
 const WEATHER_MODES = ['auto', 'conditions', 'rain', 'wind'] as const;
-const WEATHER_LAYOUTS = ['auto', 'compact', 'strip', 'expanded', 'page'] as const;
+const WEATHER_LAYOUTS = ['auto', 'compact', 'strip', 'homeview', 'expanded', 'page'] as const;
+// What the home view's foot opens on: the days ahead, or the readings now. A swipe turns it to the other.
+const HOMEVIEW_ROWS = ['days', 'details'] as const;
+// How deep the home view's glass temperature is cut, and how far it bends the sky.
+const GLASS_STRENGTHS = ['subtle', 'standard', 'strong'] as const;
 // How large the full page draws: standard, or larger for a screen seen from across a room.
 const PAGE_SIZES = ['standard', 'large', 'extra_large'] as const;
-const SHEET_STYLES = ['auto', 'sheet', 'popover'] as const;
+// A sheet from the foot of the screen, one that covers the card and no more, or a popover.
+const SHEET_STYLES = ['auto', 'sheet', 'card', 'popover'] as const;
 // Haptic feedback: the moon's timeline ticking past its marks; that and a tap for each view, day,
 // chart reading, tile and map control; or none.
 const HAPTICS = ['moon', 'all', 'off'] as const;
@@ -86,6 +91,8 @@ export const DEFAULT_AIR_SCALE: AirScaleId = 'us';
 export const AIR_SCALE_AUTO = 'auto';
 export type WeatherMode = (typeof WEATHER_MODES)[number];
 export type WeatherLayout = (typeof WEATHER_LAYOUTS)[number];
+export type HomeviewRow = (typeof HOMEVIEW_ROWS)[number];
+export type GlassStrength = (typeof GLASS_STRENGTHS)[number];
 export type PageSize = (typeof PAGE_SIZES)[number];
 export type SheetStyle = (typeof SHEET_STYLES)[number];
 export type Haptics = (typeof HAPTICS)[number];
@@ -100,6 +107,7 @@ const FLAGS = [
   'show_high_low',
   'show_daily',
   'show_name',
+  'show_clock',
   'map_wind_animation',
   'map_precipitation_animation',
   'open_meteo_forecast',
@@ -116,6 +124,10 @@ export const CONFIG_DEFAULTS = Object.freeze({
   ...WEATHER_DEFAULTS,
   ...UNIT_DEFAULTS,
   show_name: true,
+  // The home view's clock, and what its foot opens on.
+  show_clock: true,
+  homeview_row: 'days',
+  glass_strength: 'standard',
   glass_refraction: true,
   // The card's own wind map moves before it is opened.
   map_wind_animation: true,
@@ -144,6 +156,8 @@ export type CardConfig = SourceSettings &
     place_name?: string;
     weather_mode: WeatherMode;
     weather_layout: WeatherLayout;
+    homeview_row: HomeviewRow;
+    glass_strength: GlassStrength;
     size: PageSize;
     top_padding: number;
     sheet_style: SheetStyle;
@@ -220,6 +234,7 @@ export function normalizeConfig(saved: unknown): CardConfig {
     show_high_low: flag('show_high_low'),
     show_daily: flag('show_daily'),
     show_name: flag('show_name'),
+    show_clock: flag('show_clock'),
     map_wind_animation: flag('map_wind_animation'),
     map_precipitation_animation: flag('map_precipitation_animation'),
     open_meteo_forecast: flag('open_meteo_forecast'),
@@ -228,6 +243,8 @@ export function normalizeConfig(saved: unknown): CardConfig {
     haptics: 'moon',
     weather_mode: 'auto',
     weather_layout: 'auto',
+    homeview_row: 'days',
+    glass_strength: 'standard',
     size: 'standard',
     top_padding: CONFIG_DEFAULTS.top_padding,
     sheet_style: 'auto',
@@ -246,6 +263,8 @@ export function normalizeConfig(saved: unknown): CardConfig {
   };
   result.weather_mode = choice('weather_mode', WEATHER_MODES, CONFIG_DEFAULTS.weather_mode);
   result.weather_layout = choice('weather_layout', WEATHER_LAYOUTS, CONFIG_DEFAULTS.weather_layout);
+  result.homeview_row = choice('homeview_row', HOMEVIEW_ROWS, CONFIG_DEFAULTS.homeview_row);
+  result.glass_strength = choice('glass_strength', GLASS_STRENGTHS, CONFIG_DEFAULTS.glass_strength);
   result.size = choice('size', PAGE_SIZES, CONFIG_DEFAULTS.size);
   result.sheet_style = choice('sheet_style', SHEET_STYLES, CONFIG_DEFAULTS.sheet_style);
   result.haptics = choice('haptics', HAPTICS, CONFIG_DEFAULTS.haptics);

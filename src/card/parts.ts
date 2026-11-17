@@ -31,7 +31,7 @@ export const cardMarkup = (): string =>
             .join('')}</div>
         </div><div class="body-window"><div class="panel-body"><p class="summary" id="strip-summary"></p><div class="hours" role="list" tabindex="0" aria-label="Hourly forecast" aria-describedby="strip-summary"></div><div class="status" role="status" hidden><span></span><button class="retry" type="button" hidden>Retry</button></div></div></div></div>
         <button class="hours-arrow" type="button" data-edge="start" tabindex="-1" aria-hidden="true">${PAGE_ARROW}</button><button class="hours-arrow" type="button" data-edge="end" tabindex="-1" aria-hidden="true">${PAGE_ARROW}</button>
-      </section><section class="daily" aria-label="Daily forecast"><i class="glass" aria-hidden="true"></i><div class="body-window"><div class="daily-content" role="list" tabindex="0" aria-label="Daily temperature ranges"></div></div></section><div class="tiles"></div><button type="button" class="credit" hidden><span class="credit-name"><span></span>${INFO}</span><small></small></button><a class="credit-link" href="https://open-meteo.com/" target="_blank" rel="noreferrer" hidden>Weather data by Open-Meteo.com</a><canvas class="droplets" aria-hidden="true"></canvas><canvas class="frost" aria-hidden="true"></canvas></div><div class="hero"><button type="button" class="current" title="Weather details"><span class="home" hidden></span><span class="location"></span><span class="compact-meta" hidden><span class="place-context"></span><span class="place-home" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4l4.7 4v6.6H3.3V8zM6.7 10.2v3.4h2.6v-3.4z"/><path class="roof" d="m1.2 7.4 6.8-5.8 6.8 5.8M12.3 2.4v2.8"/></svg><span></span></span></span><span class="reading"><span class="temperature"></span><span class="condition"></span></span><span class="range"></span><span class="stale" hidden></span><span class="brief-light"></span><span class="brief" aria-hidden="true"></span></button></div></div>
+      </section><section class="daily" aria-label="Daily forecast"><i class="glass" aria-hidden="true"></i><div class="body-window"><div class="daily-content" role="list" tabindex="0" aria-label="Daily temperature ranges"></div></div></section><div class="tiles"></div><button type="button" class="credit" hidden><span class="credit-name"><span></span>${INFO}</span><small></small></button><a class="credit-link" href="https://open-meteo.com/" target="_blank" rel="noreferrer" hidden>Weather data by Open-Meteo.com</a><canvas class="droplets" aria-hidden="true"></canvas><canvas class="frost" aria-hidden="true"></canvas></div><div class="hero"><button type="button" class="current" title="Weather details"><span class="home" hidden></span><span class="location"></span><span class="compact-meta" hidden><span class="place-context"></span><span class="place-home" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4l4.7 4v6.6H3.3V8zM6.7 10.2v3.4h2.6v-3.4z"/><path class="roof" d="m1.2 7.4 6.8-5.8 6.8 5.8M12.3 2.4v2.8"/></svg><span></span></span></span><span class="reading"><span class="temperature"></span><span class="condition-symbol" aria-hidden="true" hidden></span><span class="condition"></span></span><span class="range"></span><span class="clock" hidden></span><canvas class="figure-glass" aria-hidden="true" hidden></canvas><span class="stale" hidden></span><span class="brief-light"></span><span class="brief" aria-hidden="true"></span></button><div class="home-row" role="group" tabindex="-1" hidden></div></div></div>
     </section></div>`;
 
 // The card's fixed parts, found once in its markup (see the constructor).
@@ -72,11 +72,15 @@ export const partsOf = (root: ParentNode) => ({
   placeHomeName: child(root, '.place-home span'),
   temperature: child(root, '.temperature'),
   condition: child(root, '.condition'),
+  conditionSymbol: child(root, '.condition-symbol'),
+  clock: child(root, '.clock'),
+  homeRow: child(root, '.home-row'),
   range: child(root, '.range'),
   stale: child(root, '.stale'),
   brief: child(root, '.brief'),
   briefLight: child(root, '.brief-light'),
   sky: canvasIn(root, '.sky'),
+  figureGlass: canvasIn(root, '.figure-glass'),
   droplets: canvasIn(root, '.droplets'),
   frost: canvasIn(root, '.frost'),
   // The forecast switch's options: conditions, precipitation and wind.

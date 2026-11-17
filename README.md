@@ -100,10 +100,18 @@ A tile with no data stays hidden, so you can start with the entity alone and add
 | `auto` | Picks a layout to fit the card's size. This is the default. |
 | `compact` | A short tile with the location and temperature above the conditions and high/low, over the animated sky. |
 | `strip` | A single line with the location, temperature and conditions, plus high/low on a wide card, over the animated sky. |
+| `homeview` | The time, a large temperature and a row of the next four days or the readings now, for a screen read from across a room. |
 | `expanded` | The conditions, the hourly forecast and the daily list. Needs about 320 px of height. |
 | `page` | Alerts, forecasts and detail tiles, in two to six columns. |
 
-In the editor preview and masonry views, `strip` defaults to 56 px tall, `compact` to 180 px, `auto` to 280 px, and `expanded` to 700 px. Compact uses three rows in a sections dashboard and keeps the same layout at every size. Dashboard grid sizes and `--iweather-height` override those defaults.
+`homeview` is for a wall tablet or a small screen on a shelf. The row along its foot shows the readings now or the next four days, and each column opens its details when pressed:
+
+<p align="center">
+  <img src="docs/images/home-day.webp" alt="The home view on a sunny day: the condition, the day's high and low and the time over a large glass temperature, above a row with the wait for rain, the wind, the humidity and the air quality index." width="40%">
+  <img src="docs/images/home-night.webp" alt="The home view on a clear night, with stars behind a large glass temperature, above the next four days, each with its symbol, high and low." width="40%">
+</p>
+
+In the editor preview and masonry views, `strip` defaults to 56 px tall, `homeview` to a square, `compact` to 180 px, `auto` to 280 px, and `expanded` to 700 px. Compact uses three rows in a sections dashboard and keeps the same layout at every size. Dashboard grid sizes and `--iweather-height` override those defaults.
 
 In a sections dashboard, `auto` changes layout as you resize it, from a one-row strip to the whole section:
 
@@ -116,7 +124,7 @@ In a sections dashboard, `auto` changes layout as you resize it, from a one-row 
 | Option | Default | Description |
 |---|---|---|
 | `entity` | required | Any `weather.*` entity |
-| `weather_layout` | `auto` | `auto`, `compact`, `strip`, `expanded` or `page` |
+| `weather_layout` | `auto` | `auto`, `compact`, `strip`, `homeview`, `expanded` or `page` |
 | `place_name` | none | Your town or city, for the `page` layout |
 | `zone` | home | The zone to show weather for, if not home. The sky, the map and Open-Meteo requests use its location. |
 | `tiles` | all 12 | Which tiles the `page` layout shows, in order |
@@ -157,7 +165,7 @@ The `page` layout shows each of these tiles when it has the data for it. Tap a t
 
 ## What leaves your browser
 
-The `auto`, `compact`, `strip` and `expanded` layouts only talk to Home Assistant, whatever options you set. The `page` layout can contact the services below. None of them needs an account or API key. Your browser sends each request directly, so the service also sees your IP address.
+The `auto`, `compact`, `strip`, `homeview` and `expanded` layouts only talk to Home Assistant, whatever options you set. The `page` layout can contact the services below. None of them needs an account or API key. Your browser sends each request directly, so the service also sees your IP address.
 
 | Turned on by | Service | What the card asks for | Location sent |
 |---|---|---|---|

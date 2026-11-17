@@ -157,6 +157,10 @@ footer {
 .stage:not([data-layout='page']) {
   padding-top: 56px;
 }
+/* The home view is square, so a desktop's column would make it taller than the screen shows. */
+.stage[data-layout='homeview'][data-screen='desktop'] .frame {
+  width: 520px;
+}
 .frame iweather-card {
   display: block;
   box-shadow: var(--shadow);

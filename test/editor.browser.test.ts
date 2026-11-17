@@ -47,7 +47,7 @@ test('compact hides unused controls and keeps their saved values through edits a
       pressure_unit: 'inHg',
       pressure_entity: 'sensor.pressure',
       uv_index_entity: 'sensor.uv',
-      tiles: ['wind', 'pressure'],
+      tiles: ['wind', 'pressure', 'averages'],
       averages: 'sensor.temperature_history',
       map: 'local',
       map_layers: { wind: 'https://example.com/{z}/{x}/{y}.png' },

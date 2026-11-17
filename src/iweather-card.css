@@ -4,6 +4,8 @@
 :host([data-layout=expanded]){height:var(--iweather-height,700px)}
 :host([data-layout=compact]){height:var(--iweather-height,180px);min-height:0;border-radius:var(--ha-card-border-radius,24px)}
 :host([data-layout=strip]){height:var(--iweather-height,56px);min-height:0}
+/* The home view is square unless it is given a height. */
+:host([data-layout=homeview]){height:var(--iweather-height,auto);min-height:0;aspect-ratio:1}
 :host([data-grid]){height:var(--iweather-height,100%);min-height:0}
 *{box-sizing:border-box;cursor:default}[hidden]{display:none!important}button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}button:focus-visible,.hours:focus-visible{outline:2px solid #fff;outline-offset:-3px}
 /* Panel material: blur 15, then a luminance curve
@@ -1418,6 +1420,53 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
    and a touch larger: grey under cloud, and lavender where the stars show. */
 .weather[data-layout=compact][data-night=true] :is(.compact-meta,.condition){color:#9ba5b9;font-size:clamp(11px,min(4.2cqw,11.5cqh),21px);font-weight:400}
 .weather[data-layout=compact][data-night=true][data-starry=true] :is(.compact-meta,.condition){color:#c5caff}
+/* The home view is read from across a room: the condition with its symbol at the upper left, the
+   day's high and low under it, the time at the upper right, the temperature as large as the card
+   allows, and four columns along the foot. Every size is a share of the card's shorter side, so
+   the whole keeps its proportions on a card of any shape; the figures take the sky's own hue
+   (see homeTints). Under 170 px tall it is a small card like any other. */
+.clock,.condition-symbol,.home-row,.figure-glass{display:none}
+@container card (min-height:170px){
+ .weather[data-layout=homeview][data-daily]{--home-x:max(12px,min(7.6cqw,7.6cqh))}
+ .weather[data-layout=homeview][data-daily] :is(.forecast,.daily,.home,.location,.compact-meta,.brief,.brief-light){display:none}
+ .weather[data-layout=homeview][data-daily] .weather-content{min-height:0}
+ .weather[data-layout=homeview][data-daily] .hero{inset:0;height:auto;padding:0;align-items:stretch;justify-content:flex-start}
+ .weather[data-layout=homeview][data-daily] .current{flex:1;display:grid;grid-template-areas:none;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto auto minmax(0,1fr);gap:0;align-items:center;justify-items:start;justify-content:normal;width:100%;max-width:none;min-height:0;padding:max(12px,min(7cqw,7cqh)) var(--home-x) 0;border-radius:inherit;text-align:left;line-height:1.15}
+ .weather[data-layout=homeview][data-daily] .reading{display:contents}
+ .weather[data-layout=homeview][data-daily] .condition-symbol{grid-area:1 / 1;display:block;margin-right:min(2.4cqw,2.4cqh)}
+ .weather[data-layout=homeview][data-daily] .condition-symbol svg{display:block;width:max(15px,min(5.8cqw,5.8cqh));height:max(15px,min(5.8cqw,5.8cqh));filter:brightness(0) invert(1)}
+ .weather[data-layout=homeview][data-daily] .condition{grid-area:1 / 2;justify-self:start;max-width:100%;min-width:0;margin:0;font-size:max(13px,min(4.9cqw,4.9cqh));font-weight:600;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .weather[data-layout=homeview][data-daily] .condition:before{content:none}
+ .weather[data-layout=homeview][data-daily] .range{grid-area:2 / 1 / 3 / 3;display:block;justify-self:start;margin:min(.5cqw,.5cqh) 0 0;color:var(--home-pale,#fff);font-size:max(12px,min(4.5cqw,4.5cqh));font-weight:500;white-space:pre;word-spacing:0}
+ .weather[data-layout=homeview][data-daily] .stale{grid-area:3 / 1 / 4 / -1;max-width:100%;margin:2px 0 0;font-size:max(11px,min(3cqw,3cqh));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .weather[data-layout=homeview][data-daily] .clock{grid-area:1 / 3 / 3 / 4;display:block;align-self:start;justify-self:end;margin-left:12px;font-size:max(18px,min(8.4cqw,8.4cqh));font-weight:600;letter-spacing:-.01em;line-height:1}
+ .weather[data-layout=homeview][data-daily] .temperature{grid-area:4 / 1 / 5 / -1;align-self:center;justify-self:start;padding:0;margin:0 0 0 .03em;color:var(--home-tint,#fff);font-size:max(48px,min(36cqw,36cqh));font-weight:500;letter-spacing:-.02em;line-height:.9;text-shadow:none}
+ .weather[data-layout=homeview][data-daily] .home-row{flex:none;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);align-items:start;gap:min(1cqw,1cqh);margin:0;padding:0 max(8px,min(6cqw,6cqh)) max(10px,min(7cqw,7cqh));pointer-events:auto;touch-action:pan-y;font-size:max(11px,min(4.5cqw,4.5cqh));font-weight:600;line-height:1.2;text-align:center;text-shadow:inherit}
+ .home-item{display:flex;flex-direction:column;align-items:center;min-width:0;margin:0;padding:0;border:0;border-radius:12px;background:none;font:inherit;line-height:inherit;text-shadow:inherit}.home-item,.home-item *{cursor:pointer}.home-item:active{opacity:.7}
+ .home-item>span{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ /* A symbol's ink runs past its box, so its room doesn't cut it as a line of words is cut. */
+ .home-item>.home-symbol{margin:min(1.2cqw,1.2cqh) 0;overflow:visible}
+ .home-symbol svg{display:block;width:max(18px,min(7.6cqw,7.6cqh));height:max(18px,min(7.6cqw,7.6cqh))}
+ .home-low{color:var(--home-pale,#fff)}
+}
+/* At every size the temperature is the sky's colour in rounded type, and glass where that can be
+   drawn: on a canvas over its own words (see GlassFigures), which keep their room. */
+.weather[data-layout=homeview][data-daily]{font-family:ui-rounded,var(--ha-font-family-body,system-ui,"Segoe UI",sans-serif)}
+.weather[data-layout=homeview][data-daily] .current{position:relative}
+.weather[data-layout=homeview][data-daily] .temperature{color:var(--home-tint,#fff);text-shadow:none}
+.weather[data-layout=homeview][data-daily][data-figures=glass] .temperature{color:transparent}
+.weather[data-layout=homeview][data-daily] .figure-glass{position:absolute;display:block;pointer-events:none;filter:drop-shadow(0 min(1.2cqw,1.2cqh) min(3cqw,3cqh) #0000002e)}
+/* A small home view is the small card's one line, its temperature grown to half the card's height
+   and standing beside the condition with no bar between them. */
+@container card (height < 170px){
+ .weather[data-layout=homeview][data-daily] .reading{align-items:center;gap:.55em}
+ .weather[data-layout=homeview][data-daily] .temperature{font-size:max(24px,min(52cqh,24cqw));font-weight:500;letter-spacing:-.02em;line-height:1}
+ .weather[data-layout=homeview][data-daily] .condition:before{content:none}
+}
+/* Narrow, the condition goes under the temperature, so that it is read whole. */
+@container card (100px <= height < 170px) and (width < 200px){.weather[data-layout=homeview][data-daily] .reading{flex-direction:column;gap:0}.weather[data-layout=homeview][data-daily] .condition{max-width:100%}}
+/* Too short for all of it, the home view lets go of its foot. */
+@container card (170px <= height < 250px){.weather[data-layout=homeview][data-daily] .home-row{display:none}.weather[data-layout=homeview][data-daily] .current{padding-bottom:8px}}
 /* A page with less height than it needs scrolls in place over a still sky. The hero collapses
    into a band at the top, the place name rising and the temperature and condition giving way
    to one line, and the panels pass under it: each stops at the band's edge, its header held
@@ -1580,6 +1629,8 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 /* From the foot, a sheet's words are white rather than the popover's softer white, as are the days
    ahead in its strip. */
 .detail[data-bottom]{color:#fff}.detail[data-bottom] .detail-days{--tense:#fff}.detail[data-bottom] .detail-days span{color:#fff}
+/* Over the card and no more (see coversCard): the card's own box and corners, at any width. */
+.detail[data-bottom][data-cover]{--foot-top:0px;--foot-radius:var(--ha-card-border-radius,12px);inset:var(--cover-top,0px) var(--cover-right,0px) var(--cover-bottom,0px) var(--cover-left,0px);max-width:none;border-radius:var(--foot-radius)}
 .detail[data-bottom]::-webkit-scrollbar{display:none}
 .detail[data-bottom]::before{content:"";display:block;height:100%}
 /* The sheet stands in a screen-high hold. Kept at its place (see bottom-sheet.ts), the hold's foot

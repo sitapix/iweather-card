@@ -197,6 +197,8 @@ function settleAcross(
 }
 
 // What the sheets read from the card, and ask of it.
+// A home view this much of the screen's width and height has the screen to itself.
+const MOST_OF_SCREEN = 0.8;
 export interface SheetHost
   extends EventTarget,
     HistoryHost,
@@ -293,6 +295,7 @@ export class DetailSheets {
       dialog.show();
     } else {
       dialog.toggleAttribute('data-bottom', this.fromFoot(detail));
+      this.cover(detail);
       dialog.toggleAttribute('data-full', this.fullScreen(detail));
       if ('closedBy' in HTMLDialogElement.prototype) dialog.setAttribute('closedby', 'any');
       dialog.showModal();
@@ -847,10 +850,39 @@ export class DetailSheets {
   fullScreen(detail: DetailSheet) {
     return detail.id === 'map' && this.sheetsHere();
   }
-  // Whether sheets come from the foot here, by the card's setting and the screen.
+  // Whether sheets come from the foot here, by the card's setting and the screen. Left to itself,
+  // the home view's always do: it is a screen under a finger, whatever its size.
   sheetsHere() {
     const style = this.card.config?.sheet_style ?? 'auto';
-    return style === 'sheet' || (style === 'auto' && isCompact());
+    return (
+      style === 'sheet' ||
+      style === 'card' ||
+      (style === 'auto' && (isCompact() || this.card.config?.weather_layout === 'homeview'))
+    );
+  }
+  // Whether a sheet from the foot covers the card and no more: where the settings say so, and left
+  // to itself in the home view once the card takes up most of the screen, as on a screen it has to
+  // itself, where a sheet narrower than the card would leave the card showing either side.
+  coversCard() {
+    const style = this.card.config?.sheet_style ?? 'auto';
+    if (style === 'card') return true;
+    if (style !== 'auto' || this.card.config?.weather_layout !== 'homeview') return false;
+    const box = this.card.getBoundingClientRect();
+    return box.width >= innerWidth * MOST_OF_SCREEN && box.height >= innerHeight * MOST_OF_SCREEN;
+  }
+  // Sets a sheet from the foot over the card's own box, or back over the screen.
+  cover({ dialog }: DetailSheet) {
+    const covers = 'bottom' in dialog.dataset && this.coversCard();
+    dialog.toggleAttribute('data-cover', covers);
+    if (!covers) return;
+    const box = this.card.getBoundingClientRect();
+    for (const [name, value] of [
+      ['--cover-top', box.top],
+      ['--cover-left', box.left],
+      ['--cover-right', innerWidth - box.right],
+      ['--cover-bottom', innerHeight - box.bottom],
+    ] as const)
+      dialog.style.setProperty(name, `${Math.max(0, value)}px`);
   }
   // How far a sheet's content is scrolled, and scrolling it there: from the foot the dialog scrolls
   // it, past the sheet's place (see the styles), and a popover scrolls its own.

@@ -846,5 +846,8 @@
     "one": "En {count} hora",
     "many": "En {count} horas",
     "other": "En {count} horas"
-  }
+  },
+  "In {count}h": "En {count} h",
+  "In {count}d": "En {count} d",
+  "AQI": "ICA"
 }

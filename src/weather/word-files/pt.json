@@ -846,5 +846,8 @@
     "one": "Em {count} hora",
     "many": "Em {count} horas",
     "other": "Em {count} horas"
-  }
+  },
+  "In {count}h": "Em {count} h",
+  "In {count}d": "Em {count} d",
+  "AQI": "IQA"
 }
