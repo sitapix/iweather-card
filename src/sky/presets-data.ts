@@ -2232,9 +2232,7 @@ const layersValues = [
   ["fringe","rain","lightning","cloudFlash"],
   ["rain","sleet"],
   ["sunDisc","fog"],
-  ["rain","nearParticles","snow"],
-  ["fringe","cloudFlash"],
-  ["fringe","rain","cloudFlash"]
+  ["rain","nearParticles","snow"]
 ] as const satisfies readonly SkyLook['layers'][];
 
 const rainValues = [
@@ -3864,7 +3862,7 @@ const compactLandscape: Record<SkyKind,SkyLook> = {
   heavySnow: { ...compact.heavySnow, decks: decksValues[42], camera: cameraValues[1] },
   hot: { ...compact.hot, camera: cameraValues[1] },
   hurricane: { ...compact.hurricane, decks: decksValues[43], camera: cameraValues[1] },
-  isolatedThunderstorms: { ...compact.isolatedThunderstorms, blanket: blanketValues[26], layers: layersValues[22], camera: cameraValues[1], fringe: fringeValues[15] },
+  isolatedThunderstorms: { ...compact.isolatedThunderstorms, blanket: blanketValues[26], camera: cameraValues[1], fringe: fringeValues[15] },
   mostlyClear: { ...compact.mostlyClear, decks: decksValues[44], blanket: blanketValues[27], camera: cameraValues[1], fringe: fringeValues[16] },
   mostlyCloudyHighAltitude: { ...compact.mostlyCloudyHighAltitude, decks: decksValues[45], blanket: blanketValues[28], camera: cameraValues[1] },
   mostlyCloudyMidAltitude: { ...compact.mostlyCloudyMidAltitude, decks: decksValues[46], blanket: blanketValues[29], camera: cameraValues[1], fringe: fringeValues[17] },
@@ -3873,14 +3871,14 @@ const compactLandscape: Record<SkyKind,SkyLook> = {
   partlyCloudyMidAltitude: { ...compact.partlyCloudyMidAltitude, decks: decksValues[49], camera: cameraValues[1] },
   partlyCloudyLowAltitude: { ...compact.partlyCloudyLowAltitude, decks: decksValues[50], camera: cameraValues[1] },
   rain: { ...compact.rain, decks: decksValues[51], blanket: blanketValues[31], camera: cameraValues[1] },
-  scatteredThunderstorms: { ...compact.scatteredThunderstorms, decks: decksValues[52], blanket: blanketValues[32], layers: layersValues[23], camera: cameraValues[1], fringe: fringeValues[19] },
+  scatteredThunderstorms: { ...compact.scatteredThunderstorms, decks: decksValues[52], blanket: blanketValues[32], camera: cameraValues[1], fringe: fringeValues[19] },
   sleet: { ...compact.sleet, decks: decksValues[53], camera: cameraValues[1] },
   smoky: { ...compact.smoky, decks: decksValues[54], camera: cameraValues[1] },
   snow: { ...compact.snow, decks: decksValues[55], camera: cameraValues[1] },
-  strongStorms: { ...compact.strongStorms, decks: decksValues[56], blanket: blanketValues[33], layers: layersValues[23], camera: cameraValues[1], fringe: fringeValues[20] },
+  strongStorms: { ...compact.strongStorms, decks: decksValues[56], blanket: blanketValues[33], camera: cameraValues[1], fringe: fringeValues[20] },
   sunFlurries: { ...compact.sunFlurries, decks: decksValues[36], blanket: blanketValues[22], camera: cameraValues[1] },
   sunShowers: { ...compact.sunShowers, decks: decksValues[57], blanket: blanketValues[34], camera: cameraValues[1] },
-  thunderstorms: { ...compact.thunderstorms, blanket: blanketValues[35], layers: layersValues[23], camera: cameraValues[1], fringe: fringeValues[21] },
+  thunderstorms: { ...compact.thunderstorms, blanket: blanketValues[35], camera: cameraValues[1], fringe: fringeValues[21] },
   tropicalStorm: { ...compact.tropicalStorm, decks: decksValues[58], blanket: blanketValues[36], camera: cameraValues[1] },
   wintryMix: { ...compact.wintryMix, decks: decksValues[59], blanket: blanketValues[37], camera: cameraValues[1] },
 };
