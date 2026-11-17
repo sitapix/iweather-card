@@ -187,10 +187,12 @@ footer {
 .screen {
   margin-left: auto;
 }
-.screen span {
+.screen span,
+.turn span {
   padding: 5px 12px;
 }
-.screen svg {
+.screen svg,
+.turn svg {
   display: block;
   width: 20px;
   height: 20px;
@@ -200,7 +202,8 @@ footer {
   stroke-width: 1.5;
 }
 /* The screen's name is read out, and shown as the pointer rests on it. */
-.screen b {
+.screen b,
+.turn b {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -235,6 +238,19 @@ footer {
 .stage[data-layout='page'][data-screen='tablet'] .frame {
   width: 820px;
 }
+/* On its side, a screen is as wide as it was tall. */
+.stage[data-layout='page'][data-screen='phone'][data-turned='true'] {
+  --frame-height: 390px;
+}
+.stage[data-layout='page'][data-screen='phone'][data-turned='true'] .frame {
+  width: 780px;
+}
+.stage[data-layout='page'][data-screen='tablet'][data-turned='true'] {
+  --frame-height: min(820px, calc(100dvh - 48px));
+}
+.stage[data-layout='page'][data-screen='tablet'][data-turned='true'] .frame {
+  width: 1180px;
+}
 .stage:not([data-layout='page'])[data-screen='phone'] .frame {
   width: 360px;
 }
@@ -266,7 +282,8 @@ footer {
     border-radius: 0;
   }
   /* A phone shows the card at its own width. */
-  .stage-bar .screen {
+  .stage-bar .screen,
+  .stage-bar .turn {
     display: none;
   }
 }
@@ -713,6 +730,12 @@ button:active {
   .settings pre,
   .doc pre {
     border-radius: 18px;
+  }
+  /* The card takes its corner from the dashboard's theme, as it does in Home Assistant, and here
+     its shape too: the stage's corner less the room between them, so the two run together. */
+  .frame iweather-card {
+    --ha-card-border-radius: 26px;
+    corner-shape: squircle;
   }
   @media (max-width: 600px) {
     .stage {

@@ -59,6 +59,8 @@ interface Choices {
   hour: number;
   layout: WeatherLayout;
   screen: Screen;
+  // A phone or tablet on its side, which only the page layout, a whole screen, shows.
+  turned: boolean;
   units: Units;
   theme: Theme;
   language: string;
@@ -85,6 +87,7 @@ function opening(): Choices {
     hour: OPENING_HOUR,
     layout: 'page',
     screen: matchMedia('(max-width: 700px)').matches ? 'phone' : 'desktop',
+    turned: false,
     units: FAHRENHEIT_REGIONS.test(first) || first === 'en' ? 'us' : 'metric',
     theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
     language: spoken[0] ?? 'en',
@@ -102,6 +105,7 @@ function fromHash(hash: string): Choices {
     hour: Number.isInteger(hour) && hour >= 0 && hour < HOURS ? hour : OPENING.hour,
     layout: oneOf(LAYOUTS, params.get('layout'), OPENING.layout),
     screen: oneOf(SCREENS, params.get('screen'), OPENING.screen),
+    turned: params.get('turned') === 'on',
     units: oneOf(UNIT_CHOICES, params.get('units'), OPENING.units),
     theme: oneOf(THEMES, params.get('theme'), OPENING.theme),
     language: oneOf(
@@ -117,6 +121,7 @@ const KEYS = [
   'hour',
   'layout',
   'screen',
+  'turned',
   'units',
   'theme',
   'language',
@@ -145,6 +150,8 @@ const form = query('form.controls', HTMLFormElement),
   here = query('button.here', HTMLButtonElement),
   search = query('input[name=place]', HTMLInputElement),
   alertBox = query('input[name=alert]', HTMLInputElement),
+  turnBox = query('input[name=turned]', HTMLInputElement),
+  turn = query('.turn', HTMLDivElement),
   copy = query('button.copy', HTMLButtonElement),
   copyFeedback = query('.copy-feedback', HTMLElement);
 
@@ -181,6 +188,7 @@ function read(): Choices {
       hour: hourInput.value,
       layout: field('layout'),
       screen: field('screen'),
+      turned: turnBox.checked ? 'on' : 'off',
       units: field('units'),
       theme: field('theme'),
       language: field('language'),
@@ -234,6 +242,9 @@ function render(): void {
     now = Date.now();
   stage.dataset['screen'] = choices.screen;
   stage.dataset['layout'] = choices.layout;
+  const turns = choices.layout === 'page' && choices.screen !== 'desktop';
+  turn.hidden = !turns;
+  stage.dataset['turned'] = String(turns && choices.turned);
   document.documentElement.dataset['theme'] = choices.theme;
   clock.value = live ? 'Now' : clockFormat.format(Date.UTC(2000, 0, 1, choices.hour));
   hourInput.setAttribute('aria-valuetext', clock.value);
