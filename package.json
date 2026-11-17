@@ -10,6 +10,7 @@
     "dev": "vite",
     "perf": "node scripts/weather-performance.ts",
     "build": "vite build",
+    "compress": "node scripts/compress.ts",
     "demo": "vite build && vite build -c demo/vite.config.ts",
     "test": "vitest run",
     "test:changed": "vitest run --changed origin/main",
