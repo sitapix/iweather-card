@@ -53,7 +53,7 @@ export function forecastStrip(
     mode,
     unit,
     kind: dominantPrecipitation(state?.state, todayCondition(daily?.forecast ?? [], now, timeZone)),
-    wind: windSeries(type, items, forecast, attrs.wind_speed_unit, now),
+    wind: mode === 'wind' ? windSeries(type, items, forecast, attrs.wind_speed_unit, now) : undefined,
   };
 }
 export type Strip = ReturnType<typeof forecastStrip>;

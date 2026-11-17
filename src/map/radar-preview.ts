@@ -26,7 +26,11 @@ export interface PreviewFrame {
 
 export class RadarPreview<Frame extends PreviewFrame> {
   private readonly canvases: HTMLCanvasElement[];
-  private readonly ready = new Set<number>();
+  private readonly ready: number[] = [];
+  private readonly opacity: number[] = [];
+  private from = -1;
+  private to = -1;
+  private on = -1;
   private readonly active: () => boolean;
   private readonly asked = new AbortController();
   private readonly frames: readonly Frame[];
@@ -72,7 +76,8 @@ export class RadarPreview<Frame extends PreviewFrame> {
       if (previous.frames[0]?.time === frames[0]?.time && previous.step === step) this.began = previous.began;
       previous.frames.forEach((frame, i) => {
         const canvas = previous.canvases[i];
-        if (canvas && previous.ready.has(i)) painted.set(identity(frame), { canvas, drawn: previous.drawn.has(i) });
+        if (canvas && previous.ready.includes(i))
+          painted.set(identity(frame), { canvas, drawn: previous.drawn.has(i) });
       });
     }
     this.canvases = frames.map((frame, i) => {
@@ -82,42 +87,67 @@ export class RadarPreview<Frame extends PreviewFrame> {
       canvas.dataset['frame'] = String(i);
       // The blend is set frame by frame, so no transition lags behind it.
       canvas.style.transition = 'none';
+      if (canvas.style.opacity !== '0') canvas.style.opacity = '0';
+      canvas.removeAttribute('data-on');
+      this.opacity[i] = 0;
       if (saved?.drawn) this.drawn.add(i);
       // Until it is drawn, a canvas of no size, as one let go is (see hold).
       else if (redraw) {
         canvas.width = 0;
         canvas.height = 0;
       }
-      if (saved || redraw) this.ready.add(i);
+      if (saved || redraw) this.ready.push(i);
       else
         void paint(canvas, frame, this.asked.signal).then(done => {
           if (this.stopped) return;
-          if (done) this.ready.add(i);
+          if (done) {
+            this.ready.push(i);
+            this.ready.sort((a, b) => a - b);
+          }
           this.update();
         });
       return canvas;
     });
-    if (this.began !== undefined && this.ready.size > 1 && this.active()) this.tick();
+    if (this.began !== undefined && this.ready.length > 1 && this.active()) this.tick();
     else {
       this.show(0, 0, 0);
-      if (this.ready.size > 1) this.update();
+      if (this.ready.length > 1) this.update();
     }
   }
 
   // The playhead `share` of the way from frame `from` to frame `to`, at `time`: those two blend, the
   // one it is nearer is the frame shown, and the corner says its time.
   private show(from: number, to: number, share: number, time = this.frames[from]?.time) {
-    for (const [i, canvas] of this.canvases.entries()) {
-      const weight = i === from ? 1 - share : i === to ? share : 0;
-      canvas.style.opacity = String(weight * Number(canvas.dataset['peak'] ?? 1));
-      canvas.toggleAttribute('data-on', i === (share < 1 / 2 ? from : to));
+    const moved = this.from !== from || this.to !== to,
+      on = share < 1 / 2 ? from : to;
+    if (moved) {
+      if (this.from !== from && this.from !== to) this.blend(this.from, 0);
+      if (this.to !== from && this.to !== to) this.blend(this.to, 0);
+      this.from = from;
+      this.to = to;
+    }
+    this.blend(from, 1 - share);
+    if (to !== from) this.blend(to, share);
+    if (this.on !== on) {
+      this.canvases[this.on]?.removeAttribute('data-on');
+      this.canvases[on]?.toggleAttribute('data-on', true);
+      this.on = on;
     }
     if (this.label && time !== undefined) {
       const said = radarWhen(time, Date.now(), this.step);
       if (said !== this.said) this.label.textContent = said;
       this.said = said;
     }
-    if (this.redraw) this.hold(from, to, this.redraw);
+    if (moved && this.redraw) this.hold(from, to, this.redraw);
+  }
+
+  private blend(i: number, weight: number) {
+    const canvas = this.canvases[i];
+    if (!canvas) return;
+    const opacity = weight * Number(canvas.dataset['peak'] ?? 1);
+    if (this.opacity[i] === opacity) return;
+    this.opacity[i] = opacity;
+    canvas.style.opacity = String(opacity);
   }
 
   // Holds the pictures of the two frames blending and of the one the playhead reaches next, round
@@ -141,7 +171,7 @@ export class RadarPreview<Frame extends PreviewFrame> {
 
   // Where the playhead is `elapsed` ms after setting off, among the frames painted so far.
   private place(elapsed: number) {
-    const ready = [...this.ready].sort((a, b) => a - b),
+    const ready = this.ready,
       gaps = ready.length - 1,
       moving = elapsed - NOW_HOLD;
     if (gaps < 1 || moving <= 0) return { from: 0, to: 0, share: 0, time: this.frames[0]?.time };
@@ -162,7 +192,7 @@ export class RadarPreview<Frame extends PreviewFrame> {
       this.update();
       return;
     }
-    const ready = this.ready.size;
+    const ready = this.ready.length;
     let elapsed = performance.now() - this.began;
     // Round again once the playhead has reached the last frame.
     if (elapsed > NOW_HOLD + (ready - 1) * FRAME_TIME) {
@@ -183,7 +213,7 @@ export class RadarPreview<Frame extends PreviewFrame> {
       this.show(0, 0, 0);
       return;
     }
-    if (this.timer || this.ready.size < 2) return;
+    if (this.timer || this.ready.length < 2) return;
     this.began ??= performance.now();
     this.timer = window.setTimeout(() => this.tick(), TICK);
   }

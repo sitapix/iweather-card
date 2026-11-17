@@ -5,7 +5,7 @@ import { mix } from '../../lib/canvas.ts';
 import { esc } from '../../lib/html.ts';
 import { DAY, HOUR } from '../../lib/time.ts';
 import { clamp, finite } from '../../lib/values.ts';
-import { forecasts, type StripItem } from '../../weather/forecast-items.ts';
+import { forecastHours, type StripItem } from '../../weather/forecast-items.ts';
 import type { ForecastState } from '../../weather/forecast.ts';
 import { convertUnit, isBeaufort, UNITS } from '../../weather/units.ts';
 import { addedLight, WORDS } from '../shared/light.ts';
@@ -170,7 +170,7 @@ export function windSeries(
   const shown = items.filter(item => !item.sun),
     live = shown.find(item => item.now),
     step = STEPS[type],
-    entries = forecasts([...(forecast?.earlier ?? []), ...(forecast?.forecast ?? [])]),
+    entries = forecastHours(forecast?.earlier, forecast?.forecast),
     from = live
       ? (entries.findLast(entry => entry.time <= now && entry.time > now - HOUR)?.time ?? Math.floor(now / HOUR) * HOUR)
       : (shown[0]?.time ?? now),

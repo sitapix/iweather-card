@@ -1,6 +1,7 @@
 import { isRecord, finite, text, isList } from '../lib/values.ts';
 import { fromUnix } from '../lib/time.ts';
-import type { HomeAssistant } from '../card/home-assistant.ts';
+import { sharedRequests } from '../lib/asking.ts';
+import type { HistoryRequest, HomeAssistant } from '../card/home-assistant.ts';
 // Asking Home Assistant for its history of entities, and reading its replies.
 // A history state's time: compressed states carry seconds, full ones an ISO time.
 export const stateTime = (state: unknown): number => {
@@ -22,10 +23,16 @@ export const historyIntervals = (result: unknown, entity: string): { time: numbe
   });
 export const historyReadings = (result: unknown, entity: string): { time: number; value: number }[] =>
   historyIntervals(result, entity).flatMap(({ time, value }) => (value === null ? [] : [{ time, value }]));
-// Entities' states from `start` to `end` (or now): with their attributes when `full`, else only
-// their values.
-export const askHistory = (hass: HomeAssistant, entities: string[], full: boolean, start: number, end?: number) =>
-  hass.callWS?.({
+// Share recorder requests only while pending on the same Home Assistant connection.
+const pending = new WeakMap<object, ReturnType<typeof sharedRequests<unknown>>>();
+
+export function askHistory(hass: HomeAssistant, entities: string[], full: boolean, start: number, end?: number) {
+  const call = hass.callWS?.bind(hass);
+  if (!call) return undefined;
+  const owner = hass.connection ?? hass,
+    ask = pending.get(owner) ?? sharedRequests<unknown>();
+  pending.set(owner, ask);
+  const message: HistoryRequest = {
     type: 'history/history_during_period',
     start_time: new Date(start).toISOString(),
     ...(end === undefined ? {} : { end_time: new Date(end).toISOString() }),
@@ -33,7 +40,9 @@ export const askHistory = (hass: HomeAssistant, entities: string[], full: boolea
     minimal_response: !full,
     no_attributes: !full,
     significant_changes_only: false,
-  });
+  };
+  return ask(JSON.stringify(message), () => call(message));
+}
 // Yesterday's and today's states of the entity.
 export interface History {
   yesterday: readonly unknown[];

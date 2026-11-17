@@ -95,6 +95,8 @@ test.describe('with radar motion on', () => {
       when = map.locator('.map-when'),
       ahead = () => when.textContent(),
       played = () => frames.count();
+    // A map far down a phone's page waits to be neared before it draws.
+    await map.scrollIntoViewIfNeeded();
     // Rain falls now, so the latest frame plays on fifty minutes, ten at a time, never the past.
     await expect.poll(played).toBeGreaterThanOrEqual(6);
     await expect(hours).toHaveCount(0);
@@ -240,6 +242,8 @@ test.describe('on a map', () => {
   test.use({ config: MAP });
   test('the ground follows the screen’s colour scheme as it changes, with the page open', async ({ card, page }) => {
     const map = card.locator('.tile[data-tile=map] .radar');
+    // A map far down a phone's page waits to be neared before it draws.
+    await map.scrollIntoViewIfNeeded();
     await expect(map).not.toHaveAttribute('data-night');
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect(map).toHaveAttribute('data-night');

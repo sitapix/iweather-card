@@ -1,5 +1,12 @@
 import { type PrecipitationKind, conditionPrecipitation, precipitationAmount } from '../../weather/precipitation.ts';
-import { type DailyItem, type TimedEntry, dateKey, daysUntil, forecasts } from '../../weather/forecast-items.ts';
+import {
+  type DailyItem,
+  type TimedEntry,
+  dateKey,
+  daysUntil,
+  forecastHours,
+  forecasts,
+} from '../../weather/forecast-items.ts';
 import { finite } from '../../lib/values.ts';
 import type { TileContext } from '../shared/context.ts';
 import type { ForecastEntry } from '../../card/home-assistant.ts';
@@ -59,7 +66,7 @@ export const dayAmount = (
 ) =>
   dayTotal(
     forecast,
-    dailyDetail([...ctx.pastHours, ...ctx.hourly], [day], ctx.timeZone).get(dateKey(day.time, ctx.timeZone)),
+    dailyDetail(forecastHours(ctx.pastHours, ctx.hourly), [day], ctx.timeZone).get(dateKey(day.time, ctx.timeZone)),
   );
 // What fell over the last 24 hours: what a precipitation sensor recorded, which doesn't say what it
 // was; or else the whole hours before the one under way, if the hours over go back that far.

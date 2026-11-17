@@ -1,6 +1,6 @@
 import { dateFormat } from '../lib/formats.ts';
 import { DAY, HOUR, HOURS_PER_DAY, MINUTE, MINUTES_PER_HOUR } from '../lib/time.ts';
-import { type TimedEntry, type DailyItem, dateKey, forecasts } from '../weather/forecast-items.ts';
+import { type TimedEntry, type DailyItem, dateKey, forecastHours, forecasts } from '../weather/forecast-items.ts';
 import { extendForecast, fillForecast } from '../weather/forecast.ts';
 import { type History, stateTime } from '../weather/history.ts';
 import { finite, isRecord, text } from '../lib/values.ts';
@@ -143,7 +143,7 @@ export function sheetDays(
     kept = pastHours.filter(entry => dateKey(entry.time, timeZone) === key),
     recorded = fillForecast(recordedHours(history?.yesterday ?? []), kept, WITHIN_THE_HOUR),
     { forecast, earlier } = extendForecast(recorded, kept, WITHIN_THE_HOUR, now),
-    entries = forecasts([...earlier, ...forecast]),
+    entries = forecastHours(earlier, forecast),
     gone = dayFrom(entries);
   return [
     { key, today: false, past: true as const, time, entries, ...(gone ? { daily: gone } : {}) },

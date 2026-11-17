@@ -167,14 +167,15 @@ test('a hidden map does not ask for grids, including a move that is still settli
   const { host, maps } = mapHost(),
     fetch = vi.fn().mockRejectedValue(new Error('No request expected.'));
   vi.stubGlobal('fetch', fetch);
-  host.visible = false;
+  // A sheet's map shows over a card out of view, so it is the page that hides it.
+  const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
   const view = maps.largeView();
   if (!view) throw new Error('No map');
   view.style.cssText = 'width:100px;height:100px';
   const demand = { centre, width: 100, height: 100, source: 'forecast' } as const;
   await maps.loadGrid(view, demand);
   expect(fetch).not.toHaveBeenCalled();
-  host.visible = true;
+  hidden.mockReturnValue(false);
   const loading = maps.loadGrid(view, demand);
   host.root.querySelector('dialog')?.close();
   await loading;

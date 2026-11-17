@@ -4,6 +4,7 @@ import type { Connection, ForecastEntry, ForecastSubscription, Unsubscribe } fro
 import { WEATHER_DEFAULTS, sceneCondition } from '../src/weather/conditions.ts';
 import {
   forecasts,
+  forecastHours,
   forecastTypes,
   todayRange,
   forecastItems,
@@ -110,6 +111,31 @@ test('forecasts ignore malformed timestamps, deduplicate and sort without mutati
     [14, 16],
   );
   assert.deepEqual(input[0], { datetime: '2026-10-21T08:00:00Z', temperature: 15 });
+});
+test('earlier and future hours share one normalized timeline and a replacement forecast wins overlaps', () => {
+  const time = '2026-11-01T01:30:00',
+    past = [
+      { datetime: `${time}-04:00`, temperature: 2 },
+      { datetime: `${time}-05:00`, temperature: 3 },
+    ],
+    ahead = [{ datetime: `${time}-05:00`, temperature: 5 }],
+    hours = forecastHours(past, ahead);
+  assert.deepEqual(
+    hours.map(entry => entry.temperature),
+    [2, 5],
+  );
+  assert.equal(forecasts(hours), hours);
+  assert.equal(forecastHours(past, ahead), hours);
+  assert.equal(forecastHours(undefined, ahead), forecasts(ahead));
+  const next = forecastHours(past, [{ ...ahead[0], temperature: 6 }]);
+  assert.deepEqual(
+    next.map(entry => entry.temperature),
+    [2, 6],
+  );
+  assert.deepEqual(
+    hours.map(entry => entry.temperature),
+    [2, 5],
+  );
 });
 test('high and low use the location date across midnight and retain zero', () => {
   const daily = [
@@ -284,6 +310,74 @@ test('today’s bar blends the scale plainly, and every other day’s in OKLab',
   // Both run the same stretch of the scale, and today's stays the stronger between its stops.
   assert.match(rangeStyles(today).fill, /linear-gradient\(90deg in srgb,#b8d060 0%,#f3cd10 100%\)/);
   assert.match(rangeStyles(other).fill, /linear-gradient\(90deg in oklab,#c3d389 0%,#f5ce38 100%\)/);
+});
+test('cards share each live forecast, convert it independently and release it after the last reader', async () => {
+  const events: ((answer: unknown) => void)[] = [],
+    stop = vi.fn(),
+    connection: Connection = {
+      subscribeMessage(callback) {
+        events.push(callback);
+        return Promise.resolve(stop);
+      },
+    },
+    first = new WeatherForecast(() => {}),
+    second = new WeatherForecast(
+      () => {},
+      rows => rows.map(row => ({ ...row, temperature: (row.temperature ?? 0) + 10 })),
+    );
+  first.update(connection, 'weather.home', ['hourly', 'daily']);
+  await settle();
+  const hourly = events[0];
+  assert.ok(hourly);
+  hourly({ forecast: [{ temperature: 1 }] });
+  second.update(connection, 'weather.home', ['hourly']);
+  await settle();
+  assert.equal(events.length, 2);
+  assert.equal(first.data.hourly?.forecast[0]?.temperature, 1);
+  assert.equal(second.data.hourly?.forecast[0]?.temperature, 11);
+  assert.equal(first.data.hourly.raw, second.data.hourly.raw);
+  first.suspend();
+  assert.equal(stop.mock.calls.length, 1);
+  hourly({ forecast: [{ temperature: 2 }] });
+  first.resume();
+  await settle();
+  assert.equal(events.length, 3);
+  assert.equal(first.data.hourly.forecast[0].temperature, 2);
+  first.renewAll('same entity reload');
+  await settle();
+  second.renewAll('same entity reload');
+  await settle();
+  assert.equal(events.length, 5);
+  hourly({ forecast: [{ temperature: 20 }] });
+  assert.equal(second.data.hourly.forecast[0].temperature, 12);
+  first.stop();
+  second.stop();
+  assert.equal(stop.mock.calls.length, 5);
+});
+
+test('manual retry on one shared forecast wakes its readers and starts one fresh request', async () => {
+  const subscribe = vi
+      .fn<Connection['subscribeMessage']>()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockImplementation(callback => {
+        callback({ forecast: [{ temperature: 2 }] });
+        return Promise.resolve(() => {});
+      }),
+    connection = { subscribeMessage: subscribe },
+    a = new WeatherForecast(() => {}),
+    b = new WeatherForecast(() => {});
+  for (const card of [a, b]) card.update(connection, 'weather.home', ['hourly']);
+  await settle();
+  assert.equal(b.data.hourly?.status, 'error');
+  a.retry();
+  b.retry();
+  assert.equal(b.data.hourly.status, 'loading');
+  await settle();
+  assert.equal(a.data.hourly?.forecast[0]?.temperature, 2);
+  assert.equal(b.data.hourly.forecast[0]?.temperature, 2);
+  assert.equal(subscribe.mock.calls.length, 2);
+  a.stop();
+  b.stop();
 });
 test('forecast subscriptions are reused on state updates and are cleaned up on disconnect', async () => {
   const calls: { callback: (message: unknown) => void; message: ForecastSubscription }[] = [],
@@ -1130,10 +1224,12 @@ test('a subscription quiet for two hours is asked again, with its forecast showi
   vi.useFakeTimers();
   try {
     let calls = 0,
-      stopped = 0;
+      stopped = 0,
+      send = (_event: unknown) => {};
     const connection: Connection = {
       subscribeMessage(callback) {
         calls++;
+        send = callback;
         if (calls === 1) callback({ forecast: [{ datetime: '2026-10-27T12:00:00Z', temperature: 3 }] });
         return Promise.resolve(() => {
           stopped++;
@@ -1145,7 +1241,9 @@ test('a subscription quiet for two hours is asked again, with its forecast showi
     stream.update(connection, 'weather.home', ['hourly']);
     await vi.advanceTimersByTimeAsync(0);
     assert.equal(calls, 1);
-    await vi.advanceTimersByTimeAsync(2 * 3_600_000 - 1);
+    await vi.advanceTimersByTimeAsync(HOUR);
+    send({ forecast: [] });
+    await vi.advanceTimersByTimeAsync(HOUR - 1);
     assert.equal(calls, 1, 'not before');
     await vi.advanceTimersByTimeAsync(1);
     assert.equal(calls, 2);

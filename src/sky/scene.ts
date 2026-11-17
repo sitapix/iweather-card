@@ -87,6 +87,8 @@ function sceneGradient(preset: ScenePreset, tile: boolean): SceneGradient {
 // Flare ghosts: position along sun→centre, radius (share of the short side),
 // shape, tint and opacity.
 // The condition-change window lasts 0.8 seconds. Falling particle counts ease separately.
+// The longest a sky waits for its cloud artwork before it changes without it.
+const CLOUD_WAIT = 3000;
 const FADE = 800,
   RAMP = 500;
 type GhostKind = 'disc' | 'iris' | 'etched' | 'chromatic';
@@ -132,6 +134,7 @@ interface Blanket {
 interface Outgoing {
   sky: readonly string[];
   skyStop: number;
+  cloudy: boolean;
   decks: Decks;
   tints: readonly Tints[];
   blanket: Blanket | null;
@@ -664,14 +667,28 @@ export class WeatherScene {
     | { key: string; sprites: { image: HTMLCanvasElement; x: number; y: number }[]; layer: HTMLCanvasElement }
     | undefined;
   enlarged = new Map<'haze' | 'field', { source: HTMLCanvasElement; key: string; canvas: HTMLCanvasElement }>();
-  // Without a canvas the scene still prepares and eases; it cannot paint.
-  constructor(canvas: HTMLCanvasElement | null) {
+  private readonly repaint: (() => void) | undefined;
+  private cloudLoad: Promise<boolean> | undefined;
+  private moonLoad: Promise<boolean> | undefined;
+  private waitingClouds = false;
+  private hadArtwork = false;
+  private cloudy = false;
+  private painted = false;
+
+  // A scene without a canvas can still prepare its weather and advance transitions.
+  constructor(canvas: HTMLCanvasElement | null, repaint?: () => void) {
     this.canvas = canvas;
+    this.repaint = repaint;
+  }
+
+  get hasClouds(): boolean {
+    return this.cloudy || this.outgoing?.cloudy === true;
   }
   // Lets go of the layers kept between frames at the canvas's own resolution, for a sky
   // that won't be drawn for a while (off screen, or off the page). Each is drawn again when
   // it is next needed; the star field, slower to build and at CSS pixels, stays.
   release(): void {
+    this.painted = false;
     if (this.canvas) this.rainRenderer?.releaseSky(this.canvas);
     this.gpuSky = null;
     this.glow = undefined;
@@ -694,8 +711,12 @@ export class WeatherScene {
       wide = false,
       location,
       textScale = 1,
-    }: { animate?: boolean; wide?: boolean; location?: string; textScale?: number } = {},
+      artwork = true,
+    }: { animate?: boolean; wide?: boolean; location?: string; textScale?: number; artwork?: boolean } = {},
   ): void {
+    // A placeholder prepared before the card can show its sky has no clouds to fade out.
+    animate = animate && this.hadArtwork && artwork;
+    this.hadArtwork = artwork;
     this.wide = wide;
     const preset = scenePreset({
         ...inputs,
@@ -753,8 +774,12 @@ export class WeatherScene {
     }
     if (!this.rainPreset || !TILED_RAIN.has(this.rainPreset.kind)) this.rainTile = undefined;
     if (!GRAINED.has(preset.kind)) this.grainStrip = undefined;
-    // The moon's photograph loads before the moon is due, so it never pops in.
-    if (preset.moon) void WeatherScene.moon?.load();
+    if (artwork && preset.moon && WeatherScene.moon && !this.moonLoad) {
+      this.moonLoad = WeatherScene.moon.load();
+      void this.moonLoad.then(loaded => {
+        if (loaded && this.preset?.moon) this.repaint?.();
+      });
+    }
     if (!animate || !samePresentation) this.outgoing = null;
     if (this.lightKey === lightKey) return;
     this.lightKey = lightKey;
@@ -763,6 +788,7 @@ export class WeatherScene {
       this.outgoing = {
         sky: background.colors,
         skyStop: background.middleStop,
+        cloudy: this.cloudy,
         decks: this.decks,
         tints: this.tints,
         blanket: this.blanket,
@@ -799,6 +825,7 @@ export class WeatherScene {
     };
     this.tints = preset.look.decks.map((deck, i) => tint(i, deck?.[9] ?? false));
     const blanket = preset.look.blanket;
+    this.cloudy = Boolean(blanket) || this.decks.some(deck => (deck?.length ?? 0) > 0);
     if (blanket) {
       const [, size, rise, art, drift, offsetZ, , variants] = blanket;
       this.blanket = {
@@ -833,6 +860,7 @@ export class WeatherScene {
   fadeProgress(phase = this.lastPhase): number {
     const out = this.outgoing;
     if (!out) return 1;
+    if (this.waitingClouds && this.hasClouds) return 0;
     out.start ??= phase;
     return clamp(((phase ?? NaN) - (out.start ?? NaN)) / FADE);
   }
@@ -917,6 +945,9 @@ export class WeatherScene {
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
       this.stars = null;
+    } else if (!phase && this.painted && this.cloudy && this.waitingClouds) {
+      // Keep the last complete still until the cloud artwork can draw the next one.
+      return;
     }
     // Under half a device pixel either way, there is nothing to draw on.
     if (!canvas.width || !canvas.height) return;
@@ -970,7 +1001,9 @@ export class WeatherScene {
     const stormTime = phase - (this.stormStart ?? phase),
       strike = p.lightning && phase ? this.strike(stormTime) : null,
       flicker = p.cloudFlash && phase ? this.cloudFlicker(ctx, stormTime, width, height) : null;
-    const painter = this.painter();
+    const clouds = this.hasClouds,
+      painter = clouds ? this.painter() : null;
+    if (!clouds) this.clouds = undefined;
     const lid = (blanket: Blanket, alpha: number, on = ctx) => {
       const atlas = WeatherScene.atlas;
       if (alpha <= 0.005 || (!painter && !atlas?.loaded)) return;
@@ -1040,7 +1073,7 @@ export class WeatherScene {
     // fill. Under the moon, that canvas also lets moonlight brighten only the cloud
     // near it.
     const moonlit = p.light.moonIntensity > 0 && fade.moon > 0.005 ? this.moonPoint : undefined,
-      layered = Boolean(moonlit) || Boolean(flicker) || ratio > 1,
+      layered = clouds && (Boolean(moonlit) || Boolean(flicker) || ratio > 1),
       target = layered ? this.cloudCanvas(width, height, Math.min(ratio, 1)) : ctx;
     let drawn = false;
     // On the GPU, each run of decks is gathered and drawn at once, before the layer is used.
@@ -1105,6 +1138,7 @@ export class WeatherScene {
       surface.fillRect(0, 0, canvas.width, canvas.height);
       surface.restore();
     }
+    this.painted = this.hadArtwork;
     // A still frame is likely the last for a while, so the canvas-sized layers go with it.
     if (!phase) {
       this.glow = undefined;
@@ -1529,9 +1563,27 @@ export class WeatherScene {
   // The page's GPU painter for clouds, once it is ready; null for the 2D drawing.
   painter(): CloudPainter | null {
     const atlas = WeatherScene.atlas;
-    if (WeatherScene.gpuClouds) return cloudPainter(atlas);
-    atlas?.restore();
-    return null;
+    const painter = WeatherScene.gpuClouds ? cloudPainter(atlas) : null;
+    if (!WeatherScene.gpuClouds) atlas?.restore();
+    if (atlas && this.repaint && this.cloudLoad !== atlas.ready) {
+      const ready = atlas.ready;
+      this.cloudLoad = ready;
+      this.waitingClouds = !painter && !atlas.loaded;
+      const go = () => {
+        this.waitingClouds = false;
+        if (this.hasClouds) this.repaint?.();
+      };
+      void ready.then(() => {
+        if (this.cloudLoad === ready) go();
+      });
+      // Clouds slow to come don't keep the sky from the weather: it goes on without them, and they
+      // are drawn when they arrive.
+      if (this.waitingClouds)
+        setTimeout(() => {
+          if (this.cloudLoad === ready && this.waitingClouds) go();
+        }, CLOUD_WAIT);
+    }
+    return painter;
   }
   // One deck of cloud sprites, drifting and wrapping. Each cloud is lit from the
   // sun's (or moon's) place relative to it: from the side when far, from behind

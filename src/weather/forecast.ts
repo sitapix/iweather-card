@@ -6,6 +6,7 @@ import {
   type Unsubscribe,
 } from '../card/home-assistant.ts';
 import { finite, isList, isRecord, text } from '../lib/values.ts';
+import { safely } from '../lib/safely.ts';
 import { DAY, HOUR, MINUTE, SECOND } from '../lib/time.ts';
 import { dailyItems, dateKey, daysFromHours, gustOverWind } from './forecast-items.ts';
 import type { Supplement } from './open-meteo.ts';
@@ -81,135 +82,191 @@ function keptRaw(connection: Connection, entity: string, type: ForecastType): re
   return held && Date.now() - held.at < KEPT_FOR ? held.raw : undefined;
 }
 
-// Use HA's streaming forecast API. One subscription per requested forecast type;
-// state updates do not refetch, and late subscription resolutions are disposed.
-export class WeatherForecast {
-  onChange: (data: ForecastData) => void;
-  transform: Transform;
-  generation = 0;
-  data: ForecastData = {};
-  stops = new Map<ForecastType, Unsubscribe>();
-  connection: Connection | undefined;
-  key: string | undefined;
-  // What is on its way for each type: when it is given up on, or asked for again.
-  private readonly timers = new Map<ForecastType, ReturnType<typeof setTimeout>>();
-  // When each type, quiet since its last forecast, is asked again (see QUIET).
-  private readonly quiet = new Map<ForecastType, ReturnType<typeof setTimeout>>();
-  // The wait before each type is next asked for again.
-  private readonly waits = new Map<ForecastType, number>();
-  // The latest try for each type: an earlier one that answers late has been let go.
-  private readonly tries = new Map<ForecastType, number>();
-  private tried = 0;
-  private entity: string | undefined;
-  private paused = false;
-  // The entity whose forecasts this follows.
-  get subscribed(): string | undefined {
-    return this.entity;
-  }
-  // `transform` adapts each received forecast (the card converts its units); refresh()
-  // applies it again to what is held, after the transform's settings change.
-  constructor(onChange: (data: ForecastData) => void, transform: Transform = list => list) {
-    this.onChange = onChange;
-    this.transform = transform;
-  }
-  update(connection: Connection | undefined, entity: string, types: readonly ForecastType[]) {
-    const key = JSON.stringify([entity, types]);
-    if (this.connection === connection && this.key === key) return;
-    const { paused } = this;
-    this.stop();
-    this.paused = paused;
+// An array is a provider answer, null a failure, and undefined the wait for an answer.
+type ForecastAnswer = readonly ForecastEntry[] | null | undefined;
+type Listener = (answer: ForecastAnswer) => void;
+const streams = new WeakMap<Connection, Map<string, ForecastStream>>();
+
+function stopSubscription(stop: Unsubscribe | undefined) {
+  try {
+    if (stop) void Promise.resolve(stop()).catch(() => {});
+  } catch {}
+}
+
+// One HA subscription and retry clock per connection, entity and forecast type.
+class ForecastStream {
+  readonly listeners = new Set<Listener>();
+  latest: ForecastAnswer;
+  private readonly connection: Connection;
+  private readonly entity: string;
+  private readonly type: ForecastType;
+  private attempt = 0;
+  private renewed: string | undefined;
+  private wait = ASK_AGAIN.first;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private stop: Unsubscribe | undefined;
+
+  constructor(connection: Connection, entity: string, type: ForecastType) {
     this.connection = connection;
-    this.key = key;
     this.entity = entity;
-    for (const type of types) this.data[type] = this.start(connection, entity, type);
-    this.onChange(this.data);
-    if (connection && !paused) for (const type of types) this.subscribe(connection, entity, type);
+    this.type = type;
+    this.latest = keptRaw(connection, entity, type);
   }
-  // What a type shows until its subscription answers.
-  private start(connection: Connection | undefined, entity: string, type: ForecastType): ForecastState {
-    const raw = connection && keptRaw(connection, entity, type);
-    if (raw) return { status: 'ready', raw, forecast: this.transform(raw, type) };
-    return { status: connection ? 'loading' : 'unavailable', forecast: [] };
+
+  close() {
+    this.attempt++;
+    clearTimeout(this.timer);
+    const stop = this.stop;
+    this.stop = undefined;
+    stopSubscription(stop);
   }
-  private subscribe(connection: Connection, entity: string, type: ForecastType) {
-    const generation = this.generation,
-      attempt = ++this.tried,
-      current = () => generation === this.generation && this.tries.get(type) === attempt;
-    this.tries.set(type, attempt);
-    const failed = () => {
-      if (!current()) return;
-      // A forecast already showing stands while the next is asked for.
-      if ((this.data[type]?.raw?.length ?? 0) === 0) {
-        this.data[type] = { status: 'error', forecast: [] };
-        this.onChange(this.data);
-      }
-      this.again(connection, entity, type);
+
+  open() {
+    this.close();
+    const attempt = this.attempt,
+      { connection, entity, type } = this;
+    let heard = false;
+    const fail = () => {
+      if (this.attempt !== attempt) return;
+      this.close();
+      this.timer = setTimeout(() => this.open(), this.wait);
+      this.wait = Math.min(this.wait * 2, ASK_AGAIN.most);
+      if ((this.latest?.length ?? 0) === 0) this.publish(null);
     };
-    this.timers.set(type, setTimeout(failed, ANSWER_WITHIN));
-    Promise.resolve()
+    this.timer = setTimeout(fail, ANSWER_WITHIN);
+    void Promise.resolve()
       .then(() => {
-        if (!current()) return undefined;
+        if (this.attempt !== attempt) return undefined;
         return connection.subscribeMessage(
           event => {
-            if (!current()) return;
-            clearTimeout(this.timers.get(type));
-            const raw = forecastEntries(event);
-            // An update with nothing in it says nothing about the forecast showing.
-            if (!raw.length && (this.data[type]?.raw?.length ?? 0) > 0) return;
-            this.waits.delete(type);
+            if (this.attempt !== attempt) return;
+            const raw = forecastEntries(event),
+              emptyUpdate = raw.length === 0 && (this.latest?.length ?? 0) > 0;
+            // Empty heartbeats cannot keep a stale forecast alive indefinitely.
+            if (emptyUpdate && heard) return;
+            heard = true;
+            clearTimeout(this.timer);
+            this.timer = setTimeout(() => this.open(), QUIET);
+            if (emptyUpdate) return;
+            this.wait = ASK_AGAIN.first;
             if (raw.length) keep(connection, entity, type, raw);
-            this.data[type] = { status: 'ready', raw, forecast: this.transform(raw, type) };
-            this.onChange(this.data);
-            clearTimeout(this.quiet.get(type));
-            this.quiet.set(
-              type,
-              setTimeout(() => {
-                if (current()) this.renew(connection, entity, type);
-              }, QUIET),
-            );
+            this.publish(raw);
           },
           { type: 'weather/subscribe_forecast', entity_id: entity, forecast_type: type },
         );
       })
       .then(stop => {
-        if (typeof stop !== 'function') return;
-        if (current()) this.stops.set(type, stop);
-        else this.dispose(stop);
+        if (this.attempt === attempt) this.stop = stop;
+        else stopSubscription(stop);
       })
-      .catch(failed);
+      .catch(fail);
   }
-  private again(connection: Connection, entity: string, type: ForecastType) {
-    const stop = this.stops.get(type),
-      wait = this.waits.get(type) ?? ASK_AGAIN.first,
-      generation = this.generation;
-    if (stop) this.dispose(stop);
-    this.stops.delete(type);
-    this.tries.delete(type);
-    clearTimeout(this.timers.get(type));
-    this.waits.set(type, Math.min(wait * 2, ASK_AGAIN.most));
-    this.timers.set(
-      type,
-      setTimeout(() => {
-        if (generation === this.generation) this.subscribe(connection, entity, type);
-      }, wait),
-    );
+
+  retry() {
+    if (this.latest !== null) return;
+    this.open();
+    this.publish(undefined);
   }
-  // A new subscription in place of one gone quiet; the forecast showing stands until it answers.
-  private renew(connection: Connection, entity: string, type: ForecastType) {
-    const stop = this.stops.get(type);
-    if (stop) this.dispose(stop);
-    this.stops.delete(type);
-    this.subscribe(connection, entity, type);
+
+  renew(change: string | undefined) {
+    if (change !== undefined && change === this.renewed) return;
+    this.renewed = change;
+    this.open();
   }
-  // Each type asked again, as the entity was made anew (see ForecastSources.renew); the forecast
-  // showing stands until they answer.
-  renewAll() {
+
+  private publish(answer: ForecastAnswer) {
+    this.latest = answer;
+    for (const listen of this.listeners) safely(() => listen(answer));
+  }
+}
+
+export class WeatherForecast {
+  data: ForecastData = {};
+  key: string | undefined;
+  private readonly onChange: (data: ForecastData) => void;
+  private readonly transform: Transform;
+  private readonly feeds = new Map<ForecastType, { stream: ForecastStream; leave: () => void }>();
+  private connection: Connection | undefined;
+  private entity: string | undefined;
+  private paused = false;
+
+  get subscribed(): string | undefined {
+    return this.entity;
+  }
+
+  constructor(onChange: (data: ForecastData) => void, transform: Transform = list => list) {
+    this.onChange = onChange;
+    this.transform = transform;
+  }
+
+  update(connection: Connection | undefined, entity: string, types: readonly ForecastType[]) {
+    const key = JSON.stringify([entity, types]);
+    if (this.connection === connection && this.key === key) return;
+    this.release();
+    this.connection = connection;
+    this.entity = entity;
+    this.key = key;
+    this.data = {};
+    for (const type of types) {
+      const raw = connection && keptRaw(connection, entity, type);
+      this.data[type] = raw
+        ? { status: 'ready', raw, forecast: this.transform(raw, type) }
+        : { status: connection ? 'loading' : 'unavailable', forecast: [] };
+    }
+    this.onChange(this.data);
+    if (this.connection === connection && this.key === key) this.follow(types);
+  }
+
+  private follow(types: readonly ForecastType[] = FORECAST_TYPES) {
     const { connection, entity } = this;
     if (!connection || entity === undefined || this.paused) return;
-    for (const type of FORECAST_TYPES) if (this.data[type]) this.renew(connection, entity, type);
+    const active = streams.get(connection) ?? new Map<string, ForecastStream>();
+    streams.set(connection, active);
+    for (const type of types) {
+      if (!this.data[type] || this.feeds.has(type)) continue;
+      const key = keptKey(entity, type),
+        stream = active.get(key) ?? new ForecastStream(connection, entity, type);
+      const listen = (answer: ForecastAnswer) => {
+        const previous = this.data[type];
+        if (
+          !previous ||
+          (answer && previous.raw === answer) ||
+          (!(answer?.length ?? 0) && (previous.raw?.length ?? 0) > 0)
+        )
+          return;
+        this.data[type] = answer
+          ? { status: 'ready', raw: answer, forecast: this.transform(answer, type) }
+          : { status: answer === null ? 'error' : 'loading', forecast: [] };
+        this.onChange(this.data);
+      };
+      active.set(key, stream);
+      this.feeds.set(type, {
+        stream,
+        leave: () => {
+          stream.listeners.delete(listen);
+          if (!stream.listeners.size) {
+            active.delete(key);
+            stream.close();
+          }
+        },
+      });
+      stream.listeners.add(listen);
+      if (stream.listeners.size === 1) stream.open();
+      if (stream.latest !== undefined) {
+        listen(stream.latest);
+        if (!stream.listeners.has(listen)) return;
+      }
+    }
   }
-  // Whether anything was held to convert. `quiet`, it says nothing, for whoever holds more to
-  // convert first (see ForecastSources.refresh).
+
+  retry() {
+    for (const { stream } of this.feeds.values()) stream.retry();
+  }
+
+  renewAll(change?: string) {
+    for (const { stream } of this.feeds.values()) stream.renew(change);
+  }
+
   refresh(quiet = false): boolean {
     let changed = false;
     for (const type of FORECAST_TYPES) {
@@ -222,36 +279,23 @@ export class WeatherForecast {
     if (changed && !quiet) this.onChange(this.data);
     return changed;
   }
-  dispose(stop: Unsubscribe) {
-    try {
-      Promise.resolve(stop()).catch(() => {});
-    } catch {}
-  }
-  // Lets go of the subscriptions, and whatever was on its way.
+
   private release() {
-    this.generation++;
-    for (const timer of [...this.timers.values(), ...this.quiet.values()]) clearTimeout(timer);
-    this.timers.clear();
-    this.quiet.clear();
-    this.waits.clear();
-    this.tries.clear();
-    for (const stop of this.stops.values()) this.dispose(stop);
-    this.stops.clear();
+    for (const { leave } of this.feeds.values()) leave();
+    this.feeds.clear();
   }
-  // While the page is hidden: a page the browser has frozen can't read what Home Assistant sends,
-  // which piles up until Home Assistant drops the connection. What is held stays on show.
+
   suspend() {
-    if (this.paused) return;
     this.paused = true;
     this.release();
   }
+
   resume() {
     if (!this.paused) return;
     this.paused = false;
-    const { connection, entity } = this;
-    if (!connection || entity === undefined) return;
-    for (const type of FORECAST_TYPES) if (this.data[type]) this.subscribe(connection, entity, type);
+    this.follow();
   }
+
   stop() {
     this.release();
     this.paused = false;
@@ -323,9 +367,15 @@ export function extendForecast(
     times = own.map(timeOf).filter(Number.isFinite);
   // Past either end, or in a hole in the middle: an entity can drop the hour that repeats as the
   // clocks go back.
-  const outside = other.filter(entry => !times.some(time => Math.abs(time - timeOf(entry)) <= window)),
-    over = (entry: ForecastEntry) => timeOf(entry) + HOUR <= at;
-  return { forecast: [...own, ...outside.filter(entry => !over(entry))], earlier: outside.filter(over) };
+  const forecast = [...own],
+    earlier: ForecastEntry[] = [];
+  for (const entry of other) {
+    const stamp = timeOf(entry);
+    if (times.some(time => Math.abs(time - stamp) <= window)) continue;
+    if (stamp + HOUR <= at) earlier.push(entry);
+    else forecast.push(entry);
+  }
+  return { forecast, earlier };
 }
 
 // What the supplement lends an entry within the entity's own range. The rest of an hour there is
@@ -500,8 +550,8 @@ export class ForecastSources {
   }
   // An entity Home Assistant made anew, as an integration does when it reloads: a subscription to the
   // one before stays open but says nothing more, and nothing on the connection tells of it.
-  renew(entity: string) {
-    for (const stream of [this.main, this.extra]) if (stream.subscribed === entity) stream.renewAll();
+  renew(entity: string, change?: string) {
+    for (const stream of [this.main, this.extra]) if (stream.subscribed === entity) stream.renewAll(change);
   }
   // The supplement to add to the forecasts, in the card's units; none lets go of what was held.
   supply(raw: Supplement | undefined, timeZone?: string) {

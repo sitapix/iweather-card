@@ -16,6 +16,9 @@ function radarHost(minutes = 5) {
   const element = document.createElement('div'),
     root = element.attachShadow({ mode: 'open' });
   document.body.append(element);
+  const view = document.createElement('div');
+  view.className = 'radar';
+  root.append(view);
   const host = Object.assign(element, {
     root,
     config: normalizeConfig({
@@ -51,6 +54,25 @@ test('radar refresh uses the configured minutes and applies a shorter interval i
   host.config = { ...host.config, radar_refresh_minutes: 1 };
   await maps.loadRadar(now + 61 * MINUTE);
   expect(fetcher).toHaveBeenCalledTimes(3);
+});
+
+test('metadata waits for a visible tile or open map sheet and uses its existing refresh interval', async () => {
+  const { host, maps, fetcher } = radarHost(),
+    now = Date.now(),
+    dialog = document.createElement('dialog'),
+    view = document.createElement('div');
+  view.className = 'radar large';
+  host.root.replaceChildren();
+  await maps.loadRadar(now);
+  dialog.append(view);
+  host.root.append(dialog);
+  await maps.loadRadar(now);
+  expect(fetcher).not.toHaveBeenCalled();
+  host.visible = false;
+  dialog.showModal();
+  await maps.loadRadar(now);
+  await maps.loadRadar(now + MINUTE);
+  expect(fetcher).toHaveBeenCalledOnce();
 });
 
 test('a pending radar request is never duplicated and a hidden completion does not repaint', async () => {

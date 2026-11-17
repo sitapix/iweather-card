@@ -8,7 +8,9 @@ import { MINUTE } from '../src/lib/time.ts';
 // end when it leaves, or a wall screen running for days gathers copies.
 const TIMES = 20,
   // Animation frames watched for the clock's requests.
-  FRAMES = 6;
+  FRAMES = 6,
+  // Forty remounts take 6 s on an idle machine and 9 s beside three other files, more in a whole run.
+  REMOUNTS_WITHIN = 45_000;
 
 afterEach(() => {
   vi.useRealTimers();
@@ -66,36 +68,40 @@ async function frames(count: number) {
   for (let i = 0; i < count; i += 1) await new Promise(requestAnimationFrame);
 }
 
-test('a card moved twenty times, or taken down and put back, holds no more than once', async () => {
-  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
-  const counted = holdings(),
-    card = document.createElement('iweather-card'),
-    [here, there] = [document.createElement('div'), document.createElement('div')];
-  document.body.append(here, there);
-  card.setConfig({ entity: 'weather.home', local_only: true });
-  card.hass = hass;
-  here.append(card);
-  await frames(FRAMES);
-  const once = counted();
-  // Moved, as a dashboard rearranging its cards does.
-  for (let i = 0; i < TIMES; i += 1) (i % 2 ? here : there).append(card);
-  await frames(FRAMES);
-  const moved = counted();
-  // Taken down for good each time, and put back.
-  for (let i = 0; i < TIMES; i += 1) {
-    card.remove();
-    vi.advanceTimersByTime(0);
+test(
+  'a card moved twenty times, or taken down and put back, holds no more than once',
+  async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    const counted = holdings(),
+      card = document.createElement('iweather-card'),
+      [here, there] = [document.createElement('div'), document.createElement('div')];
+    document.body.append(here, there);
+    card.setConfig({ entity: 'weather.home', local_only: true });
+    card.hass = hass;
     here.append(card);
-  }
-  await frames(FRAMES);
-  const returned = counted();
-  const held = ({ listening, observers, webgl }: typeof once) => ({ listening, observers, webgl });
-  expect({ moved: held(moved), returned: held(returned) }).toEqual({ moved: held(once), returned: held(once) });
-  // One animation loop, asking for one frame at a time.
-  const before = returned.clockFrames();
-  await frames(FRAMES);
-  expect(returned.clockFrames() - before).toBeLessThanOrEqual(FRAMES + 1);
-});
+    await frames(FRAMES);
+    const once = counted();
+    // Moved, as a dashboard rearranging its cards does.
+    for (let i = 0; i < TIMES; i += 1) (i % 2 ? here : there).append(card);
+    await frames(FRAMES);
+    const moved = counted();
+    // Taken down for good each time, and put back.
+    for (let i = 0; i < TIMES; i += 1) {
+      card.remove();
+      vi.advanceTimersByTime(0);
+      here.append(card);
+    }
+    await frames(FRAMES);
+    const returned = counted();
+    const held = ({ listening, observers, webgl }: typeof once) => ({ listening, observers, webgl });
+    expect({ moved: held(moved), returned: held(returned) }).toEqual({ moved: held(once), returned: held(once) });
+    // One animation loop, asking for one frame at a time.
+    const before = returned.clockFrames();
+    await frames(FRAMES);
+    expect(returned.clockFrames() - before).toBeLessThanOrEqual(FRAMES + 1);
+  },
+  REMOUNTS_WITHIN,
+);
 
 test('a card moved twenty times keeps one minute tick', () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });

@@ -42,6 +42,32 @@ test('the playhead holds on now, then crosses a gap a second, blending the two f
   expect(vi.getTimerCount()).toBe(0);
 });
 
+test('stationary playback leaves all frame attributes alone until the blend begins', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+  const preview = new RadarPreview(
+    canvas(),
+    frames,
+    RADAR_LABEL_STEP,
+    () => Promise.resolve(true),
+    () => true,
+    null,
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  const changes: MutationRecord[] = [],
+    observer = new MutationObserver(records => changes.push(...records));
+  observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['style', 'data-on'] });
+  try {
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(changes).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(1600);
+    expect(changes.length).toBeGreaterThan(0);
+    expect(shown()).toBe('1');
+  } finally {
+    observer.disconnect();
+    preview.stop();
+  }
+});
+
 test('a frame still to come is passed over, its neighbours blending across it, and joins once painted', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
   let finish = (_painted: boolean) => {};
