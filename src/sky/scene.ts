@@ -87,6 +87,18 @@ function sceneGradient(preset: ScenePreset, tile: boolean): SceneGradient {
 // Flare ghosts: position along sun→centre, radius (share of the short side),
 // shape, tint and opacity.
 // The condition-change window lasts 0.8 seconds. Falling particle counts ease separately.
+// A bolt's channel at its flash: how much wider its core stands than its flash thickness, and the
+// light that spills from it, as bands across the channel, fine enough to read as one glow: how
+// many, from how wide to how wide (scene units), how strong together at the channel, and how
+// fast they weaken as they widen.
+const BOLT_BLOOM = { widen: 2.75, bands: 36, inner: 0.5, outer: 7, strength: 0.85, falloff: 1.15 } as const;
+const BOLT_SPILLS: readonly (readonly [width: number, alpha: number])[] = (() => {
+  const { bands, inner, outer, strength, falloff } = BOLT_BLOOM,
+    widths = Array.from({ length: bands }, (_, band) => outer * (inner / outer) ** (band / (bands - 1))),
+    weights = widths.map(width => width ** -falloff),
+    whole = weights.reduce((sum, weight) => sum + weight, 0);
+  return widths.map((width, band): [number, number] => [width, (strength * (weights[band] ?? 0)) / whole]);
+})();
 // The longest a sky waits for its cloud artwork before it changes without it.
 const CLOUD_WAIT = 3000;
 const FADE = 800,
@@ -3116,7 +3128,11 @@ export class WeatherScene {
   // sooner (see branchFadeAmount). Widths are in scene units, so the bolt grows with the card.
   // The bolt is brighter than white (the preset's glow), which a canvas can't show; on a
   // hairline that light goes into width instead, so the line stays a bright pixel wide to
-  // the end of its fade rather than greying out as it thins below one.
+  // the end of its fade rather than greying out as it thins below one. On the channel that light
+  // also blooms: its core at the flash stands 2.75 times its flash thickness, 0.39 of a scene unit
+  // for most storms, and light spills from it to 3.5 units either side, fainter the further out,
+  // all of it narrowing and dimming with the channel as it thins. The branches stay hairlines
+  // with no bloom.
   paintBolt(ctx: CanvasRenderingContext2D, width: number, height: number, strike: Strike): void {
     const L = this.preset?.strikes;
     if (!L || strike.age > 1) return;
@@ -3126,8 +3142,9 @@ export class WeatherScene {
       age = strike.age,
       unit = frameUnit(width, height),
       thick = L.thickness * unit,
-      wide = thick * L.flashThickness,
-      pixel = 1 / (ctx.getTransform().a || 1),
+      wide = thick * L.flashThickness * BOLT_BLOOM.widen,
+      scale = ctx.getTransform().a || 1,
+      pixel = 1 / scale,
       shown = (size: number) => (size > 0 ? Math.max(size, Math.min(size * L.glow, pixel)) : 0);
     const widthAt = (index: number, start: number): number => {
       const taper = 1 - index / BOLT_POINTS;
@@ -3158,6 +3175,20 @@ export class WeatherScene {
       for (const [x, y] of left) ctx.lineTo(x, y);
       for (const [x, y] of right.reverse()) ctx.lineTo(x, y);
       ctx.closePath();
+      // The channel alone blooms, by how wide it stands now against its flash: bands of light
+      // along it, each wider and fainter than the last, laid under the core.
+      const lit = start ? 0 : clamp((Math.max(...sizes) * 2) / wide);
+      if (lit > 0) {
+        const line = new Path2D();
+        for (const [x, y] of at) line.lineTo(x, y);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        for (const [reach, alpha] of BOLT_SPILLS) {
+          ctx.strokeStyle = `rgba(255,255,255,${alpha * lit})`;
+          ctx.lineWidth = reach * unit * lit;
+          ctx.stroke(line);
+        }
+      }
       ctx.fill();
     }
     ctx.restore();
