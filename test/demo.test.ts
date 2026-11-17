@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 import { normalizeConfig } from '../src/card/config.ts';
 import { House } from '../demo/house.ts';
+import { sceneInputs } from '../src/weather/conditions.ts';
 import { ATTRIBUTION, type Place, forecastUrl, liveWorld, placesFrom } from '../demo/live.ts';
 import {
   ALERTS,
@@ -55,6 +56,16 @@ test("sun.sun's next rising, noon and setting come after now, at 6, 12 and 18 on
       assert.ok(time > NOW && time <= NOW + 24 * HOUR, `${name} at ${hour}`);
       assert.equal(localHour(zone, time), at, `${name} at ${hour}`);
     }
+  }
+});
+
+test("the sun stands on its path at the scene's hour, whatever the hour at the sample's place", () => {
+  const weather = weatherById('clear');
+  for (let hour = 0; hour < 24; hour++) {
+    const { states, config } = sampleWorld({ weather, hour, units: 'us' }, NOW),
+      { solarHour = Number.NaN } = sceneInputs(states[ENTITY], states['sun.sun'], config, NOW);
+    if (hour >= SUNRISE && hour < SUNSET) assert.ok(solarHour >= hour && solarHour < hour + 1, `${hour}: ${solarHour}`);
+    else assert.ok(solarHour >= SUNSET || solarHour < SUNRISE, `${hour}: ${solarHour}`);
   }
 });
 

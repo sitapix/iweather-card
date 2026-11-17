@@ -439,7 +439,8 @@ export function sunPathAt(hour: number, window: WindowClass | boolean = 'compact
   };
 }
 // Solar hour from sun.sun's next sunrise and sunset: today's daylight maps to 6–18
-// and the night to 18–30. Without them, an estimate from elevation and direction: the sun
+// and the night to 18–30. Without them, from the day's sunrise and sunset worked out for the
+// place, and without those an estimate from elevation and direction: the sun
 // taken 40° up, climbing to noon at 55°, and half an hour from sunrise or sunset below the
 // horizon.
 const SOLAR = { sunrise: 6, noon: 12, sunset: 18 } as const;
@@ -457,12 +458,9 @@ export function solarHour(
   now: number,
   { sunrise, sunset, nextRising, nextSetting, elevation, rising = true }: SunTimes = {},
 ): number {
-  // A supplied day's crossings keep elapsed daylight correct across longitudes and DST.
-  if (finite(sunrise) && finite(sunset) && sunset > sunrise && sunset - sunrise <= DAY) {
-    return SOLAR.sunrise + HALF_DAY * ((now - sunrise) / (sunset - sunrise));
-  }
-  // HA next-event timestamps can be months apart near the poles. Keep that case on
-  // the bounded elevation path instead of stretching a single day over the season.
+  // The sun entity's own next rising and setting come first, so the disc sits where the light
+  // that entity's elevation gives says it is. They can be months apart near the poles: keep
+  // that case on the bounded elevation path instead of stretching a single day over the season.
   if (
     finite(nextRising) &&
     finite(nextSetting) &&
@@ -479,6 +477,10 @@ export function solarHour(
     }
     const sunset = nextSetting - DAY;
     return (SOLAR.sunset + HALF_DAY * clamp((now - sunset) / (nextRising - sunset))) % HOURS_PER_DAY;
+  }
+  // Without them, the day's crossings worked out for the place.
+  if (finite(sunrise) && finite(sunset) && sunset > sunrise && sunset - sunrise <= DAY) {
+    return SOLAR.sunrise + HALF_DAY * ((now - sunrise) / (sunset - sunrise));
   }
   const e = finite(elevation) ? elevation : ESTIMATE.elevation,
     share = clamp(e / ESTIMATE.noon) * (SOLAR.noon - SOLAR.sunrise);
