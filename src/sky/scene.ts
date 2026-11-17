@@ -99,6 +99,10 @@ const BOLT_SPILLS: readonly (readonly [width: number, alpha: number])[] = (() =>
     whole = weights.reduce((sum, weight) => sum + weight, 0);
   return widths.map((width, band): [number, number] => [width, (strength * (weights[band] ?? 0)) / whole]);
 })();
+// A row in a list is a narrow look at a wide storm: its bolts fall anywhere up to this many
+// half-widths of the card either side of its middle, so about half land out of view, and of those
+// only the flash across the sky tells, or their glow at the card's edge.
+const TILE_BOLT_DRIFT = 2;
 // The longest a sky waits for its cloud artwork before it changes without it.
 const CLOUD_WAIT = 3000;
 const FADE = 800,
@@ -226,6 +230,8 @@ interface Strike {
   // How far through the bolt's life (0–1, past 1 once it has gone).
   age: number;
   screen: number;
+  // How far to the side the bolt falls, in half-widths of the card (see TILE_BOLT_DRIFT).
+  drift: number;
 }
 // A drop keeps its launch, direction, size and light for its whole fall. Only its
 // age changes each frame; rebuild it when that slot spawns the next drop.
@@ -3097,6 +3103,7 @@ export class WeatherScene {
       bolt: lines,
       age: age / (grow + flash + fade),
       screen,
+      drift: this.tile ? (hash(window, 6) * 2 - 1) * TILE_BOLT_DRIFT : 0,
     };
   }
   // The light flickering behind a storm's clouds (see cloudFlash), as a white glow to lay
@@ -3155,7 +3162,10 @@ export class WeatherScene {
     ctx.save();
     ctx.fillStyle = '#fff';
     for (const { points, start } of strike.bolt) {
-      const at = points.map(([x, y]): [number, number] => [width / 2 + x * unit, height / 2 - y * unit]),
+      const at = points.map(([x, y]): [number, number] => [
+          width / 2 + x * unit + (strike.drift * width) / 2,
+          height / 2 - y * unit,
+        ]),
         sizes = at.map((_, index) => shown(widthAt(index, start)) / 2);
       if (!sizes.some(Boolean)) continue;
       // Each side of the ribbon, offset square to the line through its neighbours.

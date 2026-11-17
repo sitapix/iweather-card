@@ -20,6 +20,29 @@ test('wind streaks have their own speed threshold and eligibility', () => {
   );
 });
 
+test('a list row sees some of a storm’s bolts and only the flash of the rest, where a card sees them all', () => {
+  // Five minutes of storm, looked at every fifth of a second: a strike comes every seven or eight.
+  const LONG = 300_000,
+    LOOK = 200,
+    drifts = (tile: boolean) => {
+      const scene = new WeatherScene(null);
+      scene.prepare({ condition: 'lightning-rainy', tile }, { artwork: false });
+      const seen = new Set<number>();
+      for (let phase = 0; phase < LONG; phase += LOOK) {
+        const strike = scene.strike(phase);
+        if (strike) seen.add(strike.drift);
+      }
+      return [...seen];
+    };
+  expect(drifts(false)).toEqual([0]);
+  // A drift of 1 is the card's edge.
+  const row = drifts(true),
+    out = row.filter(drift => Math.abs(drift) > 1).length;
+  expect(row.length).toBeGreaterThan(30);
+  expect(out).toBeGreaterThan(row.length / 4);
+  expect(out).toBeLessThan((row.length * 3) / 4);
+});
+
 test('wind adjusts the fall angle only in the conditions that use it', () => {
   const angle = (condition: string, windSpeed: number) =>
     (scenePreset({ condition, windSpeed }).windAngle * 180) / Math.PI;
