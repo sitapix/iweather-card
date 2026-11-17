@@ -13,6 +13,17 @@
 <body>
   <header class="top">
     <h1><a class="brand" href="./">iWeather</a></h1>
+    <div class="prefs">
+      <div class="segments" data-name="units" role="radiogroup" aria-label="Units">
+        <label><input type="radio" name="units" value="us" form="controls" checked><span>°F</span></label>
+        <label><input type="radio" name="units" value="metric" form="controls"><span>°C</span></label>
+      </div>
+      <div class="segments" data-name="theme" role="radiogroup" aria-label="Dashboard theme">
+        <label><input type="radio" name="theme" value="light" form="controls" checked><span>Light</span></label>
+        <label><input type="radio" name="theme" value="dark" form="controls"><span>Dark</span></label>
+      </div>
+      <select name="language" form="controls" aria-label="Language"></select>
+    </div>
     <nav aria-label="Site">
       <a href="./setup/">Set up</a>
       <a href="https://github.com/sitapix/iweather-card">GitHub</a>
@@ -21,27 +32,40 @@
 
   <main>
     <div class="bench">
-      <div class="stage" data-screen="desktop" data-layout="page">
-        <div class="frame"></div>
+      <div class="show">
+        <div class="stage-bar">
+          <div class="segments" data-name="layout" role="radiogroup" aria-label="Layout">
+            <label><input type="radio" name="layout" value="page" form="controls" checked><span>Page</span></label>
+            <label><input type="radio" name="layout" value="expanded" form="controls"><span>Expanded</span></label>
+            <label><input type="radio" name="layout" value="auto" form="controls"><span>Auto</span></label>
+            <label><input type="radio" name="layout" value="homeview" form="controls"><span>Home view</span></label>
+            <label><input type="radio" name="layout" value="compact" form="controls"><span>Compact</span></label>
+            <label><input type="radio" name="layout" value="strip" form="controls"><span>Strip</span></label>
+          </div>
+          <label class="check"><input type="checkbox" name="alert" form="controls"><span>Weather alert</span></label>
+          <div class="segments screen" data-name="screen" role="radiogroup" aria-label="Screen">
+            <label title="Phone"><input type="radio" name="screen" value="phone" form="controls"><span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6" y="2.5" width="8" height="15" rx="2"/><path d="M9 15h2"/></svg><b>Phone</b></span></label>
+            <label title="Tablet"><input type="radio" name="screen" value="tablet" form="controls"><span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="2.5" width="13" height="15" rx="2"/><path d="M9 15h2"/></svg><b>Tablet</b></span></label>
+            <label title="Desktop"><input type="radio" name="screen" value="desktop" form="controls" checked><span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="3.5" width="16" height="10.5" rx="1.5"/><path d="M7 17h6M10 14v3"/></svg><b>Desktop</b></span></label>
+          </div>
+          <div class="segments turn">
+            <label title="Turn the screen on its side"><input type="checkbox" name="turned" form="controls"><span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="7" height="12" rx="1.5" opacity=".45"/><rect x="5.5" y="10.5" width="12" height="7" rx="1.5"/><path d="M12 3.5a5 5 0 0 1 4.5 4M16.6 4.6v3h-3"/></svg><b>Turn the screen on its side</b></span></label>
+          </div>
+        </div>
+        <div class="stage" data-screen="desktop" data-layout="page">
+          <div class="frame"></div>
+        </div>
       </div>
 
-      <form class="controls" aria-label="What the card shows">
-        <fieldset class="real">
-          <legend>Real weather</legend>
-          <div class="search">
-            <input type="search" name="place" placeholder="A town or city" aria-label="A town or city" autocomplete="off" enterkeyhint="search">
-            <button type="submit">Look up</button>
-          </div>
-          <button type="button" class="here">Use my location</button>
-          <ul class="places" hidden></ul>
-          <p class="real-status" role="status"></p>
-          <button type="button" class="back" hidden>Back to sample weather</button>
-          <p class="note">A search sends Open-Meteo the name you type and the place you pick. Use my location sends it your position.</p>
-        </fieldset>
+      <form class="controls" id="controls" aria-label="The weather the card shows">
+        <div class="segments" data-name="source" role="radiogroup" aria-label="Which weather">
+          <label><input type="radio" name="source" value="sample" checked><span>Sample</span></label>
+          <label><input type="radio" name="source" value="real"><span>Real weather</span></label>
+        </div>
 
         <fieldset class="weather">
           <legend>Weather</legend>
-          <div class="chips" data-name="weather"></div>
+          <div class="tiles" data-name="weather"></div>
         </fieldset>
 
         <fieldset class="time">
@@ -50,65 +74,30 @@
             <input type="range" id="hour" name="hour" min="0" max="23" step="1" value="13" aria-label="Hour">
             <output name="clock" for="hour" aria-live="off">1 PM</output>
           </div>
-          <div class="marks" aria-hidden="true"><span>Night</span><span>Sunrise</span><span>Noon</span><span>Sunset</span><span>Night</span></div>
         </fieldset>
 
-        <fieldset>
-          <legend>Layout</legend>
-          <div class="segments" data-name="layout">
-            <label><input type="radio" name="layout" value="page" checked><span>Page</span></label>
-            <label><input type="radio" name="layout" value="expanded"><span>Expanded</span></label>
-            <label><input type="radio" name="layout" value="auto"><span>Auto</span></label>
-            <label><input type="radio" name="layout" value="homeview"><span>Home view</span></label>
-            <label><input type="radio" name="layout" value="compact"><span>Compact</span></label>
-            <label><input type="radio" name="layout" value="strip"><span>Strip</span></label>
+        <fieldset class="real" hidden>
+          <legend>A real place</legend>
+          <div class="search">
+            <input type="search" name="place" placeholder="A town or city" aria-label="A town or city" autocomplete="off" enterkeyhint="search">
+            <button type="submit">Look up</button>
           </div>
+          <button type="button" class="here">Use my location</button>
+          <ul class="places" hidden></ul>
+          <p class="real-status" role="status"></p>
         </fieldset>
-
-        <fieldset class="screen">
-          <legend>Screen</legend>
-          <div class="segments" data-name="screen">
-            <label><input type="radio" name="screen" value="phone"><span>Phone</span></label>
-            <label><input type="radio" name="screen" value="tablet"><span>Tablet</span></label>
-            <label><input type="radio" name="screen" value="desktop" checked><span>Desktop</span></label>
-          </div>
-        </fieldset>
-
-        <div class="pair">
-          <fieldset>
-            <legend>Units</legend>
-            <div class="segments" data-name="units">
-              <label><input type="radio" name="units" value="us" checked><span>°F</span></label>
-              <label><input type="radio" name="units" value="metric"><span>°C</span></label>
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend>Dashboard</legend>
-            <div class="segments" data-name="theme">
-              <label><input type="radio" name="theme" value="light" checked><span>Light</span></label>
-              <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
-            </div>
-          </fieldset>
-        </div>
-
-        <fieldset>
-          <legend>Language</legend>
-          <select name="language" aria-label="Language"></select>
-        </fieldset>
-
-        <label class="check"><input type="checkbox" name="alert"><span>Add a weather alert to the page layout</span></label>
       </form>
-    </div>
 
-    <section class="settings" aria-labelledby="settings-title">
-      <div class="settings-head">
-        <h2 id="settings-title">The YAML for this card</h2>
-        <span class="copy-feedback" role="status"></span>
-        <button type="button" class="copy" command="--copy" commandfor="yaml">Copy YAML</button>
-      </div>
-      <pre><code id="yaml" class="yaml"></code></pre>
-      <p>Swap in your own weather entity for <code>weather.home</code>. To install the card, see <a href="./setup/">Set up</a>.</p>
-    </section>
+      <section class="settings" aria-labelledby="settings-title">
+        <div class="settings-head">
+          <h2 id="settings-title">The YAML for this card</h2>
+          <span class="copy-feedback" role="status"></span>
+          <button type="button" class="copy" command="--copy" commandfor="yaml">Copy YAML</button>
+        </div>
+        <pre><code id="yaml" class="yaml"></code></pre>
+        <p>Swap in your own weather entity for <code>weather.home</code>. To install the card, see <a href="./setup/">Set up</a>.</p>
+      </section>
+    </div>
   </main>
 
   <footer>

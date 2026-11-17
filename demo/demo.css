@@ -11,6 +11,8 @@
   --accent: #1f5fd6;
   --on-accent: #fff;
   --dashboard: #e6e8ec;
+  --edge: #0000000f;
+  --lift: 0 1px 3px #00000024;
   --shadow: 0 1px 2px #0000000f, 0 8px 24px -12px #0000002e;
   font: 15px/1.5 system-ui, sans-serif;
 }
@@ -25,6 +27,8 @@
   --accent: #6f9bff;
   --on-accent: #0d0f12;
   --dashboard: #08090b;
+  --edge: #ffffff12;
+  --lift: 0 1px 3px #0000008c;
   --shadow: 0 1px 2px #0006, 0 8px 24px -12px #000c;
 }
 @media (prefers-color-scheme: dark) {
@@ -39,6 +43,8 @@
     --accent: #6f9bff;
     --on-accent: #0d0f12;
     --dashboard: #08090b;
+    --edge: #ffffff12;
+    --lift: 0 1px 3px #0000008c;
   }
 }
 
@@ -92,6 +98,37 @@ pre {
   display: flex;
   gap: 18px;
 }
+/* What a visitor sets once: units, the dashboard's theme and the language. On a narrow screen they
+   take a row of their own under the name. */
+.prefs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.prefs select {
+  width: auto;
+  max-width: 150px;
+  padding: 5px 8px;
+  font-size: 13.5px;
+}
+.prefs .segments span {
+  padding: 4px 10px;
+}
+@media (max-width: 700px) {
+  .top {
+    flex-wrap: wrap;
+  }
+  .prefs {
+    order: 1;
+    width: 100%;
+    margin-left: 0;
+  }
+  .prefs select {
+    flex: 1;
+    max-width: none;
+  }
+}
 .top nav a {
   color: var(--muted);
   text-decoration: none;
@@ -107,17 +144,72 @@ footer {
   padding: 0 24px;
 }
 
-/* The card on the left, the controls on the right; one above the other on a narrow screen. */
+/* The card on the left with its YAML under it, the controls down the right; on a narrow screen the
+   card, then the controls, then the YAML. */
 .bench {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template: 'stage controls' auto 'settings controls' 1fr / minmax(0, 1fr) 360px;
   gap: 24px;
   align-items: start;
 }
+.show {
+  display: grid;
+  grid-area: stage;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+.controls {
+  grid-area: controls;
+}
+.settings {
+  grid-area: settings;
+}
 @media (max-width: 980px) {
   .bench {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template: 'stage' 'controls' 'settings' / minmax(0, 1fr);
   }
+}
+
+/* Over the card, what frames it: its layout, the alert the page layout can show, and the screen it
+   stands on. */
+.stage-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.stage-bar [data-name='layout'] {
+  flex: 1 1 320px;
+  min-width: 0;
+  max-width: 600px;
+}
+.screen {
+  margin-left: auto;
+}
+.screen span,
+.turn span {
+  padding: 5px 12px;
+}
+.screen svg,
+.turn svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+/* The screen's name is read out, and shown as the pointer rests on it. */
+.screen b,
+.turn b {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* The dashboard the card stands on. The page layout scrolls inside a screen's height; the
@@ -125,6 +217,7 @@ footer {
 .stage {
   --frame-height: min(900px, calc(100dvh - 48px));
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   align-content: start;
   min-height: 420px;
@@ -144,6 +237,19 @@ footer {
 }
 .stage[data-layout='page'][data-screen='tablet'] .frame {
   width: 820px;
+}
+/* On its side, a screen is as wide as it was tall. */
+.stage[data-layout='page'][data-screen='phone'][data-turned='true'] {
+  --frame-height: 390px;
+}
+.stage[data-layout='page'][data-screen='phone'][data-turned='true'] .frame {
+  width: 780px;
+}
+.stage[data-layout='page'][data-screen='tablet'][data-turned='true'] {
+  --frame-height: min(820px, calc(100dvh - 48px));
+}
+.stage[data-layout='page'][data-screen='tablet'][data-turned='true'] .frame {
+  width: 1180px;
 }
 .stage:not([data-layout='page'])[data-screen='phone'] .frame {
   width: 360px;
@@ -176,7 +282,8 @@ footer {
     border-radius: 0;
   }
   /* A phone shows the card at its own width. */
-  .controls .screen {
+  .stage-bar .screen,
+  .stage-bar .turn {
     display: none;
   }
 }
@@ -215,40 +322,18 @@ legend {
   font-size: 14px;
   font-weight: 600;
 }
-.pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
 
-/* Choices drawn as chips and segments, over radio buttons. */
-.chips,
-.segments {
+/* Choices drawn as segments and tiles, over radio buttons. */
+.segments,
+.tiles {
   position: relative;
 }
-.chips input,
-.segments input {
+.segments input,
+.tiles input {
   position: absolute;
   width: 1px;
   height: 1px;
   opacity: 0;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.chips span {
-  display: block;
-  padding: 5px 11px;
-  border-radius: 6px;
-  background: var(--chip);
-  font-size: 14px;
-  cursor: pointer;
-}
-.chips input:checked + span {
-  background: var(--text);
-  color: var(--panel);
 }
 .segments {
   display: grid;
@@ -257,6 +342,12 @@ legend {
   padding: 3px;
   border-radius: 11px;
   background: var(--chip);
+}
+/* The layouts are too many for one row of a narrow column, so they take as many rows as they need. */
+.segments[data-name='layout'] {
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  grid-auto-flow: row;
+  gap: 2px;
 }
 .segments span {
   display: block;
@@ -268,15 +359,67 @@ legend {
 }
 .segments input:checked + span {
   background: var(--panel);
+  box-shadow:
+    var(--lift),
+    inset 0 0 0 1px var(--edge);
   font-weight: 600;
 }
-.chips input:focus-visible + span,
-.segments input:focus-visible + span {
+.segments input:focus-visible + span,
+.tiles input:focus-visible + span {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 fieldset:disabled span {
   cursor: default;
+}
+
+/* The sample's weathers, each under the card's own symbol on a patch of sky, as many to a row as
+   fit. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  gap: 4px;
+}
+.tiles span {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  height: 100%;
+  padding: 8px 0;
+  border-radius: 12px;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.tiles span:hover {
+  background: var(--chip);
+}
+.tiles i {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: linear-gradient(#2c6cc0, #6aa8e4);
+}
+.tiles svg {
+  grid-area: 1 / 1;
+  width: 24px;
+  height: 24px;
+}
+/* The cloud behind the wind. */
+.tiles svg:not(:last-child) {
+  opacity: 0.5;
+}
+.tiles input:checked + span {
+  background: var(--chip);
+  font-weight: 600;
+}
+.tiles input:checked + span i {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .hour {
@@ -285,21 +428,58 @@ fieldset:disabled span {
   align-items: center;
   gap: 10px;
 }
+/* The slider's track is the day's sky: night, dawn, day, dusk and night again. */
 .hour input {
   width: 100%;
-  accent-color: var(--accent);
+  height: 22px;
+  margin: 0;
+  appearance: none;
+  background: none;
+  cursor: pointer;
+  --sky: linear-gradient(
+    90deg,
+    #0b1030 0%,
+    #1b2a5c 18%,
+    #f2a160 27%,
+    #6fb1ee 38%,
+    #4c97e6 62%,
+    #f08e52 77%,
+    #1b2a5c 86%,
+    #0b1030 100%
+  );
+}
+.hour input::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--sky);
+}
+.hour input::-moz-range-track {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--sky);
+}
+.hour input::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: -5px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  appearance: none;
+  background: var(--accent);
+  box-shadow: 0 1px 4px #0006;
+}
+.hour input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 4px #0006;
 }
 .hour output {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   text-align: right;
-}
-.marks {
-  display: flex;
-  justify-content: space-between;
-  margin-right: 62px;
-  color: var(--muted);
-  font-size: 11px;
 }
 
 select,
@@ -341,6 +521,7 @@ button:hover {
 }
 .real {
   display: grid;
+  align-content: start;
   gap: 8px;
 }
 .here {
@@ -360,14 +541,10 @@ button:hover {
 .real-status:empty {
   display: none;
 }
-.real-status,
-.note {
+.real-status {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
-}
-.back {
-  justify-self: start;
 }
 .check {
   display: flex;
@@ -381,11 +558,23 @@ button:hover {
 .check:has(input:disabled) {
   opacity: 0.45;
 }
+/* The turn control where there is nothing to turn: greyed, unpressed, and still. */
+.turn:has(input:disabled) {
+  opacity: 0.4;
+}
+.turn input:disabled + span {
+  background: none;
+  box-shadow: none;
+  font-weight: inherit;
+  cursor: default;
+  transform: none;
+}
 
 /* The settings as YAML. */
 .settings {
+  width: 100%;
   max-width: 760px;
-  margin: 32px 0 0;
+  margin: 8px 0 0;
 }
 .settings-head {
   display: flex;
@@ -470,4 +659,98 @@ footer p {
   display: block;
   max-width: 100%;
   height: auto;
+}
+
+/* Surfaces carry a hairline at their edge, so they part from what is under them without a border's
+   weight. */
+.stage,
+.controls,
+.settings pre,
+.doc pre {
+  box-shadow: inset 0 0 0 1px var(--edge);
+}
+
+/* What is pressed gives a little under the finger, at once, and comes back as it lifts. */
+.segments span,
+.tiles span,
+.tiles i,
+button {
+  transition:
+    transform 0.12s ease-out,
+    background-color 0.15s ease-out;
+}
+.segments label:active span,
+.tiles label:active i,
+button:active {
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  .segments span,
+  .tiles span,
+  .tiles i,
+  button {
+    transition: none;
+  }
+  .segments label:active span,
+  .tiles label:active i,
+  button:active {
+    transform: none;
+  }
+}
+
+/* Corners as superellipses where the browser draws them, their curve starting further along each
+   edge and never meeting it at a point. One reads tighter than a circle's arc of the same radius,
+   so each is larger here; elsewhere the plain round corners above stand. */
+@supports (corner-shape: squircle) {
+  .stage,
+  .controls,
+  .segments,
+  .segments span,
+  .tiles span,
+  .tiles i,
+  button,
+  select,
+  input[type='search'],
+  .settings pre,
+  .doc pre {
+    corner-shape: squircle;
+  }
+  .stage {
+    border-radius: 40px;
+  }
+  .controls {
+    border-radius: 26px;
+  }
+  .segments {
+    border-radius: 17px;
+  }
+  .segments span {
+    border-radius: 13px;
+  }
+  .tiles span {
+    border-radius: 20px;
+  }
+  .tiles i {
+    border-radius: 17px;
+  }
+  button,
+  select,
+  input[type='search'] {
+    border-radius: 16px;
+  }
+  .settings pre,
+  .doc pre {
+    border-radius: 18px;
+  }
+  /* The card takes its corner from the dashboard's theme, as it does in Home Assistant, and here
+     its shape too: the stage's corner less the room between them, so the two run together. */
+  .frame iweather-card {
+    --ha-card-border-radius: 26px;
+    corner-shape: squircle;
+  }
+  @media (max-width: 600px) {
+    .stage {
+      border-radius: 0;
+    }
+  }
 }
