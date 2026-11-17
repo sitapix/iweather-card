@@ -469,9 +469,12 @@ interface SunSpot extends Glow {
 }
 // How far the sun's glow reaches, in its radii: a moon inside it is too thin to see by day.
 const SUN_GLOW = 4;
-// The moon's unlit side is the sky showing through until the stars come out: it darkens into a
-// disc from the end of civil twilight, the sun 6° down, to full night at 18° down.
+// The moon's unlit side is the sky showing through until the stars come out: the sky drawn again
+// across its disc comes in to hide them from the end of civil twilight, the sun 6° down, to full
+// night at 18° down.
 const MOON_DISC = { from: -6, to: -18 } as const;
+// The stars are drawn only above this strength (see paint).
+const STARS_SHOW = 0.005;
 // The sun's spike ball shows only while the sun is more than 9° up, coming in over the next degree.
 const SPIKES = { from: 9, to: 10 } as const;
 // A body's share of the way across the card from its place on the sky arc (`along`: the
@@ -499,12 +502,17 @@ export const moonAcross = (progress: number): number => {
 };
 // Where the moon sits on a card `width` × `height`: `across` is its share of the card's
 // width (on its arc, see arcX; without a location, a fixed spot), and its altitude in
-// `degrees` sets its height (see moonHeight), never below the middle of the card or the
-// open sky `sky`. Both are shares of the card itself, so a card of any shape shows it.
+// `degrees` sets its height (see moonHeight), never below the open sky `sky`, or the middle
+// of the card where that sky is too short for it. Both are shares of the card itself, so a
+// card of any shape shows it.
 // A disc `r` across that would sit behind the conditions' `text` moves beside them, on its
 // own side if there is room in the open sky there, else the other; with room on neither it
 // rises clear of them, cut off by the top if need be. One in the `sun`'s glow rises off
 // the card. It never moves down.
+// The open sky holds the whole moon when it is this many of its radii tall, and the moon then
+// keeps its centre this many radii above the sky's foot.
+const MOON_ROOM = 3;
+const MOON_CLEAR = 1.25;
 export function moonPlace(
   width: number,
   height: number,
@@ -515,8 +523,12 @@ export function moonPlace(
   r: number,
   sun?: SunSpot,
 ): Glow {
+  // Where the open sky has room for the whole disc, it stays in it, a little clear of the
+  // panels below: they would cut it off, not show it through.
+  const foot = sky.y + sky.height,
+    floor = sky.height >= r * MOON_ROOM ? foot - r * MOON_CLEAR : Math.max(foot, height * 0.5) - r;
   let x = width * (across ?? 0.75),
-    y = Math.min(height * moonHeight(degrees, across ?? 0.75), Math.max(sky.y + sky.height, height * 0.5) - r);
+    y = Math.min(height * moonHeight(degrees, across ?? 0.75), floor);
   if (text && x + r > text.x && x - r < text.x + text.width && y + r > text.y && y - r < text.y + text.height) {
     const left = text.x - r * 1.4,
       right = text.x + text.width + r * 1.4,
@@ -613,6 +625,8 @@ export class WeatherScene {
   haze: HTMLCanvasElement | undefined;
   twinklers: Twinkler[] = [];
   moonPoint: MoonPoint | undefined;
+  // The haze as the stars last drew it, in device pixels, for the moon's disc to draw again.
+  hazeDrawn: { image: CanvasImageSource; shift: number; across: number; alpha: number } | undefined;
   sunPoint: SunPoint | undefined;
   sunPath: SunPosition | undefined;
   clouds: HTMLCanvasElement | undefined;
@@ -939,7 +953,7 @@ export class WeatherScene {
       ctx.globalAlpha = 1;
     }
     if (p.fog > 0.005) this.paintNoise(ctx, width, height, phase);
-    if (p.stars > 0.005) {
+    if (p.stars > STARS_SHOW) {
       this.paintStars(ctx, width, height, phase, covered);
       if (phase && p.stars > 0.5 && p.look.layers.includes('shootingStar'))
         this.paintShootingStar(ctx, width, height, phase, covered);
@@ -1274,6 +1288,7 @@ export class WeatherScene {
     ctx.drawImage(enlargedHaze, -shift, 0);
     ctx.drawImage(enlargedHaze, across - shift, 0);
     ctx.restore();
+    this.hazeDrawn = { image: enlargedHaze, shift, across, alpha: p.stars };
     // Stars stay out from behind glass panels, whose refraction would smear
     // them into streaks. The cut-out follows each panel's rounded outline, so no
     // edge of it shows through the glass.
@@ -1454,7 +1469,7 @@ export class WeatherScene {
     text?: Rect,
     sun?: SunSpot,
     phase = this.preset?.moonPhase ?? moonPhase(),
-    radius = clamp(Math.max(width, height) * 0.027, 12, 48),
+    radius = clamp(Math.max(width, height) * 0.038, 12, 48),
   ): void {
     const p = this.preset;
     if (!p) return;
@@ -1475,36 +1490,35 @@ export class WeatherScene {
     const lit = (1 - Math.cos(phase * Math.PI * 2)) / 2,
       tone = skyMoonTint(p.light.moonColor, p.light.moonHorizon, warm);
     this.moonPoint = { x, y, r, lit, tone };
-    // The phase photograph is screened over the moon's own colour:
-    // its black unlit side comes out as a solid disc in that colour, hiding the stars
-    // behind it, and the lit side and halo brighten whatever is under them.
+    // The phase photograph is screened over the sky: its black unlit side adds nothing, and
+    // the lit side and halo brighten whatever is under them.
     const sprite = WeatherScene.moon?.sprite(Math.round(r * 2 * Math.min(devicePixelRatio || 1, 2)), step, warm, tone);
     if (!sprite) return;
-    const [top, middle, bottom] = stops(p.sky),
-      t = clamp(y / height),
-      stop = p.skyStop;
-    const behind = mix(
-      t < stop ? mix(top, middle, t / stop) : mix(middle, bottom, (t - stop) / (1 - stop)),
-      '#000000',
-      0.3,
-    );
     // By day and through twilight the moon is only its lit side: the dark limb shows the sky
-    // through. As night falls the disc darkens in (MOON_DISC) to hide the stars, its edge as
-    // soft as the moon's own.
-    const dark = clamp((p.elevation - MOON_DISC.from) / (MOON_DISC.to - MOON_DISC.from));
+    // through. As night falls the sky is drawn again across the disc (MOON_DISC) to hide the
+    // stars: the sky's own strip and the haze over it, so the unlit side is lost in the sky and
+    // never shows as a disc with an outline.
+    const dark = clamp((p.elevation - MOON_DISC.from) / (MOON_DISC.to - MOON_DISC.from)),
+      strip = this.strips.get('sky')?.canvas;
     ctx.save();
-    if (p.night && dark > 0) {
-      const [br, bg, bb] = rgb(behind),
-        disc = ctx.createRadialGradient(x, y, r * 0.95, x, y, r),
-        alpha = ctx.globalAlpha;
-      disc.addColorStop(0, behind);
-      disc.addColorStop(1, `rgba(${br},${bg},${bb},0)`);
-      ctx.fillStyle = disc;
-      ctx.globalAlpha = alpha * dark;
+    if (p.night && dark > 0 && strip) {
+      const alpha = ctx.globalAlpha,
+        scale = ctx.getTransform().a,
+        haze = this.live && this.live.stars > STARS_SHOW ? this.hazeDrawn : undefined;
+      ctx.save();
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = alpha;
+      ctx.clip();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = alpha * dark;
+      const first = Math.floor(((x - r) * scale) / STRIP) * STRIP;
+      for (let at = Math.max(0, first); at < (x + r) * scale; at += STRIP) ctx.drawImage(strip, at, 0);
+      if (haze) {
+        ctx.globalAlpha = alpha * dark * haze.alpha;
+        ctx.drawImage(haze.image, -haze.shift, 0);
+        ctx.drawImage(haze.image, haze.across - haze.shift, 0);
+      }
+      ctx.restore();
     } else if (!p.night) ctx.globalAlpha *= 0.85;
     ctx.translate(x, y);
     if (finite(tilt)) ctx.rotate(tilt);

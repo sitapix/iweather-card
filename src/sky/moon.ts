@@ -263,11 +263,11 @@ function render(
       const r = Math.hypot(x, y),
         i = (py * full + px) * RGBA;
       if (r > 1 + 1 / size) {
-        // The halo: a faint glow from the limb, as wide again as the disc,
-        // strongest beside the lit side.
+        // The halo: a faint glow from the limb, as wide again as the disc, beside the lit side
+        // only. Any of it round the unlit limb would draw that side's outline on the sky.
         if (!halo || !lit) continue;
         const toward = r ? (x * sx) / r : 0,
-          glow = halo * lit * Math.exp(-(r - 1) * 4.2) * (0.55 + 0.45 * Math.max(0, toward + (1 - Math.abs(sx))));
+          glow = halo * lit * Math.exp(-(r - 1) * 4.2) * Math.min(1, Math.max(0, toward + (1 - Math.abs(sx))));
         const a = Math.min(1, glow);
         out.data[i] = 222 * a * tint[0];
         out.data[i + 1] = 226 * a * tint[1];
