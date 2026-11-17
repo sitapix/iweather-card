@@ -2,234 +2,207 @@
 
 # iWeather Card
 
-A weather forecast card for [Home Assistant](https://www.home-assistant.io). Its background is an animated sky that matches your current weather and the time of day.
+See the weather now, hour by hour and up to ten days ahead on your Home Assistant dashboard. The sky behind the readings changes with local conditions and the time of day.
 
-[![Release](https://img.shields.io/github/v/release/sitapix/iweather-card?style=flat-square)](../../releases/latest)
-[![HACS: Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?style=flat-square&logo=homeassistantcommunitystore&logoColor=white)](#hacs)
-[![Home Assistant 2023.9+](https://img.shields.io/badge/Home%20Assistant-2023.9%2B-18BCF2?style=flat-square&logo=homeassistant&logoColor=white)](https://www.home-assistant.io)
-[![API key: not needed](https://img.shields.io/badge/API%20key-not%20needed-2EA44F?style=flat-square)](#what-leaves-your-browser)
-[![TypeScript: strict](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](tsconfig.base.json)
+[![Latest release](https://img.shields.io/github/v/release/sitapix/iweather-card?style=flat-square)](../../releases/latest)
+[![HACS custom repository](https://img.shields.io/badge/HACS-Custom-41BDF5?style=flat-square&logo=homeassistantcommunitystore&logoColor=white)](#hacs)
+[![Home Assistant 2023.9.3 or later](https://img.shields.io/badge/Home%20Assistant-2023.9.3%2B-18BCF2?style=flat-square&logo=homeassistant&logoColor=white)](https://www.home-assistant.io)
+[![No API key required](https://img.shields.io/badge/API%20key-not%20needed-2EA44F?style=flat-square)](#what-leaves-your-browser)
+[![Strict TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](tsconfig.base.json)
 [![Tested in Chromium, Firefox and WebKit](https://img.shields.io/badge/tested%20in-Chromium%20%C2%B7%20Firefox%20%C2%B7%20WebKit-45BA4B?style=flat-square)](e2e)
 
-[Demo](https://sitapix.github.io/iweather-card/) • [Features](#features) • [Install](#install) • [Use](#use) • [Examples](docs/examples.md) • [Tiles](#detail-tiles) • [Privacy](#what-leaves-your-browser) • [All options](docs/configuration.md)
+[Try the demo](https://sitapix.github.io/iweather-card/) · [Install](#install) · [Add to a dashboard](#use) · [Layouts](#layouts) · [Examples](docs/examples.md) · [Privacy](#what-leaves-your-browser) · [All options](docs/configuration.md)
 
-<img src="docs/images/hero.webp" alt="The full-page layout at sunset: 61° and partly cloudy over a live sky with the moon rising, above hourly and daily forecasts, a radar map, and air quality, wind and averages tiles." width="100%">
+<img src="docs/images/hero.webp" alt="Full page at sunset. Below the current temperature of 61°, the dashboard shows hourly and daily forecasts, radar and detail tiles." width="100%">
 
 </div>
 
 ## Features
 
-- **Animated sky** with clouds, rain, snow, fog, lightning, stars and the moon in its current phase, drawn from your weather entity and the sun's position.
-- **Hourly forecast** with Conditions, Precipitation and Wind views. Sunrise and sunset show between the hours.
-- **Daily forecast** for up to 10 days, with each day's temperature range on one shared scale.
-- **Full-page layout** with 12 detail tiles. Tap a tile for hourly charts, a comparison with yesterday and a short explanation of the reading. To inspect a chart with the keyboard, Tab to its time slider and use the arrow keys; Home and End jump to the first and last readings.
-- **Weather map** with radar, a 12-hour precipitation forecast, wind, temperature and air quality. It shows precipitation when rain is falling or due soon, air quality when it's poor, and wind on a dry, gusty day. Where radar doesn't reach, it opens on the forecast. Diagonal shading marks areas with no precipitation data; dry areas stay clear.
-- **Weather alerts and next-hour rain** from NWS Alerts, Meteoalarm or a nowcast integration. In the United States, the `page` layout shows National Weather Service alerts without any setup.
-- **Works with any weather integration.** You can replace any reading with a sensor, or fill in missing readings from a second weather entity or Open-Meteo.
-- **Any size**, from a one-row strip to a full screen.
-- **Visual editor** for every option, with four presets and undo.
+- **Watch the sky change.** Clouds, fog, rain, snow and lightning follow the reported weather. After dark, the sky can show stars and the moon in its current phase.
+- **Follow the forecast.** Switch the hourly view between conditions, precipitation and wind. Sunrise and sunset appear between hours. Compare up to ten days of highs and lows on a shared scale.
+- **See what’s on the way.** Full page can show active weather alerts and a minute-by-minute precipitation forecast. Its optional map shows radar and up to 12 hours of forecast precipitation. Diagonal shading marks places without precipitation data.
+- **Look closer at a reading.** Tap a tile for details. Wind has a compass and gust speeds, the moon has a calendar of phases, and pressure shows whether it’s rising or falling. On charts with a time slider, use the arrow keys to move between readings or Home and End to jump to either end.
+- **Use your own weather station.** Choose any Home Assistant weather entity. Add a sensor for an individual reading or a second weather entity for missing forecasts.
 
 <p align="center">
-  <img src="docs/images/sky-sunny.webp" alt="The card on a sunny day, with the sun's glow over a blue sky." width="24%">
-  <img src="docs/images/sky-rain.webp" alt="The card in rain, with streaks falling and drops running down the glass panels." width="24%">
-  <img src="docs/images/sky-snow.webp" alt="The card in snow, with flakes drifting past low cloud." width="24%">
-  <img src="docs/images/sky-night.webp" alt="The card on a clear night, with stars and the moon." width="24%">
+  <img src="docs/images/sky-sunny.webp" alt="Sunlight in a clear blue sky." width="24%">
+  <img src="docs/images/sky-rain.webp" alt="Rain streaks across the sky and droplets run down the forecast panels." width="24%">
+  <img src="docs/images/sky-snow.webp" alt="Snow falls beneath low clouds." width="24%">
+  <img src="docs/images/sky-night.webp" alt="The moon and stars on a clear night." width="24%">
 </p>
 
 ## Install
 
+You’ll need Home Assistant 2023.9.3 or later and a weather entity.
+
 ### HACS
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=sitapix&repository=iweather-card&category=plugin)
+[![Open iWeather Card in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=sitapix&repository=iweather-card&category=plugin)
 
-The button opens this repository in HACS on your own Home Assistant. Install **iWeather Card**, then reload your browser. To add it by hand instead:
+Open the repository with the button above, install **iWeather Card**, then reload your browser.
 
-1. In HACS, open the ⋮ menu and choose **Custom repositories**.
-2. Add this repository's URL with the type **Dashboard**.
-3. Install **iWeather Card**, then reload your browser.
+To add the repository yourself, open the ⋮ menu in HACS and select **Custom repositories**. Enter `https://github.com/sitapix/iweather-card`, choose **Dashboard**, and add the repository. You can then install the card in HACS.
 
 ### Manual
 
-1. Download every file from the [latest release](../../releases/latest), or build them with Node 22.18 or newer and [pnpm](https://pnpm.io):
+1. Download all the card files attached to the [latest release](../../releases/latest). To build them yourself, use Node.js 22.18 or later and pnpm, then run `pnpm install --frozen-lockfile` and `pnpm build`. The build writes the files to `dist/`.
+2. Copy all the files into one folder, such as `/config/www/iweather/`. The card looks there for its images, map and translations.
+3. In **Settings → Dashboards → ⋮ → Resources**, add `/local/iweather/iweather-card.js` as a **JavaScript module**. Reload your browser.
 
-   ```sh
-   pnpm install --frozen-lockfile
-   pnpm build   # writes them to dist/
-   ```
-
-   Optionally run `pnpm compress` after the build. It writes a `.gz` and a `.br` beside each script and style, which Home Assistant then sends in place of the larger file: the card's own file travels at about a quarter of its size. Run it again after every build, as a compressed file left from an older build is sent in place of the newer file of the same name.
-
-2. Copy them all to one folder, such as `/config/www/iweather/`. The card loads its cloud and moon images, the map and its translations from that folder, so keep the files together.
-3. Go to **Settings → Dashboards → ⋮ → Resources** and add `/local/iweather/iweather-card.js` as a **JavaScript module**.
-
-> [!TIP]
-> Browsers keep using the cached file after an update. To load the new one, change the resource URL, for example to `/local/iweather/iweather-card.js?v=2`. Only the card's own file needs this: the other files get new names when they change.
+When you update a manual installation, copy the new files and change the version in the resource URL, for example to `/local/iweather/iweather-card.js?v=2`. The other assets get new filenames when their contents change.
 
 ## Use
 
-Add **iWeather** from the card picker. It starts with the full-page layout and picks a weather entity for you, preferring one with forecasts. To switch to a compact tile, a forecast, a full page or a wall tablet, open **Quick setup** in the editor. It keeps your sources, units, privacy settings, actions and tiles, and you can **Undo** the switch until your next edit. In Home Assistant 2026.6 and later, picking a weather entity on the picker's **By entity** tab also offers the forecast and compact versions of the card.
+Edit your dashboard, select **Add card**, then choose **iWeather**. The picker starts with **Full page** and suggests a weather entity, preferring one that supplies forecasts. Check the entity and save. In Home Assistant 2026.6 or later, the picker’s **By entity** tab also offers Full page, Forecast and Compact for a weather entity.
 
-In YAML, the entity is the only required option:
+For YAML, replace `weather.home` with your entity ID. With no layout specified, the card uses **Automatic** and fits the space on your dashboard.
 
 ```yaml
 type: custom:iweather-card
 entity: weather.home
 ```
 
-The full page needs a few more options to fill every tile:
+For a full page with radar and historical averages, use this configuration. Change the entity and town to match your forecast.
 
 ```yaml
 type: custom:iweather-card
 entity: weather.home
 weather_layout: page
 place_name: St. Louis
-air_quality_entity: sensor.air_quality_index
-alert_entities:
-  - binary_sensor.meteoalarm
 averages: open-meteo
 map: rainviewer
 ```
 
-A tile with no data stays hidden, so you can start with the entity alone and add sources later. The editor's **Data sources** section shows which readings your entity doesn't provide.
-
-> [!TIP]
-> In a panel view, the `page` layout fills the screen. When you scroll, the current conditions shrink into a bar at the top and the panels scroll under it.
+**Data sources** in the editor lists readings your weather entity doesn’t provide. You can add sensors there as you need them.
 
 ### Layouts
 
-| `weather_layout` | Shows |
-|---|---|
-| `auto` | Picks a layout to fit the card's size. This is the default. |
-| `compact` | A short tile with the location and temperature above the conditions and high/low, over the animated sky. |
-| `strip` | A single line with the location, temperature and conditions, plus high/low on a wide card, over the animated sky. |
-| `homeview` | The time, a large temperature and a row of the next four days or the readings now, for a screen read from across a room. |
-| `expanded` | The conditions, the hourly forecast and the daily list. Needs about 320 px of height. |
-| `page` | Alerts, forecasts and detail tiles, in two to six columns. |
+| Editor layout | `weather_layout` | What you’ll see |
+|---|---|---|
+| Automatic | `auto` | Current conditions in a small space. More forecast detail appears as the card gets larger. |
+| Compact | `compact` | A small tile with the location and temperature above the conditions and today’s high and low. |
+| Strip | `strip` | Current weather on one line. Wider cards also show today’s high and low. |
+| Home view | `homeview` | A large temperature and clock for a tablet or bedside display. Swipe the bottom row to switch between the next four days and current readings. Tap an item for details. |
+| Expanded | `expanded` | Current conditions above the hourly and daily forecasts. Allow about 320 px of height for this layout. |
+| Full page | `page` | Forecasts, alerts and up to 12 detail tiles in two to six columns. In a panel view, current conditions stay at the top as you scroll. |
 
-`homeview` is for a wall tablet or a small screen on a shelf. The row along its foot shows the readings now or the next four days, and each column opens its details when pressed:
+**Quick setup** offers four presets. Compact, Expanded and Full page use their matching layouts. **Wall tablet** uses Full page with larger text and low-power animation. You can undo a preset until your next edit.
 
 <p align="center">
-  <img src="docs/images/home-day.webp" alt="The home view on a sunny day: the condition, the day's high and low and the time over a large glass temperature, above a row with the wait for rain, the wind, the humidity and the air quality index." width="40%">
-  <img src="docs/images/home-night.webp" alt="The home view on a clear night, with stars behind a large glass temperature, above the next four days, each with its symbol, high and low." width="40%">
+  <img src="docs/images/home-day.webp" alt="Home view by day, with the clock and temperature above readings for rain, wind, humidity and air quality." width="40%">
+  <img src="docs/images/home-night.webp" alt="Home view at night, with the next four days’ forecasts below the temperature." width="40%">
 </p>
 
-In the editor preview and masonry views, `strip` defaults to 56 px tall, `homeview` to a square, `compact` to 180 px, `auto` to 280 px, and `expanded` to 700 px. Compact uses three rows in a sections dashboard and keeps the same layout at every size. Dashboard grid sizes and `--iweather-height` override those defaults.
-
-In a sections dashboard, `auto` changes layout as you resize it, from a one-row strip to the whole section:
+In a Sections dashboard, resize Automatic from a one-row strip to a full section. In the editor preview and Masonry views, the default heights are 56 px for Strip, 180 px for Compact, 280 px for Automatic and 700 px for Expanded. Home view starts square. Compact starts at three rows in Sections. A dashboard grid size or `--iweather-height` overrides the default.
 
 <p align="center">
-  <img src="docs/images/sizes.webp" alt="The card at nine dashboard sizes, from a strip one row tall showing the place, temperature and condition on one line to a wide card with the hourly forecast." width="100%">
+  <img src="docs/images/sizes.webp" alt="Nine dashboard sizes, from one line of current weather to wide cards with room for the forecast." width="100%">
 </p>
 
 ### Common options
 
-| Option | Default | Description |
+| Option | Default | What it controls |
 |---|---|---|
-| `entity` | required | Any `weather.*` entity |
-| `weather_layout` | `auto` | `auto`, `compact`, `strip`, `homeview`, `expanded` or `page` |
-| `place_name` | none | Your town or city, for the `page` layout |
-| `zone` | home | The zone to show weather for, if not home. The sky, the map and Open-Meteo requests use its location. |
-| `tiles` | all 12 | Which tiles the `page` layout shows, in order |
-| `air_quality_entity` | none | A sensor with an air quality index. Without one, the `page` layout shows Open-Meteo's US index |
-| `air_quality_scale` | `auto` | The scale that sensor reports on: `auto`, `us`, `at`, `ca`, `cn`, `de`, `es`, `eu`, `fr`, `ie`, `in`, `kr`, `mx`, `sg` or `uk`. `auto` guesses from the sensor's name, such as `aqhi` or `daqi`, and falls back to the US scale |
-| `alert_entities` | none | Sensors with weather alerts. Without them, the `page` layout shows the National Weather Service's alerts in the United States |
-| `next_hour_entity` | none | A nowcast weather entity or minute-by-minute sensor |
-| `averages` | none | `open-meteo`, or a temperature sensor with two years of statistics |
-| `map` | none | `rainviewer` for radar and wind across the map, `local` for your own data |
-| `forecast_entity` | none | Another weather entity, to fill in what yours lacks |
-| `open_meteo_forecast` | `true` | On the `page` layout, fill forecast gaps from Open-Meteo |
-| `local_only` | `false` | Ask no outside service. See [What leaves your browser](#what-leaves-your-browser). |
-| `weather_animation` | `true` | Animate the sky. Your system's reduce-motion setting also turns it off. |
-| `glass_refraction` | `true` | Bend the sky through raindrops on the panels. Turned off, the drops and highlights stay but take less work to draw. |
+| `entity` | Required | The `weather.*` entity for current conditions and forecasts. |
+| `weather_layout` | `auto` | The [dashboard layout](#layouts). |
+| `place_name` | None | The location label. Away from home, it also labels the map pin. |
+| `zone` | Entity coordinates, then home | The location used for the sky, moon, map and online weather requests. |
+| `tiles` | All 12 | Which Full page tiles to include and their order. A tile appears when it has data. |
+| `air_quality_entity` | None | An AQI sensor. Without one, Full page can use Open-Meteo’s US AQI. |
+| `air_quality_scale` | `auto` | The scale your sensor reports. Automatic checks its name for a match, such as AQHI or DAQI, and falls back to the US scale. |
+| `alert_entities` | None | Sensors from NWS Alerts, Meteoalarm or another weather alert integration. With no sensors configured, Full page can fetch National Weather Service alerts in the US. |
+| `next_hour_entity` | None | A weather entity or sensor with precipitation forecasts at intervals shorter than an hour, such as five-minute rain amounts. |
+| `averages` | None | `open-meteo` for historical averages, or a temperature sensor with at least two years of long-term statistics. |
+| `map` | None | `rainviewer` adds radar and weather across the map. `local` shows Home Assistant readings at your location. |
+| `forecast_entity` | None | A second weather entity that fills gaps in forecasts and current readings. |
+| `open_meteo_forecast` | `true` | Lets Full page request missing forecast data from Open-Meteo. |
+| `local_only` | `false` | Turns off built-in online services. Custom map tile URLs can still receive requests. |
+| `weather_animation` | `true` | Animates the sky when your device allows motion. |
+| `glass_refraction` | `true` | Bends the sky through raindrops on panels or through the temperature digits in Home view. |
 
-[Examples](docs/examples.md) shows a few setups to start from. [All options](docs/configuration.md) covers units, sensors for each reading, the map's tiles and overlays, sizing, and how each panel behaves.
+Home Assistant pushes entity and forecast changes to the card. **Map and online services → Refresh intervals** sets how often a visible card checks RainViewer for radar (1–60 minutes, default 5) and Open-Meteo for missing forecasts (15–360 minutes, default 60). Your integration sets its own update schedule. To see when a source last changed or when the card last fetched a forecast, open **Conditions → Data Updates**.
 
-The card updates as soon as Home Assistant sends a new state or forecast. In the editor, **Map and online services → Refresh intervals** sets how often the card checks for new radar (1–60 minutes, default 5) and asks Open-Meteo for missing forecast values (15–360 minutes, default 60). Neither changes how often your weather integration polls or how often its provider takes readings. The Conditions sheet's **Data Updates** section shows how old each source's data is and when the card last fetched forecast values.
+[Example configurations](docs/examples.md) · [All options and defaults](docs/configuration.md)
 
 ## Detail tiles
 
-The `page` layout shows each of these tiles when it has the data for it. Tap a tile to open a sheet with more detail.
+Tap a tile in the Full page layout to open its details. Use the IDs below in the `tiles` option to choose their order. Poor air quality, a feels-like temperature at least 5 °F (about 3 °C) from the measured temperature, or an unusual daily high can move the relevant tile toward the top.
 
-| Tile | Shows | Needs |
+| Tile | What it shows | Data source |
 |---|---|---|
-| `air_quality` | The index, its category, and how it compares with yesterday | `air_quality_entity` |
-| `wind` | Compass with speed, direction and gusts | `wind_speed` |
-| `moon` | Phase, next moonrise or moonset | Home Assistant's location |
-| `sun` | Next sunset or sunrise, and the sun's path | `sun.sun` |
-| `uv` | UV index, level, and when to use sun protection | `uv_index` |
-| `map` | Radar, wind, temperature or air quality, depending on the weather | `map` |
-| `feels_like` | Apparent temperature | `apparent_temperature`, or temperature, humidity and wind |
-| `averages` | Today's high against the normal for the date | `averages` |
-| `precipitation` | Today's amount and when the next rain or snow comes | Daily forecast amounts or chances |
-| `visibility` | Distance, and what's reducing it | `visibility` |
-| `humidity` | Relative humidity and dew point | `humidity` |
-| `pressure` | Barometric pressure and its trend | `pressure` |
+| `air_quality` | Index, category and comparison with yesterday when available | `air_quality_entity` or Open-Meteo |
+| `wind` | Speed, direction and gusts on a compass | Wind speed, with direction and gusts when available |
+| `moon` | Phase, next moonrise or moonset, and a calendar of phases | Calculated phase, with rise and set times for the forecast coordinates |
+| `sun` | Next sunrise or sunset and the sun’s path | `sun.sun` at home, forecast coordinates for other locations |
+| `uv` | UV index, risk level and sun protection guidance | UV index |
+| `map` | Radar or forecast precipitation, wind, temperature or air quality | `map: rainviewer` or `map: local` |
+| `feels_like` | How the temperature feels | Reported apparent temperature, or an estimate using the air temperature with humidity for heat index and wind speed for wind chill |
+| `averages` | Today’s high relative to the usual high for this date, or recent precipitation compared with the average | `averages` |
+| `precipitation` | Recent or expected precipitation and when rain or snow is next due | Forecast amounts or chances, with recent totals from a configured gauge |
+| `visibility` | How far you can see and what may be limiting the view | Visibility |
+| `humidity` | Relative humidity and dew point | Humidity, with dew point when available |
+| `pressure` | Barometric pressure and its recent trend | Pressure, with history for the trend |
+
+The map follows the hourly forecast view and local conditions. It can highlight approaching rain, poor air quality or wind on a dry, gusty day. Open the map to choose a layer yourself.
 
 ## What leaves your browser
 
-The `auto`, `compact`, `strip`, `homeview` and `expanded` layouts only talk to Home Assistant, whatever options you set. The `page` layout can contact the services below. None of them needs an account or API key. Your browser sends each request directly, so the service also sees your IP address.
+Automatic, Compact, Strip, Home view and Expanded get their weather from Home Assistant. **Full page** can also contact the services below. The card needs no API key. Each service receives requests directly from your browser and can see its IP address.
 
-| Turned on by | Service | What the card asks for | Location sent |
-|---|---|---|---|
-| `weather_layout: page`, when your entity leaves gaps. On by default; `open_meteo_forecast: false` stops it. | Open-Meteo | The missing forecast values, every `forecast_refresh_minutes` while the card is in sight (default 60) | The weather's place, to about 100 m, and time zone |
-| `weather_layout: page`, with the air quality tile and no `air_quality_entity` | Open-Meteo | The air quality index now and a day ago, and the pollutants behind it, hourly while the card is in sight | The weather's place, to about 100 m |
-| `weather_layout: page`, with no `alert_entities`, when the weather comes from the NWS integration or Home Assistant's country is the United States or one of its territories | National Weather Service | The alerts in force at the weather's place, every five minutes while the card is in sight | The weather's place, to about 10 m |
-| `averages: open-meteo` | Open-Meteo | 1991–2020 normals, kept in the browser, and the last 30 days' precipitation every six hours | The weather's place, to about 100 m |
-| `map: rainviewer` | RainViewer | Radar, every `radar_refresh_minutes` while the card is in sight (default 5), and whether its coverage reaches your home | The map's area |
-| `map: rainviewer`, with the large map's 1-hour view open in the contiguous United States | NOAA HRRR through Iowa State's Environmental Mesonet | Simulated radar in 15-minute steps for the next hour; checks for a completed model run every ten minutes | The map's area |
-| `map: rainviewer` | Open-Meteo | Wind and temperature across the map, air quality when the map shows it, and the 12-hour forecast's precipitation when none of the services below answers | The map's area |
-| `map: rainviewer`, with the large map's 12-hour forecast open | NOAA's HRRR archive at the University of Utah in the United States, MET Norway in the Nordic countries, Environment and Climate Change Canada elsewhere | The forecast's precipitation across the map: in the United States in tiles kept in the browser for a day, elsewhere an hour at a time | The map's area |
-| `map: rainviewer`, with the map showing air quality over the United States, southern Canada or northern Mexico | AirNow, the US Environmental Protection Agency's air quality service | The areas in each band of the US air quality index, as monitors last measured them: one small file, kept ten minutes | Nothing about you: the same file whatever the map shows |
-| `map: rainviewer` | OpenFreeMap, OpenStreetMap | Base map tiles | The map's area |
-| `map: local` | OpenStreetMap | Base map tiles | The map's area |
-| `map_tile_url`, `map_layers` | Services you name | Map tiles | The map's area |
+**For a local dashboard**, set `local_only: true`. This turns off the built-in online services. To display a map in this mode, enable the map and set `map_tile_url`. The map requests that URL and any `map_layers` overlays you configure, so use local tile servers to keep those requests on your network.
 
-If you set `map_tile_url`, the card loads tiles from your server instead of OpenFreeMap and OpenStreetMap.
-
-> [!IMPORTANT]
-> With `local_only: true`, the card only talks to Home Assistant, whatever else you set. Open-Meteo (including its averages), the National Weather Service alerts and the radar are all turned off. The map is hidden too, unless you set your own tile server with `map_tile_url`. In that case the map loads tiles from your server and draws your Home Assistant data on top.
+| When Full page requests data | Service and purpose | Location in the request |
+|---|---|---|
+| Forecast values are missing and `open_meteo_forecast` is on | Open-Meteo fills gaps, by default every 60 minutes while the card is visible. | Forecast coordinates rounded to about 100 m, plus time zone |
+| Air quality tile is enabled without an AQI sensor | Open-Meteo supplies current and previous-day AQI and pollutant readings, refreshed hourly. | Forecast coordinates rounded to about 100 m |
+| No alert sensors are set, and the entity uses NWS or Home Assistant’s country is the US or a covered territory | The National Weather Service supplies active alerts, checked every five minutes while visible. | Forecast coordinates rounded to about 10 m |
+| `averages: open-meteo` | Open-Meteo supplies 1991–2020 averages, cached in the browser, and the last 30 days of precipitation, refreshed every six hours. | Forecast coordinates rounded to about 100 m |
+| Online map | RainViewer supplies radar and coverage. The card checks for new images every five minutes by default. | Map area |
+| Online map, one-hour forecast in the contiguous US | The Iowa Environmental Mesonet serves NOAA HRRR simulated radar at 15-minute intervals. The open map checks for a new run every ten minutes. | Map area |
+| Online map, 12-hour precipitation forecast | Regional sources include NOAA’s HRRR archive at the University of Utah for the contiguous US and MET Norway for the Nordic region. Environment and Climate Change Canada supplies regional and global models. Open-Meteo provides a fallback. | Map area |
+| Online map, wind, temperature or air quality | Open-Meteo supplies weather across the map. Over the US, southern Canada and northern Mexico, AirNow supplies measured air quality. | Map area for Open-Meteo. AirNow serves the same coverage file for every location. |
+| Base map tiles | The online map uses OpenFreeMap and OpenStreetMap. The local weather map uses OpenStreetMap by default. A custom `map_tile_url` selects your tile server. | Map area |
+| Custom overlays | Servers you configure in `map_layers` supply overlay tiles. | Map area |
 
 ## Languages
 
-The card uses your Home Assistant language. It comes in Chinese (Simplified and Traditional), Czech, Danish, Dutch, English, Finnish, French, German, Italian, Japanese, Korean, Norwegian, Polish, Portuguese, Spanish and Swedish. Any other language falls back to English.
+The card and its editor follow your Home Assistant language. They support English, Chinese (Simplified and Traditional), Czech, Danish, Dutch, Finnish, French, German, Italian, Japanese, Korean, Norwegian Bokmål, Polish, Portuguese, Spanish and Swedish. Other languages use English.
 
 ## Support
 
-Report a bug in [Issues](../../issues). Ask a question or suggest an idea in [Discussions](../../discussions). Mention which weather integration you use, since the card can only show the data it provides.
+Include your weather integration, layout and the reading or forecast you expected when you [report a bug](../../issues). For questions and ideas, visit [Discussions](../../discussions).
 
 ## Development
 
 ```sh
-pnpm install    # also points git at the repository's hooks
-pnpm dev        # preview pages with sample weather at http://127.0.0.1:4174/preview/
-pnpm perf run   # with dev running: all 33 skies, desktop/phone/tablet, day and night
-pnpm check      # types, lint, formatting and every test
-pnpm build      # dist/: the card, and the files it loads from beside itself
-pnpm demo       # _site/: the demo and setup pages, with the built card beside them
+pnpm install --frozen-lockfile
+pnpm dev     # Local demo and preview pages
+pnpm check   # Type checks, lint, formatting, tests and production build
+pnpm build   # Card and assets in dist/
+pnpm demo    # Static demo and setup guide in _site/
 ```
 
-The demo in `demo/` runs the card on sample weather, with controls for the weather, time of day, layout, units and language. It can also show a real place's weather from Open-Meteo. `pnpm dev` serves it from source at http://127.0.0.1:4174/demo/, and `pnpm demo` builds a static copy you can host anywhere. Each push to `main` publishes it to [GitHub Pages](https://sitapix.github.io/iweather-card/).
+With the dev server running, open [the demo](http://127.0.0.1:4174/demo/) to try sample weather or look up a live forecast. The [preview pages](http://127.0.0.1:4174/preview/) use sample scenes for development. Pushes to `main` publish the demo to [GitHub Pages](https://sitapix.github.io/iweather-card/).
 
-Before the first browser test run, install the browsers with `pnpm exec playwright install chromium-headless-shell firefox webkit`. To regenerate the cloud images, run `node scripts/clouds.ts` (needs `avifenc` from libavif). To regenerate this README's images, run `node scripts/readme-images.ts` (needs Google Chrome, ffmpeg and libwebp's tools).
+- **Browser tests.** Before the first run, install the browsers with `pnpm exec playwright install chromium-headless-shell firefox webkit`.
+- **Performance.** With the dev server running, `pnpm perf run` measures all 33 skies on desktop, phone and tablet by day and night. It uses your installed Chrome by default and writes timings, fixed-frame screenshots and accessibility snapshots to `perf-results/`. Run it separately from the browser tests so they don’t compete for the GPU. [Performance guide](docs/weather-performance-2026-11-03.md) · [Firefox rain](docs/firefox-rain-performance-2026-11-03.md) · [Firefox glass](docs/firefox-glass-copy-performance-2026-11-03.md) · [GPU rain](docs/gpu-rain-performance-2026-11-04.md)
+- **Compression.** After building, `pnpm compress` creates gzip and Brotli copies of the scripts and styles for servers that support them. Regenerate these with each build so the server sends the current files.
+- **Images.** Run `node scripts/clouds.ts` to regenerate cloud images with libavif’s `avifenc`. Run `node scripts/readme-images.ts` to regenerate the README images with Chrome, ffmpeg and the libwebp tools.
+- **Releases.** Pushing a version tag creates a draft release and checks the attached files against the build. Review the draft before publishing it.
 
-`pnpm perf run` uses your installed Chrome by default and saves timings, screenshots of fixed frames and accessibility snapshots to `perf-results/`. Don't run it while tests are running, since both use the GPU. [The weather performance report](docs/weather-performance-2026-11-03.md) explains its browser options, how to run part of it and what it can't measure. Later reports cover [rain in Firefox](docs/firefox-rain-performance-2026-11-03.md), [glass in Firefox](docs/firefox-glass-copy-performance-2026-11-03.md) and [rain on the GPU](docs/gpu-rain-performance-2026-11-04.md).
-
-Pushing a version tag builds the card and creates a draft release with the files HACS installs, after checking each one against the build. Look over the draft, then publish it by hand.
-
-- [docs/glossary.md](docs/glossary.md) defines the terms used for the card's parts.
-- [docs/adr](docs/adr) records design decisions and the reasons for them.
+[Project glossary](docs/glossary.md) · [Design decisions](docs/adr)
 
 ## Credits
 
-- **Moon:** near-side imagery from NASA's Scientific Visualization Studio [CGI Moon Kit](https://svs.gsfc.nasa.gov/4720) (Lunar Reconnaissance Orbiter), public domain.
-- **Forecast and climate data:** [Open-Meteo](https://open-meteo.com/), CC BY 4.0. The card credits Open-Meteo at the bottom of the page whenever it uses Open-Meteo data for the forecast, air quality or averages.
-- **Map library:** [MapLibre GL JS](https://maplibre.org/), BSD 3-Clause, shipped alongside the card with its licence.
-- **Alerts:** the [National Weather Service](https://www.weather.gov/), public domain, used when no alert sensor is set.
-- **Radar:** [RainViewer](https://www.rainviewer.com/), free for personal use with attribution.
-- **Air quality on the map:** [AirNow](https://www.airnow.gov/), from the US Environmental Protection Agency and its partner agencies, over the United States, southern Canada and northern Mexico; Open-Meteo elsewhere.
-- **Precipitation forecast on the map:** NOAA's [HRRR](https://registry.opendata.aws/noaa-hrrr-pds/) model, from the [HRRR Zarr archive](https://mesowest.utah.edu/html/hrrr/) the University of Utah keeps for NOAA; [MEPS](https://thredds.met.no/thredds/catalog/mepslatest/catalog.html) from MET Norway, CC BY 4.0; and Canada's regional and global models from [Environment and Climate Change Canada](https://eccc-msc.github.io/open-data/msc-geomet/readme_en/), under the Open Government Licence – Canada. The map lists the model in use under Map Data.
-- **Maps:** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, [OpenMapTiles](https://openmaptiles.org/) and [OpenFreeMap](https://openfreemap.org/), drawn with [MapLibre GL JS](https://maplibre.org/).
+- **Moon imagery.** NASA’s Scientific Visualization Studio, using Lunar Reconnaissance Orbiter imagery. Public domain. [CGI Moon Kit](https://svs.gsfc.nasa.gov/4720)
+- **Forecasts, air quality and climate averages.** The card credits Open-Meteo in the footer when it uses these data. CC BY 4.0. [Open-Meteo](https://open-meteo.com/)
+- **US alerts.** National Weather Service, public domain. [NWS](https://www.weather.gov/)
+- **Radar.** RainViewer, free for personal use with attribution. [RainViewer](https://www.rainviewer.com/)
+- **Measured air quality.** AirNow, a service of the US Environmental Protection Agency and its partners. [AirNow](https://www.airnow.gov/)
+- **Precipitation forecasts.** The map identifies the active model under **Map Data**. Sources include NOAA HRRR, MET Norway’s MEPS (CC BY 4.0) and Canadian regional and global models (Open Government Licence – Canada). [NOAA HRRR](https://registry.opendata.aws/noaa-hrrr-pds/) · [University of Utah HRRR archive](https://mesowest.utah.edu/html/hrrr/) · [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/GIS/model.phtml) · [MET Norway](https://thredds.met.no/thredds/catalog/mepslatest/catalog.html) · [Environment and Climate Change Canada](https://eccc-msc.github.io/open-data/msc-geomet/readme_en/)
+- **Maps.** © OpenStreetMap contributors, with OpenMapTiles and OpenFreeMap. The card ships MapLibre GL JS with its BSD 3-Clause license. [OpenStreetMap](https://www.openstreetmap.org/copyright) · [OpenMapTiles](https://openmaptiles.org/) · [OpenFreeMap](https://openfreemap.org/) · [MapLibre GL JS](https://maplibre.org/)
 
 ## License
 
-The card is released under the [MIT License](LICENSE).
+[MIT License](LICENSE)

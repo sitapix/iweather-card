@@ -64,7 +64,7 @@ a {
 }
 code,
 pre {
-  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 pre {
   font-size: 14px;
@@ -78,12 +78,13 @@ pre {
 /* The bar across the top. */
 .top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 24px;
+  padding: 14px 24px;
 }
 .top h1 {
   margin: 0;
@@ -91,45 +92,26 @@ pre {
 }
 .brand {
   color: var(--text);
+  font-size: 19px;
   font-weight: 650;
+  letter-spacing: -0.025em;
   text-decoration: none;
 }
 .top nav {
   display: flex;
-  gap: 18px;
-}
-/* What a visitor sets once: units, the dashboard's theme and the language. On a narrow screen they
-   take a row of their own under the name. */
-.prefs {
-  display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: auto;
+  gap: 20px;
+  margin-inline-start: auto;
 }
-.prefs select {
-  width: auto;
-  max-width: 150px;
-  padding: 5px 8px;
-  font-size: 13.5px;
+.brand,
+.top nav > * {
+  white-space: nowrap;
 }
-.prefs .segments span {
-  padding: 4px 10px;
-}
-@media (max-width: 700px) {
-  .top {
-    flex-wrap: wrap;
-  }
-  .prefs {
-    order: 1;
-    width: 100%;
-    margin-left: 0;
-  }
-  .prefs select {
-    flex: 1;
-    max-width: none;
-  }
-}
+
 .top nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--muted);
   text-decoration: none;
 }
@@ -144,86 +126,38 @@ footer {
   padding: 0 24px;
 }
 
-/* The card on the left with its YAML under it, the controls down the right; on a narrow screen the
-   card, then the controls, then the YAML. */
+/* Controls precede the preview in reading order. Wide screens keep them beside the card. */
 .bench {
   display: grid;
-  grid-template: 'stage controls' auto 'settings controls' 1fr / minmax(0, 1fr) 360px;
-  gap: 24px;
+  grid-template: 'stage controls' auto / minmax(0, 1fr) 352px;
+  gap: 20px;
   align-items: start;
 }
-.show {
-  display: grid;
-  grid-area: stage;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  min-width: 0;
-}
-.controls {
-  grid-area: controls;
-}
-.settings {
-  grid-area: settings;
-}
-@media (max-width: 980px) {
-  .bench {
-    grid-template: 'stage' 'controls' 'settings' / minmax(0, 1fr);
-  }
-}
-
-/* Over the card, what frames it: its layout, the alert the page layout can show, and the screen it
-   stands on. */
-.stage-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 16px;
-}
-.stage-bar [data-name='layout'] {
-  flex: 1 1 320px;
-  min-width: 0;
-  max-width: 600px;
-}
-.screen {
-  margin-left: auto;
-}
-.screen span,
-.turn span {
-  padding: 5px 12px;
-}
-.screen svg,
-.turn svg {
-  display: block;
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentcolor;
-  stroke-linecap: round;
-  stroke-width: 1.5;
-}
-/* The screen's name is read out, and shown as the pointer rests on it. */
-.screen b,
-.turn b {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+.compact-picker {
+  display: none;
 }
 
 /* The dashboard the card stands on. The page layout scrolls inside a screen's height; the
    others take the height they take on a dashboard, at a column's width. */
 .stage {
-  --frame-height: min(900px, calc(100dvh - 48px));
+  --frame-height: clamp(360px, calc(100dvh - 116px), 900px);
+  grid-area: stage;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   align-content: start;
-  min-height: 420px;
-  padding: 24px;
+  min-width: 0;
+  min-height: 360px;
+  padding: 16px;
   border-radius: 24px;
   background: var(--dashboard);
+}
+.preview-loading {
+  display: grid;
+  min-height: 280px;
+  margin: 0;
+  place-items: center;
+  color: var(--muted);
 }
 .frame {
   width: 100%;
@@ -261,7 +195,7 @@ footer {
   width: 640px;
 }
 .stage:not([data-layout='page']) {
-  padding-top: 56px;
+  align-content: center;
 }
 /* The home view is square, so a desktop's column would make it taller than the screen shows. */
 .stage[data-layout='homeview'][data-screen='desktop'] .frame {
@@ -271,41 +205,28 @@ footer {
   display: block;
   box-shadow: var(--shadow);
 }
-.stage[data-layout='page'] iweather-card {
+.stage[data-layout='page'] .frame {
   --iweather-height: var(--frame-height);
+  height: var(--iweather-height);
 }
-@media (max-width: 600px) {
-  .stage,
-  .stage:not([data-layout='page']) {
-    margin: 0 -24px;
-    padding: 12px;
-    border-radius: 0;
-  }
-  /* A phone shows the card at its own width. */
-  .stage-bar .screen,
-  .stage-bar .turn {
-    display: none;
-  }
+.stage[data-layout='page'] .preview-loading {
+  min-height: 100%;
 }
-
-/* The controls. */
+/* A short panel stays within reach while the preview scrolls. */
 .controls {
   position: sticky;
   top: 16px;
   display: grid;
-  gap: 20px;
+  grid-area: controls;
+  gap: 18px;
+  min-width: 0;
   max-height: calc(100dvh - 32px);
+  padding: 18px;
   overflow: auto;
-  padding: 20px;
-  border-radius: 12px;
+  border-radius: 20px;
   background: var(--panel);
 }
-@media (max-width: 980px) {
-  .controls {
-    position: static;
-    max-height: none;
-  }
-}
+
 fieldset {
   min-width: 0;
   margin: 0;
@@ -315,7 +236,8 @@ fieldset {
 fieldset:disabled {
   opacity: 0.45;
 }
-legend {
+legend,
+.hour-heading label {
   margin-bottom: 8px;
   padding: 0;
   color: var(--text);
@@ -343,15 +265,22 @@ legend {
   border-radius: 11px;
   background: var(--chip);
 }
-/* The layouts are too many for one row of a narrow column, so they take as many rows as they need. */
+/* Keep all six layouts one click away when the controls have their own column. */
 .segments[data-name='layout'] {
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-flow: row;
   gap: 2px;
 }
+.segments label,
+.tiles label {
+  position: relative;
+  min-width: 0;
+}
 .segments span {
-  display: block;
-  padding: 5px 4px;
+  display: grid;
+  min-height: 34px;
+  padding: 5px 6px;
+  place-items: center;
   border-radius: 8px;
   font-size: 13.5px;
   text-align: center;
@@ -377,24 +306,28 @@ fieldset:disabled span {
    fit. */
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
 }
 .tiles span {
   display: grid;
   justify-items: center;
   align-content: start;
-  gap: 6px;
+  gap: 5px;
   height: 100%;
-  padding: 8px 0;
+  padding: 6px 2px;
   border-radius: 12px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
   text-align: center;
   cursor: pointer;
 }
-.tiles span:hover {
-  background: var(--chip);
+@media (hover: hover) {
+  .tiles label:hover span,
+  .segments label:hover input:not(:checked) + span {
+    background: var(--chip);
+    box-shadow: inset 0 0 0 1px var(--edge);
+  }
 }
 .tiles i {
   display: grid;
@@ -402,7 +335,13 @@ fieldset:disabled span {
   width: 40px;
   height: 40px;
   border-radius: 11px;
-  background: linear-gradient(#2c6cc0, #6aa8e4);
+  background: linear-gradient(150deg, #326ba8, #6aa8d4);
+}
+.tiles label:has(input:is([value='rain'], [value='downpour'], [value='thunderstorm'], [value='lightning'])) i {
+  background: linear-gradient(150deg, #394763, #697b96);
+}
+.tiles label:has(input:is([value='fog'], [value='snow'], [value='sleet'], [value='hail'])) i {
+  background: linear-gradient(150deg, #5b758a, #93aab5);
 }
 .tiles svg {
   grid-area: 1 / 1;
@@ -422,16 +361,21 @@ fieldset:disabled span {
   outline-offset: 2px;
 }
 
-.hour {
-  display: grid;
-  grid-template-columns: 1fr 52px;
-  align-items: center;
-  gap: 10px;
+.hour-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
+.hour-heading label {
+  margin: 0;
+}
+
 /* The slider's track is the day's sky: night, dawn, day, dusk and night again. */
-.hour input {
+.time input {
   width: 100%;
-  height: 22px;
+  display: block;
+  height: 36px;
   margin: 0;
   appearance: none;
   background: none;
@@ -448,17 +392,17 @@ fieldset:disabled span {
     #0b1030 100%
   );
 }
-.hour input::-webkit-slider-runnable-track {
+.time input::-webkit-slider-runnable-track {
   height: 10px;
   border-radius: 5px;
   background: var(--sky);
 }
-.hour input::-moz-range-track {
+.time input::-moz-range-track {
   height: 10px;
   border-radius: 5px;
   background: var(--sky);
 }
-.hour input::-webkit-slider-thumb {
+.time input::-webkit-slider-thumb {
   width: 20px;
   height: 20px;
   margin-top: -5px;
@@ -468,7 +412,7 @@ fieldset:disabled span {
   background: var(--accent);
   box-shadow: 0 1px 4px #0006;
 }
-.hour input::-moz-range-thumb {
+.time input::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border: 3px solid #fff;
@@ -476,7 +420,9 @@ fieldset:disabled span {
   background: var(--accent);
   box-shadow: 0 1px 4px #0006;
 }
-.hour output {
+.hour-heading output {
+  color: var(--accent);
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   text-align: right;
@@ -485,7 +431,8 @@ fieldset:disabled span {
 select,
 input[type='search'] {
   width: 100%;
-  padding: 8px 10px;
+  min-height: 40px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--panel);
@@ -493,7 +440,8 @@ input[type='search'] {
   font: inherit;
 }
 button {
-  padding: 8px 12px;
+  min-height: 40px;
+  padding: 8px 14px;
   border: 0;
   border-radius: 10px;
   background: var(--chip);
@@ -505,6 +453,11 @@ button {
 button:hover {
   filter: brightness(0.96);
 }
+.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
 .search {
   display: flex;
   gap: 6px;
@@ -515,9 +468,6 @@ button:hover {
 }
 .search button {
   white-space: nowrap;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 600;
 }
 .real {
   display: grid;
@@ -541,73 +491,294 @@ button:hover {
 .real-status:empty {
   display: none;
 }
-.real-status {
+.real-status,
+.location-note {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
 }
-.check {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  font-size: 14px;
+.display-options {
+  border-top: 1px solid var(--line);
 }
-.check input {
-  accent-color: var(--accent);
-}
-.check:has(input:disabled) {
-  opacity: 0.45;
-}
-/* The turn control where there is nothing to turn: greyed, unpressed, and still. */
-.turn:has(input:disabled) {
-  opacity: 0.4;
-}
-.turn input:disabled + span {
-  background: none;
-  box-shadow: none;
-  font-weight: inherit;
-  cursor: default;
-  transform: none;
-}
-
-/* The settings as YAML. */
-.settings {
-  width: 100%;
-  max-width: 760px;
-  margin: 8px 0 0;
-}
-.settings-head {
+.display-options summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 2px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
 }
-.copy-feedback {
-  margin-inline: auto 0.5rem;
+.display-options summary::-webkit-details-marker {
+  display: none;
+}
+.display-options summary::after {
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border: solid var(--muted);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg) translateY(-2px);
+  content: '';
+}
+.display-options[open] summary::after {
+  transform: rotate(225deg) translate(-1px, -1px);
+}
+.display-fields {
+  display: grid;
+  gap: 6px;
+}
+.option-row,
+.check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.option-row select {
+  width: auto;
+  max-width: 60%;
+}
+.option-row .segments span {
+  min-width: 40px;
+}
+.check {
+  cursor: pointer;
+}
+.check input {
+  width: 18px;
+  height: 18px;
+  margin: 0 4px;
+  accent-color: var(--accent);
+}
+.check:has(input:disabled) {
   color: var(--muted);
+  cursor: default;
+}
+
+.settings {
+  width: min(440px, calc(100% - 32px));
+  max-width: 100%;
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 16px 64px #0003;
+}
+.settings::backdrop {
+  background: rgb(15 21 31 / 45%);
+}
+body:has(.settings[open]) {
+  overflow: hidden;
+}
+.sheet {
+  padding: 22px;
+}
+.settings-head,
+.sheet-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 .settings h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
 }
-.settings pre {
-  margin: 12px 0;
-  padding: 16px 18px;
-  overflow: auto;
-  border-radius: 8px;
-  background: var(--panel);
+.dismiss {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border-radius: 50%;
+}
+.dismiss svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.8;
 }
 .settings p {
+  margin: 8px 0 16px;
   color: var(--muted);
+}
+.settings pre {
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border-radius: 10px;
+  background: var(--bg);
+  user-select: all;
+}
+.copy-feedback {
+  display: block;
+  color: var(--muted);
+  font-size: 14px;
+}
+.copy-feedback:not(:empty) {
+  margin-top: 12px;
+}
+.sheet-actions {
+  margin-top: 18px;
+}
+.sheet-actions a {
+  font-size: 14px;
 }
 
 footer {
-  padding-top: 24px;
-  padding-bottom: 40px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 18px;
+  padding-bottom: 32px;
   color: var(--muted);
   font-size: 13px;
 }
 footer p {
   max-width: 80ch;
+  margin: 0;
+}
+footer > a {
+  color: var(--muted);
+}
+
+@media (max-width: 980px) {
+  .demo .top {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    background: var(--bg);
+  }
+  html:has(.demo) {
+    scroll-padding-top: 80px;
+  }
+  .bench {
+    grid-template: 'controls' 'stage' / minmax(0, 1fr);
+    gap: 12px;
+  }
+  .controls {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    max-height: none;
+    padding: 14px 16px 4px;
+    overflow: visible;
+  }
+  .controls > :is([data-name='source'], .time, .real, .display-options),
+  .controls:has(.weather[hidden]) .layout {
+    grid-column: 1 / -1;
+  }
+  .compact-picker {
+    display: block;
+  }
+  .controls :is([data-name='layout'], .tiles) {
+    display: none;
+  }
+  .controls legend {
+    margin-bottom: 4px;
+  }
+}
+
+@media (max-width: 600px) {
+  .top,
+  main,
+  footer {
+    padding-inline: 12px;
+  }
+  .top {
+    gap: 8px;
+    padding-block: 8px;
+  }
+  .top nav {
+    gap: 12px;
+  }
+  .top nav a {
+    font-size: 14px;
+  }
+  html:has(.demo) {
+    /* The 44px controls and the header's 8px padding on each side. */
+    --demo-header-height: calc(60px + env(safe-area-inset-top));
+    scroll-padding-top: calc(var(--demo-header-height) + 8px);
+  }
+  .demo .top {
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
+  .stage,
+  .stage:not([data-layout='page']) {
+    min-height: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .stage[data-layout][data-screen] .frame {
+    width: 100%;
+  }
+  /* On a phone, the full page scrolls inside the space below the sticky header. */
+  .stage[data-layout='page'] .frame {
+    --iweather-height: calc(100svh - var(--demo-header-height) - env(safe-area-inset-bottom));
+  }
+  .controls .preview-screen {
+    display: none;
+  }
+  .controls select,
+  .controls input[type='search'] {
+    font-size: 16px;
+  }
+  .settings {
+    inset: auto 0 0;
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+  }
+  .sheet {
+    padding: 16px 18px max(20px, env(safe-area-inset-bottom));
+  }
+}
+@media (pointer: coarse), (max-width: 600px) {
+  .segments span,
+  button,
+  select,
+  input[type='search'],
+  .time input {
+    min-height: 44px;
+  }
+}
+@media (max-width: 360px) {
+  .brand {
+    font-size: 17px;
+  }
+  .top nav {
+    gap: 8px;
+  }
+  .top .primary {
+    padding-inline: 10px;
+  }
+}
+@media (forced-colors: active) {
+  .segments input:checked + span,
+  .tiles input:checked + span {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+  .time input {
+    appearance: auto;
+    forced-color-adjust: auto;
+  }
 }
 
 /* The setup page. */
@@ -716,7 +887,7 @@ button:active {
     corner-shape: squircle;
   }
   .stage {
-    border-radius: 40px;
+    border-radius: 32px;
   }
   .controls {
     border-radius: 26px;

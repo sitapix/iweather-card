@@ -247,7 +247,7 @@ test('the editor shows what applies, sends typing after a pause and passes state
   if (!(form instanceof FakeForm)) throw new Error('No form.');
   const titles = () => form.schema.flatMap(item => (item.title ? [item.title] : []));
   expect(titles()).not.toContain('Full page');
-  const look = form.schema.find(item => item.title === 'Look'),
+  const look = form.schema.find(item => item.title === 'Appearance'),
     refraction = look?.schema?.find(item => item.name === 'glass_refraction');
   expect(refraction?.selector).toEqual({ boolean: {} });
   expect(form.data['glass_refraction']).toBe(true);

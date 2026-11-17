@@ -67,8 +67,8 @@ test('refresh controls stay in a collapsed section under online services with bo
       assert.match(field.helper ?? '', /Your integrations update on their own schedules\./u);
     }
     const radar = refresh.schema.find(item => item.name === 'radar_refresh_minutes');
-    if (radar) assert.match(radar.helper ?? '', /RainViewer’s radar/u);
-    assert.match(refresh.schema.at(-1)?.helper ?? '', /forecast Open-Meteo fills in/u);
+    if (radar) assert.match(radar.helper ?? '', /RainViewer for new radar images/u);
+    assert.match(refresh.schema.at(-1)?.helper ?? '', /Open-Meteo for missing forecast data/u);
     assert.doesNotMatch(services?.schema?.find(item => item.name === 'open_meteo_forecast')?.helper ?? '', /hourly/u);
   }
   for (const layout of ['auto', 'compact', 'expanded'] as const)

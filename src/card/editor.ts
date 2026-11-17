@@ -220,7 +220,7 @@ export class IWeatherCardEditor extends HTMLElement {
     this._form.data = this._data;
     this._schema();
     stopEditing(this);
-    this._setup.announce('Starting point applied.');
+    this._setup.announce('Preset applied.');
     this._send(true);
   }
   private _undoPreset() {

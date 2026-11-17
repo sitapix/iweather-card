@@ -134,7 +134,7 @@ const forecastSection = ({ layout, showForecast, showDaily }: EditorContext): Fo
       showDaily || layout === 'page'
         ? grid([flag('show_daily', 'Daily forecast'), amount('forecast_days', 'Days')])
         : flag('show_daily', 'Daily forecast'),
-      flag('show_high_low', 'High and low'),
+      flag('show_high_low', 'Today’s high and low'),
       ...(showForecast || showDaily ? [forecastView()] : []),
     ],
     true,
@@ -168,13 +168,13 @@ const pageSection = (columns: number): FormSchemaItem =>
           { value: 'extra_large', label: 'Extra large' },
         ],
         columns,
-        'Larger text and tiles, with fewer columns, for a screen you read from across the room.',
+        'Larger sizes fit fewer columns and make the page easier to read from across the room.',
       ),
       field(
         'top_padding',
         'Top padding (%)',
         { number: { ...TOP_PADDING_LIMITS, step: 1, mode: 'box' } },
-        'Space above the current weather.',
+        '50% leaves half the usual space above the weather. Set this to 0 to remove the gap.',
       ),
       choice(
         'sheet_style',
@@ -185,7 +185,7 @@ const pageSection = (columns: number): FormSchemaItem =>
           { value: 'popover', label: 'Popover' },
         ],
         columns,
-        'Automatic slides a sheet up on a phone, and opens a popover beside the tile on anything larger.',
+        'Automatic opens a sheet on phones and a popover beside the tile on larger screens.',
       ),
       field(
         'tiles',
@@ -198,7 +198,7 @@ const pageSection = (columns: number): FormSchemaItem =>
             options: TILES.map(value => ({ value, label: TILE_CARDS[value].label })),
           },
         },
-        'Drag to reorder. Poor air quality goes first. Feels like moves up when it’s 5 °F or more from the temperature, and Averages when today’s high is outside its normal range.',
+        'Drag tiles to reorder them. Poor air quality, a noticeable feels-like difference or an unusual daily high can move a tile up.',
       ),
     ],
     true,
@@ -217,7 +217,7 @@ function servicesSection(context: EditorContext): FormSchemaItem {
               'radar_refresh_minutes',
               'Radar refresh (minutes)',
               { number: { ...REFRESH_LIMITS.radar_refresh_minutes, step: 1, mode: 'box' } },
-              'For RainViewer’s radar only. Your integrations update on their own schedules.',
+              'How often to check RainViewer for new radar images while the card is visible. Your integrations update on their own schedules.',
             ),
           ]
         : []),
@@ -227,7 +227,7 @@ function servicesSection(context: EditorContext): FormSchemaItem {
               'forecast_refresh_minutes',
               'Forecast refresh (minutes)',
               { number: { ...REFRESH_LIMITS.forecast_refresh_minutes, step: 1, mode: 'box' } },
-              'For the forecast Open-Meteo fills in only. Your integrations update on their own schedules.',
+              'How often to check Open-Meteo for missing forecast data while the card is visible. Your integrations update on their own schedules.',
             ),
           ]
         : []),
@@ -236,15 +236,15 @@ function servicesSection(context: EditorContext): FormSchemaItem {
     flag(
       'local_only',
       'Local only',
-      'The card contacts no outside service, whatever you set below. Open-Meteo and the radar are off, and the map needs map tiles of your own.',
+      'Turns off the built-in online services. A map needs a custom base tile URL. Use local URLs for the base map and overlays to keep requests on your network.',
     ),
     ...(context.localOnly
       ? []
       : [
           flag(
             'open_meteo_forecast',
-            'Fill the forecast from Open-Meteo',
-            'Fills in rain chances, gusts or days your weather entity leaves out. Its own values come first. The card sends the weather’s location to Open-Meteo.',
+            'Fill forecast gaps with Open-Meteo',
+            'Sends the forecast location to Open-Meteo for missing values, such as rain chances, wind gusts or extra days. Your weather entity takes priority.',
           ),
         ]),
     ...mapFields(context),
@@ -259,26 +259,28 @@ function mapFields(context: EditorContext): FormSchemaItem[] {
       'Map',
       [
         { value: 'none', label: 'None' },
-        { value: 'rainviewer', label: 'Online: radar and wind (recommended)' },
-        { value: 'local', label: 'Home Assistant data only' },
+        { value: 'rainviewer', label: 'Online weather and radar' },
+        { value: 'local', label: 'Home Assistant weather' },
       ],
-      'The map shows wind in the Wind view and precipitation in the Precipitation view. Otherwise it shows the first that applies: precipitation falling or due soon, poor air quality, or wind on a windy dry day. Online adds RainViewer radar and wind across the map from Open-Meteo, with no integration or key. With Home Assistant data only, the card loads the base map from OpenStreetMap unless you set your own map tiles.',
+      context.localOnly
+        ? 'With Local only on, both map sources use Home Assistant readings. Enter your base tile URL under Map tiles.'
+        : 'Online adds radar and weather across the map. Home Assistant shows readings at your location and uses OpenStreetMap unless you supply base tiles.',
     ),
     ...(context.map === 'none'
       ? []
       : [
-          flag('map_wind_animation', 'Moving wind on the card', 'Off, the wind holds still until you open the map.'),
+          flag('map_wind_animation', 'Animate wind on the map tile', 'Turn this off for a still preview of the wind.'),
           ...(context.map === 'local' || context.localOnly
             ? []
             : [
                 flag(
                   'map_precipitation_animation',
-                  'Moving precipitation on the card',
-                  'Off, precipitation holds still until you open the map.',
+                  'Animate precipitation on the map tile',
+                  'Turn this off to show the latest radar image on the tile.',
                 ),
               ]),
           section('Map tiles', 'mdi:map-outline', [
-            text('map_tile_url', 'Base map', 'An https URL with {z}, {x} and {y}. Default: OpenStreetMap.', 'url'),
+            text('map_tile_url', 'Base map', 'Enter an HTTPS tile URL containing {z}, {x} and {y}.', 'url'),
             section(
               'Overlays',
               'mdi:layers-outline',
@@ -304,21 +306,25 @@ function sensorsSection(context: EditorContext): FormSchemaItem {
   return section('Alerts and sensors', 'mdi:alert-outline', [
     field(
       'alert_entities',
-      'Severe weather alerts',
+      'Weather alert sensors',
       { entity: { multiple: true, domain: SETTING_DOMAINS.alert_entities } },
-      'Sensors from NWS Alerts, Meteoalarm or similar. Alerts lead the page.',
+      context.localOnly
+        ? 'Choose the Home Assistant sensors that report weather alerts for this location.'
+        : 'Choose sensors from NWS Alerts, Meteoalarm or another alert integration. In the US, the card can fetch NWS alerts if you leave this empty.',
     ),
     field(
       'next_hour_entity',
       'Next-hour precipitation',
       { entity: { domain: SETTING_DOMAINS.next_hour_entity } },
-      'A nowcast weather entity, or a sensor listing minute-by-minute precipitation.',
+      'Choose a weather entity with a short-term precipitation forecast or a sensor with minute-by-minute readings.',
     ),
     field(
       'air_quality_entity',
       'Air quality index',
       { entity: { domain: SETTING_DOMAINS.air_quality_entity } },
-      'The tile compares it with yesterday’s, from history.',
+      context.localOnly
+        ? 'Choose an air quality sensor to compare today’s index with yesterday’s.'
+        : 'Choose an AQI sensor to compare today’s reading with yesterday’s. Without a sensor, the page can use Open-Meteo.',
     ),
     // The scale is the sensor's, and the averages are their tile's.
     ...(context.air ? [airScale()] : []),
@@ -333,7 +339,7 @@ const airScale = (): FormSchemaItem =>
       { value: AIR_SCALE_AUTO, label: 'Automatic' },
       ...AIR_SCALE_IDS.map(value => ({ value, label: AIR_SCALES[value].name })),
     ],
-    'Automatic reads the scale from the sensor’s name, or else uses the US scale, which many services report worldwide.',
+    'Automatic looks for a scale in the sensor’s name and uses the US scale if it finds no match.',
   );
 function averagesFields(context: EditorContext): FormSchemaItem[] {
   return [
@@ -342,10 +348,12 @@ function averagesFields(context: EditorContext): FormSchemaItem[] {
       'Averages',
       [
         { value: 'none', label: 'None' },
-        { value: OPEN_METEO, label: 'Open-Meteo (1991–2020 normals)' },
-        { value: 'sensor', label: 'A temperature sensor’s history' },
+        { value: OPEN_METEO, label: 'Open-Meteo (1991–2020 averages)' },
+        { value: 'sensor', label: 'Temperature sensor history' },
       ],
-      'Today’s high against the normal, and how the last 30 days compare.',
+      context.localOnly
+        ? 'For local averages, choose a temperature sensor with at least two years of statistics.'
+        : 'Compare today’s high with the average for this date. Open-Meteo also compares precipitation totals for the past 30 days.',
     ),
     ...(context.averages === 'sensor'
       ? [
@@ -353,7 +361,7 @@ function averagesFields(context: EditorContext): FormSchemaItem[] {
             'averages_sensor',
             'Temperature sensor',
             { entity: { domain: SETTING_DOMAINS.averages } },
-            'Needs at least two years of long-term statistics.',
+            'Choose a sensor with at least two years of long-term statistics.',
           ),
         ]
       : []),
@@ -370,28 +378,36 @@ const lookSection = (
   compact: boolean,
   home: boolean,
 ): FormSchemaItem =>
-  section('Look', 'mdi:palette-outline', [
+  section('Appearance', 'mdi:palette-outline', [
     ...(home
       ? []
       : showName
         ? [
-            grid([flag('show_name', 'Place name'), text('name', 'Name', 'Instead of the weather entity’s name.')]),
+            grid([
+              flag('show_name', 'Show place name'),
+              text('name', 'Name', 'Leave blank to use the weather entity’s name.'),
+            ]),
             text(
               'place_name',
               'Town or city',
               layout === 'page'
-                ? 'Heads the page under Home Assistant’s name for your home, and names the map’s pin.'
-                : 'Replaces Name.',
+                ? 'Shown in the page heading and on the map pin for locations away from home.'
+                : 'If set, this takes priority over Name.',
             ),
           ]
         : [
-            flag('show_name', 'Place name'),
+            flag('show_name', 'Show place name'),
             ...(layout === 'page' && map !== 'none'
-              ? [text('place_name', 'Town or city', 'Names the map’s pin.')]
+              ? [text('place_name', 'Town or city', 'Labels the map pin for locations away from home.')]
               : []),
           ]),
     ...(sky
-      ? [grid([flag('weather_scene', 'Live sky'), flag('weather_animation', 'Animation', 'Off with reduced motion.')])]
+      ? [
+          grid([
+            flag('weather_scene', 'Live sky'),
+            flag('weather_animation', 'Animation', 'Animation pauses when your device uses reduced motion.'),
+          ]),
+        ]
       : [flag('weather_scene', 'Live sky')]),
     ...(compact || home || !sky || lowPower
       ? []
@@ -399,7 +415,7 @@ const lookSection = (
           flag(
             'glass_refraction',
             'Raindrop refraction',
-            'In rain, each drop on the panels bends the sky behind it. Off, the drops still run but stay plain, which is lighter to draw.',
+            'Raindrops bend the sky behind them. Turn this off for simpler drops that use less graphics power.',
           ),
         ]),
     ...(sky
@@ -407,7 +423,7 @@ const lookSection = (
           flag(
             'low_power',
             'Low power',
-            'For a wall tablet or an older screen: a softer sky, fewer frames and less rain and snow.',
+            'Draws fewer frames, raindrops and snowflakes to save power on an always-on display.',
           ),
         ]
       : []),
@@ -423,7 +439,7 @@ const lookSection = (
               { value: 'off', label: 'Off' },
             ],
             columns,
-            'The moon timeline ticks at each mark it passes, and a sheet’s menu at each sheet your held finger passes. Everything adds a tap when you switch views or days, read a chart or press a tile.',
+            'Moon timeline gives a light tap as you scroll the timeline or move through a detail menu. Everything adds feedback on charts, tiles and forecast controls.',
           ),
         ]),
   ]);
@@ -441,9 +457,9 @@ const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean)
     'Home view',
     'mdi:tablet-dashboard',
     [
-      grid([flag('show_high_low', 'High and low'), flag('show_clock', 'Clock')]),
+      grid([flag('show_high_low', 'Today’s high and low'), flag('show_clock', 'Clock')]),
       ...(sky
-        ? [flag('glass_refraction', 'Glass temperature', 'The temperature as glass that bends the sky behind it.')]
+        ? [flag('glass_refraction', 'Glass effect on temperature', 'The sky shows through the temperature digits.')]
         : []),
       ...(sky && glass
         ? [
@@ -457,7 +473,7 @@ const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean)
                 { value: 'clear', label: 'Clear' },
               ],
               columns,
-              'A stronger glass has a wider bevel and bends the sky further.',
+              'Stronger settings give the digits a wider edge and bend more of the sky behind them.',
             ),
           ]
         : []),
@@ -466,10 +482,10 @@ const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean)
         'Bottom row',
         [
           { value: 'days', label: 'Days ahead' },
-          { value: 'details', label: 'Readings now' },
+          { value: 'details', label: 'Current readings' },
         ],
         columns,
-        'The row along the foot starts here. A swipe across it turns to the other, and pressing a column opens its details.',
+        'Choose which row appears first. Swipe to switch rows or tap an item for details.',
       ),
       choice(
         'sheet_style',
@@ -480,13 +496,13 @@ const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean)
           { value: 'popover', label: 'Popover' },
         ],
         columns,
-        'Automatic slides a sheet up from the foot of the screen, and keeps it to the card once the card fills most of the screen.',
+        'Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.',
       ),
       field(
         'air_quality_entity',
         'Air quality index',
         { entity: { domain: SETTING_DOMAINS.air_quality_entity } },
-        'Joins the readings in the bottom row. Without one, the UV index takes its place.',
+        'Shows air quality in the bottom row. Leave blank to show the UV index when available.',
       ),
       ...(air ? [airScale()] : []),
     ],
@@ -559,7 +575,9 @@ function sourcesSection(
         readingOption(attribute),
         label,
         { entity: { domain: SETTING_DOMAINS.readings } },
-        missing.includes(attribute) ? 'Your weather entity doesn’t provide this.' : undefined,
+        missing.includes(attribute)
+          ? 'Your weather entity doesn’t report this reading. You can add a sensor here.'
+          : undefined,
       ),
     );
   return section(
@@ -570,13 +588,13 @@ function sourcesSection(
         'forecast_entity',
         'Forecast',
         { entity: { domain: SETTING_DOMAINS.forecast_entity } },
-        'Another weather entity, for forecasts and details yours lacks.',
+        'Choose a second weather entity to fill gaps in forecasts and current readings.',
       ),
       field(
         'condition_entity',
         'Condition',
         { entity: { domain: SETTING_DOMAINS.condition_entity } },
-        'Another weather entity, or a sensor whose state is a condition.',
+        'Choose an entity that reports a weather condition such as sunny or rainy.',
       ),
       ...(compact
         ? [
@@ -598,14 +616,14 @@ const advancedSection = (compact: boolean): FormSchemaItem =>
       'zone',
       'Location',
       { entity: { domain: SETTING_DOMAINS.zone } },
-      'A zone, for weather away from home: the sky, moon and map follow it. Set its time zone below.',
+      'Choose the Home Assistant zone for this forecast. The sky, moon and map use its coordinates.',
     ),
     text(
       'time_zone',
       'Time zone',
       compact
-        ? 'For the local clock and today’s high and low. Default: Home Assistant’s.'
-        : 'For the forecast’s hours and days, as an IANA name. Default: Home Assistant’s.',
+        ? 'Sets the local clock and the date for today’s high and low. Leave blank to use your profile’s time zone.'
+        : 'Use a time zone such as Europe/Paris for forecast dates and times. Leave blank to use your profile’s setting.',
     ),
   ]);
 
@@ -647,17 +665,17 @@ export function schemaFor(context: Partial<EditorContext> = {}, say: EditorText 
       ],
       2,
       full.layout === 'homeview'
-        ? 'Home view shows the time, a large temperature and a row of days or readings, for a screen read from across a room. The card keeps your settings for other layouts when you switch.'
+        ? 'A large temperature display and clock, with a four-day forecast or current readings along the bottom.'
         : full.layout === 'strip'
-          ? 'Strip shows current weather in one line. The card keeps your settings for other layouts when you switch.'
+          ? 'Current weather in one row. Wider cards also show today’s high and low.'
           : compact
-            ? 'Compact shows current weather only. The card keeps your settings for other layouts when you switch.'
-            : 'Automatic fits the card’s size. Full page adds alerts, tiles, averages and a map, and scrolls in place in a panel view.',
+            ? 'A small tile with the location, temperature, conditions and today’s high and low.'
+            : 'Automatic fits the space on your dashboard. Expanded shows hourly and daily forecasts. Full page adds alerts and detail tiles.',
     ),
     ...(home
       ? [homeSection(columnsFor(full.narrow), full), actionsSection(false)]
       : compact
-        ? [actionsSection(true), flag('show_high_low', 'High and low')]
+        ? [actionsSection(true), flag('show_high_low', 'Today’s high and low')]
         : [forecastSection(full)]),
     ...(full.layout === 'page'
       ? [pageSection(columnsFor(full.narrow)), servicesSection(full), sensorsSection(full)]

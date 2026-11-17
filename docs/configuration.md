@@ -5,7 +5,7 @@ Every option here is also in the visual editor, which writes only the settings t
 - [Card](#card)
 - [Forecast](#forecast)
 - [Full page](#full-page)
-- [Look](#look)
+- [Appearance](#appearance)
 - [Units](#units)
 - [Data sources](#data-sources)
 - [Advanced](#advanced)
@@ -53,7 +53,7 @@ These apply to the `page` layout.
 | `air_quality_entity` | none | A sensor reporting an air quality index. Without one, the `page` layout shows Open-Meteo's US index for the weather's place |
 | `air_quality_scale` | `auto` | The scale that sensor reports on: `auto`, `us`, `at`, `ca`, `cn`, `de`, `es`, `eu`, `fr`, `ie`, `in`, `kr`, `mx`, `sg` or `uk`. `auto` goes by the sensor's name, such as `aqhi` or `daqi`, and otherwise the US scale |
 | `averages` | none | `open-meteo`, or a temperature sensor whose long-term statistics cover at least two years. See [Averages](#averages). |
-| `local_only` | `false` | Ask no outside service, whatever else is set. See [Local only](#local-only). |
+| `local_only` | `false` | Turn off the built-in online services. Custom tile and overlay URLs still apply. See [Local only](#local-only). |
 | `open_meteo_forecast` | `true` | Fill what your entity's forecast leaves out. `false` never asks. See [Filling the forecast](#filling-the-forecast). |
 | `forecast_refresh_minutes` | `60` | Minutes between supplemental Open-Meteo forecast requests while visible: a whole number from 15 to 360. The browser's saved forecast uses the same interval. Does not change Home Assistant forecasts or the map's forecast grids. |
 | `radar_refresh_minutes` | `5` | Minutes between RainViewer frame checks while visible: a whole number from 1 to 60. Checking more often cannot make the provider publish new frames sooner. |
@@ -77,7 +77,9 @@ These apply to the `homeview` layout. See [The home view](#the-home-view).
 | `sheet_style` | `auto` | How a column opens its details. In this layout `auto` slides a sheet up from the foot of the screen, and once the card takes up at least 80% of the screen's width and height, as on a tablet it has to itself, the sheet covers the card exactly. `card` always keeps the sheet to the card, `sheet` always gives the screen's, and `popover` opens one beside the column. |
 | `air_quality_entity` | none | A sensor reporting an air quality index, shown among the readings |
 
-## Look
+<a id="look"></a>
+
+## Appearance
 
 | Option | Default | Description |
 |---|---|---|
@@ -268,7 +270,7 @@ Weather integrations send different things. Met.no gives 48 hours and 6 days, wi
 
 ## Local only
 
-`local_only: true` keeps the `page` layout inside Home Assistant, whatever else you set:
+Set `local_only: true` to turn off the built-in online services in the `page` layout.
 
 - `open_meteo_forecast` counts as `false`, so your entity's forecast stands alone, gaps and all.
 - `averages: open-meteo` stops, and the averages tile hides. An averages sensor keeps working.

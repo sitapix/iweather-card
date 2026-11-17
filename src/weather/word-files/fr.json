@@ -59,6 +59,7 @@
     "many": "Alertes en vigueur : {events}.",
     "other": "Alertes en vigueur : {events}."
   },
+  "An animated sky follows the local weather. See hourly forecasts and up to ten days of highs and lows.": "Le ciel animé suit la météo locale. Consultez les prévisions heure par heure et les maximales et minimales sur dix jours au plus.",
   "An odorless gas left by fuel that doesn’t burn completely, mostly in vehicle exhaust. Breathed in, it keeps the blood from carrying oxygen.": "Gaz inodore laissé par une combustion incomplète, surtout dans les gaz d’échappement. Inhalé, il empêche le sang de transporter l’oxygène.",
   "Assess the situation and take precautions if necessary.": "Évaluez la situation et prenez des précautions si nécessaire.",
   "Astronomical Twilight": "Crépuscule astronomique",
@@ -151,7 +152,6 @@
   "For {month}, the average daily low is {low}, and the average daily high is {high}.": "Pour {month}, le minimum quotidien moyen est de {low} et le maximum quotidien moyen de {high}.",
   "For {month}, the average total precipitation is {amount}.": "Pour {month}, le cumul moyen de précipitations est de {amount}.",
   "Forecast": "Prévisions",
-  "Forecast with live scenery, hourly conditions, precipitation and wind, and a 10-day outlook.": "Prévisions avec ciel animé, conditions horaires, précipitations et vent, et perspectives sur 10 jours.",
   "Forms near the ground when sunlight acts on pollution from vehicles and industry, so it climbs on hot, still afternoons. It irritates the airways.": "Se forme près du sol quand le soleil agit sur la pollution des véhicules et de l’industrie ; il augmente donc les après-midi chauds et calmes. Il irrite les voies respiratoires.",
   "France (IQA)": "France (IQA)",
   "Fresh breeze": "Bonne brise",

@@ -78,10 +78,7 @@ export class EditorSetup {
   update(say: EditorText, source: SetupSource, canUndo: boolean) {
     this.say = say;
     setText(this.summary, say('Quick setup'));
-    setText(
-      this.introduction,
-      say('Choose a starting point. Your sources, units, privacy and actions stay as they are.'),
-    );
+    setText(this.introduction, say('Choose a preset for this card. You can undo it until your next edit.'));
     for (const { title, description, preset } of this.options) {
       setText(title, say(preset.label));
       setText(description, say(preset.description));

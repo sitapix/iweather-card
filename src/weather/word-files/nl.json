@@ -55,6 +55,7 @@
     "one": "Waarschuwing van kracht: {events}.",
     "other": "Waarschuwingen van kracht: {events}."
   },
+  "An animated sky follows the local weather. See hourly forecasts and up to ten days of highs and lows.": "De geanimeerde lucht volgt het lokale weer. Bekijk de verwachting per uur en de hoogste en laagste temperaturen voor maximaal tien dagen.",
   "An odorless gas left by fuel that doesn’t burn completely, mostly in vehicle exhaust. Breathed in, it keeps the blood from carrying oxygen.": "Een reukloos gas dat ontstaat wanneer brandstof niet volledig verbrandt, vooral in uitlaatgassen van voertuigen. Ingeademd verhindert het dat het bloed zuurstof vervoert.",
   "Assess the situation and take precautions if necessary.": "Beoordeel de situatie en neem zo nodig voorzorgsmaatregelen.",
   "Astronomical Twilight": "Astronomische schemering",
@@ -147,7 +148,6 @@
   "For {month}, the average daily low is {low}, and the average daily high is {high}.": "Voor {month} is het gemiddelde dagminimum {low} en het gemiddelde dagmaximum {high}.",
   "For {month}, the average total precipitation is {amount}.": "Voor {month} is de gemiddelde totale neerslag {amount}.",
   "Forecast": "Verwachting",
-  "Forecast with live scenery, hourly conditions, precipitation and wind, and a 10-day outlook.": "Verwachting met een levendig decor, omstandigheden per uur, neerslag en wind, en een vooruitblik van 10 dagen.",
   "Forms near the ground when sunlight acts on pollution from vehicles and industry, so it climbs on hot, still afternoons. It irritates the airways.": "Ontstaat vlak bij de grond wanneer zonlicht inwerkt op vervuiling van voertuigen en industrie, en loopt daarom op tijdens hete, windstille middagen. Het irriteert de luchtwegen.",
   "France (IQA)": "Frankrijk (IQA)",
   "Fresh breeze": "Vrij krachtige wind",
