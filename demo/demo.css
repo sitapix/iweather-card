@@ -558,6 +558,17 @@ button:hover {
 .check:has(input:disabled) {
   opacity: 0.45;
 }
+/* The turn control where there is nothing to turn: greyed, unpressed, and still. */
+.turn:has(input:disabled) {
+  opacity: 0.4;
+}
+.turn input:disabled + span {
+  background: none;
+  box-shadow: none;
+  font-weight: inherit;
+  cursor: default;
+  transform: none;
+}
 
 /* The settings as YAML. */
 .settings {

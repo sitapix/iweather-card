@@ -150,8 +150,9 @@ test('the controls drive the card, and the settings and the address follow', asy
   );
   expect(new URLSearchParams(new URL(demo.url()).hash.slice(1)).get('weather')).toBe('clear');
 
-  // Only the page layout shows an alert, so no other offers one.
-  await expect(demo.locator('input[name=alert]')).toBeHidden();
+  // Only the page layout shows an alert or a screen on its side, so elsewhere both stand greyed.
+  await expect(demo.locator('input[name=alert]')).toBeDisabled();
+  await expect(demo.locator('input[name=turned]')).toBeDisabled();
 });
 
 test('a scene in the address opens as it was left', async ({ demo }) => {

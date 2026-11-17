@@ -146,12 +146,10 @@ const form = query('form.controls', HTMLFormElement),
   status = query('.real-status', HTMLParagraphElement),
   places = query('ul.places', HTMLUListElement),
   real = query('fieldset.real', HTMLFieldSetElement),
-  alertLabel = query('label.check', HTMLLabelElement),
   here = query('button.here', HTMLButtonElement),
   search = query('input[name=place]', HTMLInputElement),
   alertBox = query('input[name=alert]', HTMLInputElement),
   turnBox = query('input[name=turned]', HTMLInputElement),
-  turn = query('.turn', HTMLDivElement),
   copy = query('button.copy', HTMLButtonElement),
   copyFeedback = query('.copy-feedback', HTMLElement);
 
@@ -243,14 +241,14 @@ function render(): void {
   stage.dataset['screen'] = choices.screen;
   stage.dataset['layout'] = choices.layout;
   const turns = choices.layout === 'page' && choices.screen !== 'desktop';
-  turn.hidden = !turns;
+  // Greyed where it does nothing, and still in its place, so the bar holds its shape.
+  turnBox.disabled = !turns;
   stage.dataset['turned'] = String(turns && choices.turned);
   document.documentElement.dataset['theme'] = choices.theme;
   clock.value = live ? 'Now' : clockFormat.format(Date.UTC(2000, 0, 1, choices.hour));
   hourInput.setAttribute('aria-valuetext', clock.value);
   // Only the page layout shows alerts.
   alertBox.disabled = choices.layout !== 'page';
-  alertLabel.hidden = alertBox.disabled;
   form.dataset['live'] = String(live !== undefined);
   const which = form.elements.namedItem('source');
   if (which instanceof RadioNodeList) which.value = source;
