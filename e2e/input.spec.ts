@@ -465,6 +465,31 @@ test.describe('the map', () => {
   });
 });
 
+test('an embedded forecast can pass a wheel scroll to the page at either end', async ({ card, page }) => {
+  await card.evaluate(host => {
+    if (host instanceof HTMLElement) host.style.setProperty('--iweather-height', '420px');
+    document.body.style.minHeight = '200vh';
+  });
+  const forecast = card.locator('.weather[data-scroll=true] .weather-content');
+  await expect(forecast).toHaveCSS('overscroll-behavior-y', 'contain');
+  await card.evaluate(host => {
+    if (host instanceof HTMLElement) host.style.setProperty('--iweather-page-overscroll-y', 'auto');
+  });
+  await forecast.evaluate(el => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await forecast.hover();
+  await page.mouse.wheel(0, 80);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
+
+  const before = await page.evaluate(() => scrollY);
+  await forecast.evaluate(el => {
+    el.scrollTop = 0;
+  });
+  await page.mouse.wheel(0, -80);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(before);
+});
+
 test.describe('a page scrolling in place on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
   test.skip(({ isMobile }) => isMobile, 'The phone has its own engine here: this one runs in all three.');

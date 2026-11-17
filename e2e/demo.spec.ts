@@ -175,6 +175,20 @@ test('a scene in the address opens as it was left', async ({ demo }) => {
   await expect(demo.locator('output[name=clock]')).toHaveText('9 AM');
 });
 
+test('scrolling over the desktop settings moves the page', async ({ demo, isMobile }) => {
+  test.skip(isMobile, 'Requires a desktop pointer.');
+  await demo.setViewportSize({ width: 1280, height: 640 });
+  await demo.goto(`${SITE}/#layout=strip&language=en`);
+  const controls = demo.getByRole('form', { name: 'Preview settings' });
+  await controls.getByText('Display options', { exact: true }).click();
+  expect(await controls.evaluate(form => form.scrollHeight - form.clientHeight)).toBe(0);
+  await controls.getByRole('radiogroup', { name: 'Card layout' }).hover();
+  const before = await demo.evaluate(() => scrollY);
+  await demo.mouse.wheel(0, 240);
+  await expect.poll(() => demo.evaluate(() => scrollY)).toBeGreaterThan(before);
+  await expect(controls).toHaveJSProperty('scrollTop', 0);
+});
+
 test('the compact pickers and desktop controls share the same scene', async ({ demo }) => {
   await demo.setViewportSize({ width: 390, height: 844 });
   await demo.goto(`${SITE}/#layout=expanded&weather=fog&language=en`);
