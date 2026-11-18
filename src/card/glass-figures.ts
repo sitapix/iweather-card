@@ -3,8 +3,9 @@ import { context2d } from '../lib/canvas.ts';
 import type { GlassStrength } from './config.ts';
 
 // The home view's temperature as glass in the shape of its figures: the sky behind each figure is
-// bent by a bevelled height field built from the figure itself, lifted toward white, and lit along
-// its rim. It is drawn over the words it stands for, which stay in the page for whoever can't see
+// bent by a rounded height field built from the figure itself, lifted toward white, and lit along
+// its rim, which mirrors the sky's light where it turns from the eye and carries a small glint. The
+// glass throws a soft shadow on the sky. It is drawn over the words it stands for, which stay in the page for whoever can't see
 // it, and which show as they are wherever WebGL isn't to be had.
 const VERTEX = `
 attribute vec2 a_position;
@@ -32,6 +33,16 @@ vec3 backdrop(vec2 px) {
   return texture2D(u_background, clamp((u_origin + px) / u_backgroundSize, 0.0, 1.0)).rgb;
 }
 
+// How dark the shadow is and how many slope spans it falls from the glass; how far the surface
+// leans for a given slope; how much of the sky's light the turned rim mirrors; and the glint's
+// strength and tightness.
+const float SHADOW = 0.2;
+const float SHADOW_REACH = 2.5;
+const float LEAN = 1.3;
+const float FRESNEL = 0.45;
+const float GLINT = 0.55;
+const float GLINT_TIGHT = 48.0;
+
 float tall(vec2 texels) {
   return texture2D(u_shape, v_uv + texels * u_texel).g;
 }
@@ -43,7 +54,9 @@ vec2 rise(float span) {
 void main() {
   vec4 shape = texture2D(u_shape, v_uv);
   float mask = shape.r;
-  if (mask < 0.004) { gl_FragColor = vec4(0.0); return; }
+  // The glass's shadow on the sky: its own shape, soft, a little down and to the right of it.
+  float shade = SHADOW * smoothstep(0.05, 0.85, tall(-SHADOW_REACH * u_span * vec2(0.6, 0.8)));
+  if (mask < 0.004) { gl_FragColor = vec4(0.0, 0.0, 0.0, shade); return; }
   // The green channel is the figure blurred by the bevel's width: half at the rim, 1 deep inside.
   // It holds 256 levels, and a slope taken between neighbouring texels shows each step of them as
   // a crease: it is taken across a span of texels, at two widths, and the height from five taps.
@@ -65,7 +78,15 @@ void main() {
   vec2 light = normalize(vec2(-0.6, -0.8));
   float facing = dot(normalize(slope + 1e-5), light);
   color += vec3(1.0) * u_rim * pow(edge, 1.6) * (0.5 * max(facing, 0.0) + 0.18 * max(-facing, 0.0));
-  gl_FragColor = vec4(clamp(color, 0.0, 1.0) * mask, mask);
+  // The surface as it faces the eye: it leans out over the rim and lies level across the middle.
+  vec3 normal = normalize(vec3(-slope * LEAN, 1.0));
+  // Glass turned from the eye mirrors the sky's light, not what is behind it.
+  color = mix(color, vec3(1.0), FRESNEL * min(1.0, u_rim) * pow(1.0 - normal.z, 2.5));
+  // And a small sharp glint where it faces the light, on the rim the bright one is opposite.
+  vec3 lamp = normalize(vec3(-light * 0.75, 0.66));
+  float glint = pow(max(dot(normal, normalize(lamp + vec3(0.0, 0.0, 1.0))), 0.0), GLINT_TIGHT);
+  color += vec3(1.0) * GLINT * u_rim * glint * smoothstep(0.02, 0.2, edge);
+  gl_FragColor = vec4(clamp(color, 0.0, 1.0) * mask, mask + shade * (1.0 - mask));
 }`;
 // The canvas reaches a bevel and a half past the figures, and the height field is the figures
 // blurred by .55 of the bevel. Past two device pixels to one there is nothing more to see.
