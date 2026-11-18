@@ -171,6 +171,8 @@ export function sceneInputs(
         : located
           ? solarElevation(now + MINUTE, latitude, longitude) > (elevation ?? 0)
           : true;
+  const ahead = (time: number) => finite(time) && time >= now && time - now <= DAY,
+    told = ahead(parse('next_rising')) && ahead(parse('next_setting'));
   const moonHour = finite(moonNow) && moonNow > 0 ? moonHourAt(now, location.latitude, location.longitude) : undefined;
   return {
     ...sceneCondition(state, sun),
@@ -180,8 +182,10 @@ export function sceneInputs(
     solarHour: solarHour(now, {
       nextRising: parse('next_rising'),
       nextSetting: parse('next_setting'),
-      sunrise: events?.sunrise ?? undefined,
-      sunset: events?.sunset ?? undefined,
+      // A sun entity that tells its next rising and setting leads: the place's own crossings stand
+      // in only without them.
+      sunrise: told ? undefined : (events?.sunrise ?? undefined),
+      sunset: told ? undefined : (events?.sunset ?? undefined),
       elevation,
       rising,
     }),

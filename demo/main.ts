@@ -1,9 +1,12 @@
 import { languageOf } from '../src/weather/language.ts';
 import type { WeatherLayout } from '../src/card/config.ts';
+import type { CloudAltitude } from '../src/card/home-assistant.ts';
 import { House } from './house.ts';
 import { type Place, findPlaces, liveWeather } from './live.ts';
 import { SYMBOLS, type SymbolName } from '../src/weather/symbols.ts';
 import {
+  CLOUD_HEIGHTS,
+  DEFAULT_CLOUDS,
   DEFAULT_WEATHER,
   LANGUAGES,
   type Theme,
@@ -11,6 +14,7 @@ import {
   WEATHERS,
   type World,
   cardSettings,
+  hasCloudHeight,
   sampleWorld,
   weatherById,
   withAlert,
@@ -34,6 +38,7 @@ const OPENING_HOUR = 13;
 const WEATHER_SYMBOLS: Readonly<Record<string, readonly SymbolName[]>> = {
   clear: ['sun'],
   'partly-cloudy': ['cloud-sun'],
+  'mostly-cloudy': ['cloud-sun'],
   cloudy: ['cloud'],
   fog: ['fog'],
   rain: ['rain'],
@@ -55,6 +60,8 @@ const LOCATION_WAIT = 15 * 1000;
 interface Choices {
   weather: string;
   hour: number;
+  // How high the clouds stand, for a weather whose sky differs by it.
+  clouds: CloudAltitude;
   layout: WeatherLayout;
   screen: Screen;
   // A phone or tablet on its side, which only the page layout, a whole screen, shows.
@@ -83,6 +90,7 @@ function opening(): Choices {
   return {
     weather: DEFAULT_WEATHER,
     hour: OPENING_HOUR,
+    clouds: DEFAULT_CLOUDS,
     layout: 'page',
     // The default fills the preview as the window resizes. Phone and tablet widths are opt-in.
     screen: 'desktop',
@@ -102,6 +110,11 @@ function fromHash(hash: string): Choices {
   return {
     weather: weatherById(params.get('weather') ?? OPENING.weather).id,
     hour: Number.isInteger(hour) && hour >= 0 && hour < HOURS ? hour : OPENING.hour,
+    clouds: oneOf(
+      CLOUD_HEIGHTS.map(([height]) => height),
+      params.get('clouds'),
+      OPENING.clouds,
+    ),
     layout: oneOf(LAYOUTS, params.get('layout'), OPENING.layout),
     screen: oneOf(SCREENS, params.get('screen'), OPENING.screen),
     turned: params.get('turned') === 'on',
@@ -118,6 +131,7 @@ function fromHash(hash: string): Choices {
 const KEYS = [
   'weather',
   'hour',
+  'clouds',
   'layout',
   'screen',
   'turned',
@@ -145,6 +159,7 @@ const form = query('form.controls', HTMLFormElement),
   status = query('.real-status', HTMLParagraphElement),
   places = query('ul.places', HTMLUListElement),
   real = query('fieldset.real', HTMLFieldSetElement),
+  heights = query('fieldset.clouds', HTMLFieldSetElement),
   here = query('button.here', HTMLButtonElement),
   search = query('input[name=place]', HTMLInputElement),
   alertBox = query('input[name=alert]', HTMLInputElement),
@@ -163,6 +178,9 @@ query('[data-name=weather]', HTMLDivElement).innerHTML = WEATHERS.map(
     )
       .map(name => SYMBOLS[name])
       .join('')}</i>${weather.label}</span></label>`,
+).join('');
+query('[data-name=clouds]', HTMLDivElement).innerHTML = CLOUD_HEIGHTS.map(
+  ([height, label]) => `<label><input type="radio" name="clouds" value="${height}"><span>${label}</span></label>`,
 ).join('');
 query('select[name=language]', HTMLSelectElement).innerHTML = LANGUAGES.map(
   ([language, name]) => `<option value="${language}" lang="${language}">${name}</option>`,
@@ -201,6 +219,7 @@ function read(): Choices {
       // Disabled sample controls still supply the scene to restore after showing real weather.
       weather: weather instanceof RadioNodeList ? weather.value : field('weather'),
       hour: hourInput.value,
+      clouds: field('clouds'),
       layout: field('layout'),
       screen: field('screen'),
       turned: turnBox.checked ? 'on' : 'off',
@@ -214,24 +233,28 @@ function read(): Choices {
 
 // --- The card ------------------------------------------------------------------------------
 let house: House | undefined;
-let sampleScene: { weather: string; hour: number; units: Units; minute: number; world: World } | undefined;
+let sampleScene:
+  | { weather: string; hour: number; clouds: CloudAltitude; units: Units; minute: number; world: World }
+  | undefined;
 
 // Presentation controls don't change the sample forecast. Keep it until its inputs or clock change.
-function sampleFor({ weather, hour, units }: Choices, now: number): World {
+function sampleFor({ weather, hour, clouds, units }: Choices, now: number): World {
   const minute = Math.floor(now / MINUTE);
   if (
     !sampleScene ||
     sampleScene.weather !== weather ||
     sampleScene.hour !== hour ||
+    sampleScene.clouds !== clouds ||
     sampleScene.units !== units ||
     sampleScene.minute !== minute
   )
     sampleScene = {
       weather,
       hour,
+      clouds,
       units,
       minute,
-      world: sampleWorld({ weather: weatherById(weather), hour, units }, now),
+      world: sampleWorld({ weather: weatherById(weather), hour, units, clouds }, now),
     };
   return sampleScene.world;
 }
@@ -274,6 +297,9 @@ function render(): void {
     fieldset.disabled = live !== undefined;
     fieldset.hidden = source === 'real';
   }
+  // Offered only for a weather whose sky differs by it.
+  heights.disabled = live !== undefined;
+  heights.hidden = source === 'real' || !hasCloudHeight(weatherById(choices.weather));
   history.replaceState(null, '', toHash(choices) || `${location.pathname}${location.search}`);
 
   const settings = cardSettings(choices),

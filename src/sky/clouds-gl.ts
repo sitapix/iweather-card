@@ -1,3 +1,4 @@
+import { KNEE } from './tone.ts';
 import { cloudAtlasWidth, cloudAtlasHeight, spriteRect } from './clouds.ts';
 import { type CloudAtlas, type Direction, type Tint, decode, lightWeights } from './cloud-decks.ts';
 import { context2d } from '../lib/canvas.ts';
@@ -17,6 +18,8 @@ export interface CloudDraw {
   ambient: Tint;
   fill?: Tint;
   opacity?: number;
+  // How much of the film's curve its light takes (see tone.ts).
+  tone?: number;
   alpha: number;
 }
 
@@ -43,6 +46,7 @@ uniform vec3 uSun;
 uniform vec3 uFill;
 uniform vec3 uAmbient;
 uniform float uOpacity;
+uniform float uTone;
 uniform float uAlpha;
 in vec2 vUv;
 out vec4 color;
@@ -57,7 +61,12 @@ void main() {
   vec3 minus = vec3(layer(at, 1.), layer(at, 3.), layer(at, 5.));
   float direct = dot(plus, uPlus) + dot(minus, uMinus);
   float opposite = dot(plus, uMinus) + dot(minus, uPlus);
-  vec3 pigment = uSun * direct + uFill * opposite + uAmbient;
+  vec3 light = uSun * direct + uFill * opposite + uAmbient;
+  // Past the knee each colour rolls off toward full, as far as this sky takes it (see tone.ts):
+  // the colour as it shows on a whole cloud, which the deck's opacity then thins.
+  vec3 whole = light / max(uOpacity, .001);
+  vec3 rolled = ${KNEE} + ${1 - KNEE} * (1. - exp(-(whole - ${KNEE}) / ${1 - KNEE}));
+  vec3 pigment = mix(light, mix(whole, rolled, step(${KNEE}, whole)) * uOpacity, uTone);
   float alpha = cover * uOpacity * uAlpha;
   color = vec4(clamp(pigment * cover * uAlpha, 0., alpha), alpha);
 }`;
@@ -73,6 +82,7 @@ type Uniform =
   | 'uFill'
   | 'uAmbient'
   | 'uOpacity'
+  | 'uTone'
   | 'uAlpha';
 const PLANES = 7;
 const CHANNEL = 255;
@@ -131,6 +141,7 @@ export class CloudPainter {
         uAmbient: at('uAmbient'),
         uFill: at('uFill'),
         uOpacity: at('uOpacity'),
+        uTone: at('uTone'),
         uAlpha: at('uAlpha'),
       };
     // The seven planes keep the decoded data channels, including their faintest opacity.
@@ -224,6 +235,7 @@ export class CloudPainter {
       gl.uniform3f(u.uAmbient, (ar * ai) / CHANNEL, (ag * ai) / CHANNEL, (ab * ai) / CHANNEL);
       gl.uniform3f(u.uFill, (fr * fi) / CHANNEL, (fg * fi) / CHANNEL, (fb * fi) / CHANNEL);
       gl.uniform1f(u.uOpacity, Math.min(1, Math.max(0, cloud.opacity ?? 1)));
+      gl.uniform1f(u.uTone, Math.min(1, Math.max(0, cloud.tone ?? 0)));
       gl.uniform1f(u.uAlpha, Math.min(1, Math.max(0, cloud.alpha)));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }

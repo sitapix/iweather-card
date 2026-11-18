@@ -1041,7 +1041,7 @@ test('times follow the zone the user’s profile picks, unless the card sets its
 test('a new dashboard can start as the weather alone, on the first weather entity or the one named', async () => {
   const entry = window.customStrategies?.find(strategy => strategy.type === 'iweather');
   expect(entry?.strategyType).toBe('dashboard');
-  expect(entry?.description).toMatch(/Forecast/u);
+  expect(entry?.description).toContain('hourly forecasts');
   const element = customElements.get('ll-strategy-dashboard-iweather');
   if (!element) throw new Error('No strategy.');
   const { WeatherDashboardStrategy } = await import('../src/card/strategy.ts');
