@@ -13,6 +13,7 @@
     <a class="brand" href="../"><img src="../sun.png?no-inline" width="24" height="24" alt="">iWeather Card</a>
     <nav aria-label="Site navigation">
       <a href="../">Try the demo</a>
+      <a href="../docs/configuration/">Docs</a>
       <a href="https://github.com/sitapix/iweather-card">GitHub</a>
     </nav>
   </header>
@@ -71,13 +72,13 @@ map: rainviewer</code></pre>
 
     <h2 id="online">Online data and privacy</h2>
     <p>Full page can send the forecast location to Open-Meteo for missing readings, air quality and climate averages. In the US, it can also fetch alerts from the National Weather Service. The online map requests radar, forecasts and map tiles for the area in view. Your browser contacts these services directly. The other layouts get their weather from Home Assistant.</p>
-    <p>Set <code>local_only: true</code> to turn off the built-in online services. To show a map in this mode, supply a base map with <code>map_tile_url</code>. Use local servers for both the base map and any <code>map_layers</code> overlays to keep tile requests on your network. <a href="https://github.com/sitapix/iweather-card#what-leaves-your-browser">See which services receive location data</a>.</p>
+    <p>Set <code>local_only: true</code> to turn off the built-in online services. To show a map in this mode, supply a base map with <code>map_tile_url</code>. Use local servers for both the base map and any <code>map_layers</code> overlays to keep tile requests on your network. <a href="../docs/privacy/">See which services receive location data</a>.</p>
 
     <h2 id="more">Configuration and support</h2>
     <ul>
-      <li><a href="https://github.com/sitapix/iweather-card/blob/main/docs/examples.md">Example dashboard configurations</a></li>
-      <li><a href="https://github.com/sitapix/iweather-card/blob/main/docs/configuration.md">All options and defaults</a></li>
-      <li><a href="https://github.com/sitapix/iweather-card#detail-tiles">Data sources for each tile</a></li>
+      <li><a href="../docs/examples/">Example dashboard configurations</a></li>
+      <li><a href="../docs/configuration/">All options and defaults</a></li>
+      <li><a href="../docs/tiles/">Data sources for each tile</a></li>
       <li>Include your weather integration when you <a href="https://github.com/sitapix/iweather-card/issues">report a bug</a>.</li>
     </ul>
   </main>
