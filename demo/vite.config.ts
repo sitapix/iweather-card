@@ -2,6 +2,7 @@ import { copyFileSync, existsSync, readFileSync, readdirSync, writeFileSync } fr
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
+import { DOCS, docPages } from './docs.ts';
 
 // `pnpm demo`: the demo's pages in _site/, ready for any static host, with the card beside them as
 // it ships, from dist/ (built first). The demo omits the source map and the line that points to it.
@@ -33,13 +34,19 @@ export const demoConfig = (dist: string, site: string) =>
     root: here('.'),
     base: './',
     publicDir: false,
-    plugins: [shippedCard(dist, site)],
+    plugins: [docPages(), shippedCard(dist, site)],
     build: {
       outDir: site,
       emptyOutDir: true,
       target: 'es2022',
       modulePreload: false,
-      rolldownOptions: { input: { index: here('index.html'), setup: here('setup/index.html') } },
+      rolldownOptions: {
+        input: {
+          index: here('index.html'),
+          setup: here('setup/index.html'),
+          ...Object.fromEntries(DOCS.map(page => [`docs-${page.slug}`, here(`docs/${page.slug}/index.html`)])),
+        },
+      },
     },
   });
 
