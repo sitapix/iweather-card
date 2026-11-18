@@ -8,7 +8,8 @@ import {
   WEATHER_CONDITIONS,
   type WeatherCondition,
 } from '../src/card/home-assistant.ts';
-import type { WeatherLayout } from '../src/card/config.ts';
+import type { GlassStrength, WeatherLayout } from '../src/card/config.ts';
+import { GLASS_DEFAULTS } from '../src/card/glass-options.ts';
 import { DAY, HOUR } from '../src/lib/time.ts';
 import { zoneAt } from './scene-clock.ts';
 
@@ -647,18 +648,29 @@ export function withAlert(world: World, alert: boolean, now: number): World {
 export interface Choices {
   layout: WeatherLayout;
   alert: boolean;
+  glass?: boolean;
+  strength?: GlassStrength;
 }
-export type CardSettings = Readonly<Record<string, string | readonly string[]>>;
+export type CardSettings = Readonly<Record<string, string | boolean | readonly string[]>>;
 
 // The settings the card is given, which are the ones shown as YAML. The page layout shows what the
 // online services add, and alerts when there are some.
-export function cardSettings({ layout, alert }: Choices): CardSettings {
+export function cardSettings({
+  layout,
+  alert,
+  glass = GLASS_DEFAULTS.glass_refraction,
+  strength = GLASS_DEFAULTS.glass_strength,
+}: Choices): CardSettings {
   return {
     type: CARD_TYPE,
     entity: ENTITY,
     ...(layout === 'auto' ? {} : { weather_layout: layout }),
     ...(layout === 'page' ? { map: 'rainviewer', averages: 'open-meteo' } : {}),
     ...(layout === 'page' && alert ? { alert_entities: [ALERTS] } : {}),
+    ...(layout === 'homeview' && glass !== GLASS_DEFAULTS.glass_refraction ? { glass_refraction: glass } : {}),
+    ...(layout === 'homeview' && glass && strength !== GLASS_DEFAULTS.glass_strength
+      ? { glass_strength: strength }
+      : {}),
   };
 }
 
@@ -666,7 +678,7 @@ export function cardSettings({ layout, alert }: Choices): CardSettings {
 export function yaml(settings: CardSettings): string {
   return Object.entries(settings)
     .map(([key, value]) =>
-      typeof value === 'string' ? `${key}: ${value}` : `${key}:\n${value.map(item => `  - ${item}`).join('\n')}`,
+      typeof value === 'object' ? `${key}:\n${value.map(item => `  - ${item}`).join('\n')}` : `${key}: ${value}`,
     )
     .join('\n');
 }

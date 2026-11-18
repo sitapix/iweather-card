@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'vitest';
+import { parse } from 'yaml';
 import { normalizeConfig } from '../src/card/config.ts';
 import { House } from '../demo/house.ts';
 import { sceneInputs } from '../src/weather/conditions.ts';
@@ -139,6 +140,27 @@ test('the settings shown are the ones the card takes, and read as YAML', () => {
   for (const layout of ['page', 'expanded', 'auto', 'homeview', 'compact', 'strip'] as const) {
     const settings = cardSettings({ layout, alert: true });
     assert.equal(normalizeConfig(settings).weather_layout, layout);
+  }
+});
+
+test('Home view exports glass settings that reproduce the preview in Home Assistant', () => {
+  for (const strength of ['subtle', 'standard', 'strong', 'clear'] as const) {
+    const settings = cardSettings({ layout: 'homeview', alert: false, glass: true, strength }),
+      parsed: unknown = parse(yaml(settings)),
+      config = normalizeConfig(parsed);
+    assert.deepEqual(parsed, settings);
+    assert.equal(config.glass_refraction, true);
+    assert.equal(config.glass_strength, strength);
+    assert.equal('glass_strength' in settings, strength !== 'standard');
+  }
+  const off = cardSettings({ layout: 'homeview', alert: false, glass: false, strength: 'strong' }),
+    parsed: unknown = parse(yaml(off));
+  assert.equal(normalizeConfig(parsed).glass_refraction, false);
+  assert.equal('glass_strength' in off, false);
+  for (const layout of ['page', 'expanded', 'auto', 'compact', 'strip'] as const) {
+    const defaults = cardSettings({ layout, alert: false });
+    for (const glass of [true, false])
+      assert.deepEqual(cardSettings({ layout, alert: false, glass, strength: 'clear' }), defaults);
   }
 });
 

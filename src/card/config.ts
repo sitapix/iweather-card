@@ -1,3 +1,4 @@
+import { GLASS_DEFAULTS, GLASS_STRENGTHS } from './glass-options.ts';
 import { WEATHER_DEFAULTS } from '../weather/conditions.ts';
 import { TILES, isTile, type TileId } from '../cards/ids.ts';
 import { UNIT_CHOICES, UNIT_DEFAULTS, UNIT_KIND_NAMES, type UnitKind } from '../weather/units.ts';
@@ -56,9 +57,6 @@ const WEATHER_MODES = ['auto', 'conditions', 'rain', 'wind'] as const;
 const WEATHER_LAYOUTS = ['auto', 'compact', 'strip', 'homeview', 'expanded', 'page'] as const;
 // What the home view's foot opens on: the days ahead, or the readings now. A swipe turns it to the other.
 const HOMEVIEW_ROWS = ['days', 'details'] as const;
-// How deep the home view's glass temperature is cut, and how far it bends the sky; clear is cut
-// as deep as strong, and left without the white that the others are lifted by.
-const GLASS_STRENGTHS = ['subtle', 'standard', 'strong', 'clear'] as const;
 // How large the full page draws: standard, or larger for a screen seen from across a room.
 const PAGE_SIZES = ['standard', 'large', 'extra_large'] as const;
 // A sheet from the foot of the screen, one that covers the card and no more, or a popover.
@@ -128,8 +126,7 @@ export const CONFIG_DEFAULTS = Object.freeze({
   // The home view's clock, and what its foot opens on.
   show_clock: true,
   homeview_row: 'days',
-  glass_strength: 'standard',
-  glass_refraction: true,
+  ...GLASS_DEFAULTS,
   // The card's own wind map moves before it is opened.
   map_wind_animation: true,
   map_precipitation_animation: true,
@@ -245,7 +242,7 @@ export function normalizeConfig(saved: unknown): CardConfig {
     weather_mode: 'auto',
     weather_layout: 'auto',
     homeview_row: 'days',
-    glass_strength: 'standard',
+    glass_strength: CONFIG_DEFAULTS.glass_strength,
     size: 'standard',
     top_padding: CONFIG_DEFAULTS.top_padding,
     sheet_style: 'auto',

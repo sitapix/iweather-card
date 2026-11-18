@@ -1,5 +1,6 @@
 import { languageOf } from '../src/weather/language.ts';
-import type { WeatherLayout } from '../src/card/config.ts';
+import type { GlassStrength, WeatherLayout } from '../src/card/config.ts';
+import { GLASS_DEFAULTS, GLASS_OPTIONS, GLASS_STRENGTHS } from '../src/card/glass-options.ts';
 import type { CloudAltitude } from '../src/card/home-assistant.ts';
 import { House } from './house.ts';
 import { type Place, findPlaces, liveWeather } from './live.ts';
@@ -63,6 +64,8 @@ interface Choices {
   // How high the clouds stand, for a weather whose sky differs by it.
   clouds: CloudAltitude;
   layout: WeatherLayout;
+  glass: boolean;
+  strength: GlassStrength;
   screen: Screen;
   // A phone or tablet on its side, which only the page layout, a whole screen, shows.
   turned: boolean;
@@ -92,6 +95,8 @@ function opening(): Choices {
     hour: OPENING_HOUR,
     clouds: DEFAULT_CLOUDS,
     layout: 'page',
+    glass: GLASS_DEFAULTS.glass_refraction,
+    strength: GLASS_DEFAULTS.glass_strength,
     // The default fills the preview as the window resizes. Phone and tablet widths are opt-in.
     screen: 'desktop',
     turned: false,
@@ -106,7 +111,9 @@ const OPENING = opening();
 // The choices in a hash, each one checked, and the choices as one: only those not the opening's.
 function fromHash(hash: string): Choices {
   const params = new URLSearchParams(hash.replace(/^#/, '')),
-    hour = Number(params.get('hour') ?? OPENING.hour);
+    hour = Number(params.get('hour') ?? OPENING.hour),
+    flag = (key: 'glass' | 'turned' | 'alert') =>
+      oneOf(['on', 'off'], params.get(key), OPENING[key] ? 'on' : 'off') === 'on';
   return {
     weather: weatherById(params.get('weather') ?? OPENING.weather).id,
     hour: Number.isInteger(hour) && hour >= 0 && hour < HOURS ? hour : OPENING.hour,
@@ -116,8 +123,10 @@ function fromHash(hash: string): Choices {
       OPENING.clouds,
     ),
     layout: oneOf(LAYOUTS, params.get('layout'), OPENING.layout),
+    glass: flag('glass'),
+    strength: oneOf(GLASS_STRENGTHS, params.get('strength'), OPENING.strength),
     screen: oneOf(SCREENS, params.get('screen'), OPENING.screen),
-    turned: params.get('turned') === 'on',
+    turned: flag('turned'),
     units: oneOf(UNIT_CHOICES, params.get('units'), OPENING.units),
     theme: oneOf(THEMES, params.get('theme'), OPENING.theme),
     language: oneOf(
@@ -125,7 +134,7 @@ function fromHash(hash: string): Choices {
       params.get('language'),
       OPENING.language,
     ),
-    alert: params.get('alert') === 'on',
+    alert: flag('alert'),
   };
 }
 const KEYS = [
@@ -133,6 +142,8 @@ const KEYS = [
   'hour',
   'clouds',
   'layout',
+  'glass',
+  'strength',
   'screen',
   'turned',
   'units',
@@ -160,6 +171,9 @@ const form = query('form.controls', HTMLFormElement),
   places = query('ul.places', HTMLUListElement),
   real = query('fieldset.real', HTMLFieldSetElement),
   heights = query('fieldset.clouds', HTMLFieldSetElement),
+  homeGlass = query('.home-glass', HTMLDivElement),
+  glassBox = query('input[name=glass]', HTMLInputElement),
+  glassStrength = query('fieldset.glass-strength', HTMLFieldSetElement),
   here = query('button.here', HTMLButtonElement),
   search = query('input[name=place]', HTMLInputElement),
   alertBox = query('input[name=alert]', HTMLInputElement),
@@ -170,7 +184,10 @@ const form = query('form.controls', HTMLFormElement),
   copy = query('button.copy', HTMLButtonElement),
   copyFeedback = query('.copy-feedback', HTMLElement);
 
-// The controls, from the sample's weathers and the card's languages.
+// The controls, from the sample weather and the card's glass options and languages.
+query('[data-name=strength]', HTMLDivElement).innerHTML = GLASS_OPTIONS.map(
+  ({ value, label }) => `<label><input type="radio" name="strength" value="${value}"><span>${label}</span></label>`,
+).join('');
 query('[data-name=weather]', HTMLDivElement).innerHTML = WEATHERS.map(
   weather =>
     `<label><input type="radio" name="weather" value="${weather.id}"><span><i aria-hidden="true">${(
@@ -221,6 +238,8 @@ function read(): Choices {
       hour: hourInput.value,
       clouds: field('clouds'),
       layout: field('layout'),
+      glass: glassBox.checked ? 'on' : 'off',
+      strength: field('strength'),
       screen: field('screen'),
       turned: turnBox.checked ? 'on' : 'off',
       units: field('units'),
@@ -281,6 +300,8 @@ function render(): void {
   for (const { name, picker } of compactPickers) picker.value = choices[name];
   stage.dataset['screen'] = choices.screen;
   stage.dataset['layout'] = choices.layout;
+  homeGlass.hidden = choices.layout !== 'homeview';
+  glassStrength.hidden = !choices.glass;
   const turns = choices.layout === 'page' && choices.screen !== 'desktop';
   turnBox.disabled = !turns;
   stage.dataset['turned'] = String(turns && choices.turned);

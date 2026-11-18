@@ -167,6 +167,39 @@ test('the controls drive the card, and the settings and the address follow', asy
   await expect(demo.locator('input[name=turned]')).toBeDisabled();
 });
 
+test('Home view glass updates the preview and YAML and survives sharing a scene', async ({ demo }) => {
+  await demo.goto(`${SITE}/#layout=homeview&language=en`);
+  const toggle = demo.getByRole('checkbox', { name: 'Glass effect on temperature' }),
+    strengths = demo.getByRole('group', { name: 'Glass strength' }),
+    yaml = demo.locator('code.yaml'),
+    glass = () => demo.evaluate(() => document.querySelector('iweather-card')?.config?.glass_refraction),
+    strength = () => demo.evaluate(() => document.querySelector('iweather-card')?.config?.glass_strength);
+  await expect(toggle).toBeChecked();
+  await expect(strengths.getByRole('radio', { name: 'Standard' })).toBeChecked();
+  for (const value of ['Subtle', 'Strong', 'Clear']) {
+    await choose(demo, 'strength', value);
+    await expect.poll(strength).toBe(value.toLowerCase());
+    await expect(yaml).toContainText(`glass_strength: ${value.toLowerCase()}`);
+  }
+  await toggle.uncheck();
+  await expect.poll(glass).toBe(false);
+  await expect(strengths).toBeHidden();
+  await expect(yaml).toContainText('glass_refraction: false');
+  await expect(demo).toHaveURL(/glass=off/);
+  await expect(demo).toHaveURL(/strength=clear/);
+  await demo.reload();
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  await expect(strengths.getByRole('radio', { name: 'Clear' })).toBeChecked();
+  await expect.poll(strength).toBe('clear');
+  await choose(demo, 'layout', 'Compact');
+  await expect(toggle).toBeHidden();
+  await expect(yaml).not.toContainText('glass_');
+  await choose(demo, 'layout', 'Home view');
+  await expect(strengths.getByRole('radio', { name: 'Clear' })).toBeChecked();
+  await expect.poll(glass).toBe(true);
+});
+
 test('a scene in the address opens as it was left', async ({ demo }) => {
   await demo.goto(`${SITE}/#weather=fog&hour=9&layout=expanded&units=metric&language=en`);
   await expect(card(demo).locator('.hero .condition')).toHaveText('Fog');

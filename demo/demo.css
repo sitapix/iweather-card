@@ -544,6 +544,9 @@ button:hover {
 .option-row .segments span {
   min-width: 40px;
 }
+.home-glass {
+  margin-top: 8px;
+}
 .check {
   cursor: pointer;
 }
@@ -673,7 +676,8 @@ footer > a {
     padding: 14px 16px 4px;
   }
   .controls > :is([data-name='source'], .time, .real, .display-options),
-  .controls:has(.weather[hidden]) .layout {
+  .controls:has(.weather[hidden]) .layout,
+  .controls:has(.home-glass:not([hidden])) :is(.layout, .weather) {
     grid-column: 1 / -1;
   }
   .compact-picker {
