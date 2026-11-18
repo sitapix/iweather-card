@@ -139,8 +139,8 @@ test('a row with nothing to show gives way to the other, with nothing to turn to
 });
 
 test('the figures take the sky’s hue, lighter than the sky, and grey under a grey one', () => {
-  assert.deepEqual(homeTints('#2d4baa'), { tint: 'hsl(226 90% 70%)', pale: 'hsl(226 90% 86%)' });
-  assert.deepEqual(homeTints('#808080'), { tint: 'hsl(0 0% 70%)', pale: 'hsl(0 0% 86%)' });
+  assert.deepEqual(homeTints('#2d4baa'), { tint: 'hsl(226 90% 70%)', pale: 'hsl(226 90% 92%)' });
+  assert.deepEqual(homeTints('#808080'), { tint: 'hsl(0 0% 70%)', pale: 'hsl(0 0% 92%)' });
   assert.deepEqual(homeTints('#c8dcf0'), { tint: 'hsl(210 90% 96%)', pale: 'hsl(210 90% 96%)' });
 });
 
