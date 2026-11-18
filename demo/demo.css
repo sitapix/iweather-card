@@ -121,6 +121,11 @@ pre {
 .top nav a:hover {
   color: var(--text);
 }
+.github-link {
+  width: 44px;
+  justify-content: center;
+  border-radius: 10px;
+}
 
 main,
 footer {
@@ -757,6 +762,14 @@ footer > a {
   input[type='search'],
   .time input {
     min-height: 44px;
+  }
+}
+@media (max-width: 440px) {
+  .demo .top nav {
+    gap: 2px;
+  }
+  .setup-detail {
+    display: none;
   }
 }
 @media (max-width: 380px) {
