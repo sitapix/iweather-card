@@ -2451,21 +2451,24 @@ export class WeatherScene {
     const [amount, speed] = p.look.rainFall.sway;
     return p.windAngle - (amount * Math.sin((speed * phase) / 1000) * Math.PI) / 180;
   }
+  // Gusts: short soft dashes that grow, curl and fade as they cross, from their artwork. Without
+  // the artwork nothing is drawn: a line stands in for one poorly, and reads as a strand of hair.
   paintWind(ctx: CanvasRenderingContext2D, width: number, height: number, phase: number): void {
-    const p = this.live;
-    if (!p || p.wind <= 0.005) return;
+    const p = this.live,
+      image = effectImage('wind');
+    if (!p || p.wind <= 0.005 || !image) return;
     const wind = p.look.wind,
       unit = frameUnit(width, height),
       seconds = phase / 1000,
       meanSize = (wind.size[0] + wind.size[1]) / 2,
       lifetime = meanSize / Math.max(0.1, wind.speed * 0.1),
       count = Math.min(48, Math.ceil(wind.rate * lifetime * this.fallShare)),
-      image = effectImage('wind');
-    if (image) this.windSheet = tintSheet(image, wind.color, this.windSheet);
+      sheet = tintSheet(image, wind.color, this.windSheet),
+      w = image.naturalWidth / 2,
+      h = image.naturalHeight / 20;
+    this.windSheet = sheet;
     ctx.save();
-    ctx.strokeStyle = wind.color;
-    ctx.lineWidth = Math.max(0.6, unit * 0.035);
-    ctx.lineCap = 'round';
+    ctx.globalAlpha = p.wind;
     for (let i = 0; i < count; i++) {
       const size = wind.size[0] + (wind.size[1] - wind.size[0]) * hash(i, 701),
         life = size / Math.max(0.1, wind.speed * 0.1),
@@ -2476,30 +2479,19 @@ export class WeatherScene {
         reach = Math.min(width * 0.55, (wind.x[0] + (wind.x[1] - wind.x[0]) * hash(seed, 703)) * size * unit * 0.2),
         x = -reach + age * (width + reach * 2),
         y = hash(seed, 704) * height,
-        bend = (wind.y[0] + (wind.y[1] - wind.y[0]) * hash(seed, 705)) * size * unit * 0.2;
-      if (image && this.windSheet) {
-        const frame = Math.min(39, Math.floor((1 - age) * 40)),
-          w = image.naturalWidth / 2,
-          h = image.naturalHeight / 20;
-        ctx.globalAlpha = p.wind;
-        ctx.drawImage(
-          this.windSheet.canvas,
-          (frame % 2) * w,
-          Math.floor(frame / 2) * h,
-          w,
-          h,
-          x - reach,
-          y - bend / 2,
-          reach,
-          bend,
-        );
-        continue;
-      }
-      ctx.globalAlpha = p.wind * 0.2 * Math.sin(age * Math.PI) ** 2;
-      ctx.beginPath();
-      ctx.moveTo(x - reach, y);
-      ctx.bezierCurveTo(x - reach * 0.65, y - bend, x - reach * 0.3, y + bend, x, y);
-      ctx.stroke();
+        bend = (wind.y[0] + (wind.y[1] - wind.y[0]) * hash(seed, 705)) * size * unit * 0.2,
+        frame = Math.min(39, Math.floor((1 - age) * 40));
+      ctx.drawImage(
+        sheet.canvas,
+        (frame % 2) * w,
+        Math.floor(frame / 2) * h,
+        w,
+        h,
+        x - reach,
+        y - bend / 2,
+        reach,
+        bend,
+      );
     }
     ctx.restore();
   }
