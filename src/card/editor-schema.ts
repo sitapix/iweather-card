@@ -1,4 +1,5 @@
 import { AIR_SCALE_AUTO, AIR_SCALE_IDS } from './config.ts';
+import { GLASS_OPTIONS } from './glass-options.ts';
 import { AIR_SCALES } from '../cards/air-quality/scales.ts';
 import type { EntityAttributes, FormSchemaItem, Selector } from './home-assistant.ts';
 import {
@@ -466,12 +467,7 @@ const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean)
             choice(
               'glass_strength',
               'Glass strength',
-              [
-                { value: 'subtle', label: 'Subtle' },
-                { value: 'standard', label: 'Standard' },
-                { value: 'strong', label: 'Strong' },
-                { value: 'clear', label: 'Clear' },
-              ],
+              GLASS_OPTIONS,
               columns,
               'Stronger settings give the digits a wider edge and bend more of the sky behind them.',
             ),

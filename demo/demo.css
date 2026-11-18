@@ -91,6 +91,9 @@ pre {
   font: inherit;
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--text);
   font-size: 19px;
   font-weight: 650;
@@ -207,22 +210,19 @@ footer {
 }
 .stage[data-layout='page'] .frame {
   --iweather-height: var(--frame-height);
+  --iweather-page-overscroll-y: auto;
   height: var(--iweather-height);
 }
 .stage[data-layout='page'] .preview-loading {
   min-height: 100%;
 }
-/* A short panel stays within reach while the preview scrolls. */
+/* Settings expand in the document so a wheel or swipe over them scrolls the page. */
 .controls {
-  position: sticky;
-  top: 16px;
   display: grid;
   grid-area: controls;
   gap: 18px;
   min-width: 0;
-  max-height: calc(100dvh - 32px);
   padding: 18px;
-  overflow: auto;
   border-radius: 20px;
   background: var(--panel);
 }
@@ -547,6 +547,9 @@ button:hover {
 .option-row .segments span {
   min-width: 40px;
 }
+.home-glass {
+  margin-top: 8px;
+}
 .check {
   cursor: pointer;
 }
@@ -671,15 +674,13 @@ footer > a {
     gap: 12px;
   }
   .controls {
-    position: static;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px 16px;
-    max-height: none;
     padding: 14px 16px 4px;
-    overflow: visible;
   }
   .controls > :is([data-name='source'], .time, .real, .display-options),
-  .controls:has(.weather[hidden]) .layout {
+  .controls:has(.weather[hidden]) .layout,
+  .controls:has(.home-glass:not([hidden])) :is(.layout, .weather) {
     grid-column: 1 / -1;
   }
   .compact-picker {
@@ -758,15 +759,24 @@ footer > a {
     min-height: 44px;
   }
 }
-@media (max-width: 360px) {
+@media (max-width: 380px) {
+  .top {
+    column-gap: 4px;
+    padding-inline: 8px;
+  }
   .brand {
-    font-size: 17px;
+    gap: 4px;
+    font-size: 16px;
+  }
+  .brand img {
+    width: 20px;
+    height: 20px;
   }
   .top nav {
-    gap: 8px;
+    gap: 6px;
   }
   .top .primary {
-    padding-inline: 10px;
+    padding-inline: 8px;
   }
 }
 @media (forced-colors: active) {
