@@ -293,7 +293,7 @@ In a sections dashboard the card defaults to the full width and six rows. Resize
 
 - **1 row:** one line: the place name at the start, the temperature and condition parted by a bar ("64° | Sunny"), and from 400 px wide the high and low at the end. Narrower, the high and low go first, then the condition below 200 px, then the place below 150 px, leaving the temperature.
 - **2 rows:** the same, headed by Home Assistant's name for its home in small capitals after a location arrow, left out when it matches the place name. From about 420 px wide the coming hours sit beside them. Narrow cards give the condition a line of its own.
-- **3 rows and up:** the current conditions over the hourly forecast, side by side on wide cards, with the daily forecast added once the card is tall enough.
+- **3 rows and up:** the current conditions over the hourly forecast. A wide card three rows tall sets them side by side, and the daily forecast is added once the card is tall enough.
 - **Narrow cards** (under 200 px, three or four columns): the conditions stacked, and from about 300 px tall the coming hours listed under them. These cards are too narrow for the forecast's switch, so they show conditions.
 
 The sky keeps its proportions at every size. It scales with the card's longer side, so a wide card shows less of the top of the sky and cuts off the highest clouds and the sun, with the sun's glow still reaching in. The moon sits at the same share of the card's width and height whatever its shape. Rain and snow fall equally dense on a small card or a large one.
