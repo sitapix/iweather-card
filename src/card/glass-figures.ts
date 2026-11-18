@@ -23,6 +23,7 @@ uniform vec2 u_origin;
 uniform vec2 u_size;
 uniform vec2 u_backgroundSize;
 uniform float u_bevel;
+uniform float u_span;
 uniform float u_refraction;
 uniform float u_lift;
 uniform float u_rim;
@@ -31,15 +32,26 @@ vec3 backdrop(vec2 px) {
   return texture2D(u_background, clamp((u_origin + px) / u_backgroundSize, 0.0, 1.0)).rgb;
 }
 
+float tall(vec2 texels) {
+  return texture2D(u_shape, v_uv + texels * u_texel).g;
+}
+// The rise of the height per texel, across span texels either way.
+vec2 rise(float span) {
+  return vec2(tall(vec2(span, 0.0)) - tall(vec2(-span, 0.0)), tall(vec2(0.0, span)) - tall(vec2(0.0, -span))) / span;
+}
+
 void main() {
   vec4 shape = texture2D(u_shape, v_uv);
   float mask = shape.r;
   if (mask < 0.004) { gl_FragColor = vec4(0.0); return; }
-  // The green channel is the figure blurred by the bevel's width: 0 at the rim, 1 deep inside.
-  float height = shape.g;
-  float dx = texture2D(u_shape, v_uv + vec2(u_texel.x, 0.0)).g - texture2D(u_shape, v_uv - vec2(u_texel.x, 0.0)).g;
-  float dy = texture2D(u_shape, v_uv + vec2(0.0, u_texel.y)).g - texture2D(u_shape, v_uv - vec2(0.0, u_texel.y)).g;
-  vec2 slope = vec2(dx, dy) * u_bevel * 0.5;
+  // The green channel is the figure blurred by the bevel's width: half at the rim, 1 deep inside.
+  // It holds 256 levels, and a slope taken between neighbouring texels shows each step of them as
+  // a crease: it is taken across a span of texels, at two widths, and the height from five taps.
+  float height = (shape.g * 2.0 + tall(vec2(u_span, 0.0)) + tall(vec2(-u_span, 0.0)) + tall(vec2(0.0, u_span)) + tall(vec2(0.0, -u_span))) / 6.0;
+  vec2 slope = (rise(u_span) + rise(u_span * 2.0)) * 0.5 * u_bevel * 0.5;
+  // Rounded like a drop, not cut like a bevel: steep at the rim and level across the middle.
+  float inward = 1.0 - clamp(height * 2.0 - 1.0, 0.0, 1.0);
+  slope *= mix(1.0, clamp(inward / sqrt(max(1.0 - inward * inward, 0.03)), 0.0, 2.4), 0.6);
   float edge = clamp(length(slope), 0.0, 1.0);
   vec2 px = v_uv * u_size;
   // Thick glass bends the sky toward the rim, red and blue each a little differently.
@@ -57,15 +69,16 @@ void main() {
 }`;
 // The canvas reaches a bevel and a half past the figures, and the height field is the figures
 // blurred by .55 of the bevel. Past two device pixels to one there is nothing more to see.
-const GLASS = { pad: 1.5, blur: 0.55, sharpest: 2 } as const;
+// The slope is taken across `span` of the bevel, and never less than `least` texels.
+const GLASS = { pad: 1.5, blur: 0.55, sharpest: 2, span: 0.22, least: 1.5 } as const;
 // What the strength set changes: the bevel as a share of the figures' size, how many bevels the sky
 // bends by, how bright the rim is lit, and how far the body is lifted toward white. The lift is
 // what reads from across a room, over a dark sky most of all; clear glass gives nearly all of it
 // up, and is read by its deeper bend and brighter rim alone.
 const STRENGTHS: Readonly<Record<GlassStrength, { bevel: number; refraction: number; rim: number; lift: number }>> = {
-  subtle: { bevel: 0.04, refraction: 1, rim: 0.65, lift: 0.3 },
-  standard: { bevel: 0.06, refraction: 1.6, rim: 1, lift: 0.3 },
-  strong: { bevel: 0.085, refraction: 2.4, rim: 1.4, lift: 0.3 },
+  subtle: { bevel: 0.04, refraction: 1, rim: 0.65, lift: 0.24 },
+  standard: { bevel: 0.06, refraction: 1.6, rim: 1, lift: 0.2 },
+  strong: { bevel: 0.085, refraction: 2.4, rim: 1.4, lift: 0.2 },
   clear: { bevel: 0.085, refraction: 3, rim: 1.7, lift: 0.03 },
 };
 const CORNERS = 4,
@@ -81,6 +94,7 @@ const UNIFORMS = [
   'u_size',
   'u_backgroundSize',
   'u_bevel',
+  'u_span',
   'u_refraction',
   'u_lift',
   'u_rim',
@@ -117,6 +131,7 @@ export class GlassFigures {
       u_size: gl.getUniformLocation(program, 'u_size'),
       u_backgroundSize: gl.getUniformLocation(program, 'u_backgroundSize'),
       u_bevel: gl.getUniformLocation(program, 'u_bevel'),
+      u_span: gl.getUniformLocation(program, 'u_span'),
       u_refraction: gl.getUniformLocation(program, 'u_refraction'),
       u_lift: gl.getUniformLocation(program, 'u_lift'),
       u_rim: gl.getUniformLocation(program, 'u_rim'),
@@ -210,6 +225,7 @@ export class GlassFigures {
     gl.uniform2f(this.at.u_texel, 1 / w, 1 / h);
     gl.uniform2f(this.at.u_size, width, height);
     gl.uniform1f(this.at.u_bevel, bevel * dpr);
+    gl.uniform1f(this.at.u_span, Math.max(GLASS.least, bevel * dpr * GLASS.span));
     gl.uniform1f(this.at.u_refraction, bevel * cut.refraction);
     gl.uniform1f(this.at.u_rim, cut.rim);
     gl.uniform1f(this.at.u_lift, cut.lift);
