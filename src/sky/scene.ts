@@ -846,7 +846,7 @@ export class WeatherScene {
         const [r, g, b] = rgb(tone);
         return [(r * color[0]) / 255, (g * color[1]) / 255, (b * color[2]) / 255, gain * intensity];
       };
-      const tone = lighting ? toneStrength(L.sunIntensity, stormy) : 0,
+      const tone = lighting ? toneStrength(L.sunIntensity, stormy, preset.elevation) : 0,
         sun = light(L.sun, lighting ? L.sunIntensity / 1000 : 0),
         // Under a fair sky the fill never outshines the sun: at sunrise it is the stronger by far, and
         // alone it paints the clouds its own colour.
