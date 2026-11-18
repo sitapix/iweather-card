@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { scenePreset } from '../src/sky/sky.ts';
-import { KNEE, TONE_DAY, TONE_RISEN, bounced, exposure, paled, toneStrength, toned } from '../src/sky/tone.ts';
+import { HORIZON, KNEE, TONE_DAY, bounced, exposure, horizon, paled, toneStrength, toned } from '../src/sky/tone.ts';
 
 test('light under the knee is what it was, and past it rolls off toward full without passing it', () => {
   for (const light of [0, 0.05, 0.4, 1, 1.6]) expect(toned(light, 0)).toBe(light);
@@ -70,35 +70,35 @@ test('some of the sun’s light reaches the shade, by its strength, and none whe
 
 test('all of it comes in with the sun, and never where anything falls or flashes', () => {
   const [from, whole] = TONE_DAY;
-  const high = 40;
-  expect(toneStrength(from, false, high)).toBe(0);
-  expect(toneStrength(0, false, high)).toBe(0);
-  expect(toneStrength(whole, false, high)).toBe(1);
-  expect(toneStrength(whole * 2, false, high)).toBe(1);
-  expect(toneStrength((from + whole) / 2, false, high)).toBeCloseTo(0.5);
-  expect(toneStrength(whole * 2, true, high)).toBe(0);
-});
-
-test('none of it with the sun on the horizon, and all of it once the sun has risen', () => {
-  const [low, risen] = TONE_RISEN,
-    [, whole] = TONE_DAY;
-  expect(toneStrength(whole, false, 0)).toBe(0);
-  expect(toneStrength(whole, false, low)).toBe(0);
-  expect(toneStrength(whole, false, (low + risen) / 2)).toBeCloseTo(0.5);
-  expect(toneStrength(whole, false, risen)).toBe(1);
+  expect(toneStrength(from, false)).toBe(0);
+  expect(toneStrength(0, false)).toBe(0);
+  expect(toneStrength(whole, false)).toBe(1);
+  expect(toneStrength(whole * 2, false)).toBe(1);
+  expect(toneStrength((from + whole) / 2, false)).toBeCloseTo(0.5);
+  expect(toneStrength(whole * 2, true)).toBe(0);
 });
 
 test('night skies and skies with rain, snow or lightning keep their light as it is', () => {
   const strength = (inputs: Parameters<typeof scenePreset>[0]) => {
     const preset = scenePreset(inputs),
       stormy = preset.rain + preset.snow + preset.sleet + preset.hail > 0 || preset.lightning || preset.cloudFlash;
-    return toneStrength(preset.light.sunIntensity, stormy, preset.elevation);
+    return toneStrength(preset.light.sunIntensity, stormy);
   };
   expect(strength({ condition: 'partlycloudy', elevation: 40 })).toBe(1);
   expect(strength({ condition: 'cloudy', elevation: 35 })).toBe(1);
-  expect(strength({ condition: 'partlycloudy', elevation: 0 })).toBe(0);
   expect(strength({ condition: 'partlycloudy', elevation: -30, night: true })).toBe(0);
   expect(strength({ condition: 'rainy', elevation: 30 })).toBe(0);
   expect(strength({ condition: 'lightning', elevation: 25 })).toBe(0);
   expect(strength({ condition: 'snowy', elevation: 20 })).toBe(0);
+});
+
+test('the horizon’s paling is whole with the sun on it, gone once the sun has risen, and never without the tone', () => {
+  const { from, by } = HORIZON;
+  expect(horizon(0, 1)).toBe(1);
+  expect(horizon(from, 1)).toBe(1);
+  expect(horizon((from + by) / 2, 1)).toBeCloseTo(0.5);
+  expect(horizon(by, 1)).toBe(0);
+  expect(horizon(40, 1)).toBe(0);
+  expect(horizon(0, 0)).toBe(0);
+  expect(horizon(0, 0.5)).toBeCloseTo(0.5);
 });

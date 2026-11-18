@@ -21,7 +21,7 @@ export const ENTITY = 'weather.home';
 export const ALERTS = 'sensor.weather_alerts';
 export const CARD_TYPE = 'custom:iweather-card';
 // Where the sample weather is, for the map, the moon, the air and the normals.
-export const PLACE = { name: 'Chicago', latitude: 41.88, longitude: -87.63 } as const;
+export const PLACE = { name: 'Chicago', latitude: 41.88, longitude: -87.63, zone: 'America/Chicago' } as const;
 
 export type Units = 'us' | 'metric';
 export type Theme = 'light' | 'dark';
@@ -425,9 +425,10 @@ export function hours(weather: Weather, hour: number, now: number): ForecastEntr
   });
 }
 
-// The days, dated at local noon so no zone moves one onto the date before.
+// The days, dated half an hour past local noon, so no zone moves one onto the date before, and none
+// falls on midnight UTC, which the card reads as naming that date wherever it is.
 export function daily(weather: Weather, hour: number, now: number): ForecastEntry[] {
-  const noon = Math.floor(now / HOUR) * HOUR + (NOON - hour) * HOUR;
+  const noon = Math.floor(now / HOUR) * HOUR + (NOON - hour) * HOUR + HOUR / 2;
   return days(weather).map((day, i) => ({
     datetime: new Date(noon + i * DAY).toISOString(),
     condition: day.condition,
@@ -587,6 +588,16 @@ export interface Scene {
   clouds?: CloudAltitude;
 }
 
+// The moment nearest now when the clocks at the sample's place read the scene's hour, to the minute
+// now: the moon stands where it does there then, and crosses the sky as the hour is moved.
+export function skyTime(hour: number, now: number): number {
+  const there = Number(
+      new Intl.DateTimeFormat('en-US', { timeZone: PLACE.zone, hour: 'numeric', hourCycle: 'h23' }).format(now),
+    ),
+    ahead = ((hour - there + HOURS + HOURS / 2) % HOURS) - HOURS / 2;
+  return now + ahead * HOUR;
+}
+
 // The sample weather for a scene, as an integration would send it.
 export function sampleWorld({ weather, hour, units, clouds }: Scene, now: number): World {
   const hourly = hours(weather, hour, now),
@@ -614,6 +625,7 @@ export function sampleWorld({ weather, hour, units, clouds }: Scene, now: number
         ...attributes,
         ...UNIT_NAMES[units],
         ...(clouds && hasCloudHeight(weather) ? { cloud_altitude: clouds } : {}),
+        sky_time: new Date(skyTime(hour, now)).toISOString(),
         friendly_name: PLACE.name,
         attribution: 'Sample weather for this page',
         supported_features: 3,

@@ -9,14 +9,10 @@
 // than cut (see `toned`): cut, a pink light over a blue one loses its green and goes garish.
 //
 // `strength` blends both in: none at night or under rain, snow or lightning, whose skies are tuned
-// without them, and all of it under a fair day's sun. None with the sun on the horizon either: there
-// the glow opposite the sun is the stronger light by far, and a cloud is dark but for the rims it
-// catches.
+// without them, and all of it under a fair day's sun.
 
 // The sun's strength, in the lights' own units, from which this comes in and by which it is whole.
 export const TONE_DAY = [300, 600] as const;
-// The sun's height, in degrees, from which it comes in and by which it is whole.
-export const TONE_RISEN = [2, 12] as const;
 // Where the roll-off starts, as a share of full.
 export const KNEE = 0.75;
 // How bright a lit cloud is to be, as a share of full: low with the sun on the horizon, when the
@@ -37,10 +33,9 @@ type Light = readonly [red: number, green: number, blue: number, intensity: numb
 const seen = ([red, green, blue, intensity]: Light) =>
   ((red * EYE[0] + green * EYE[1] + blue * EYE[2]) / FULL) * intensity;
 
-// How much of this a sky takes: by its sun's strength and height, and none where anything falls or
-// flashes.
-export function toneStrength(sunIntensity: number, stormy: boolean, elevation: number): number {
-  return stormy ? 0 : share(sunIntensity, TONE_DAY[0], TONE_DAY[1]) * share(elevation, TONE_RISEN[0], TONE_RISEN[1]);
+// How much of this a sky takes: by its sun's strength, and none where anything falls or flashes.
+export function toneStrength(sunIntensity: number, stormy: boolean): number {
+  return stormy ? 0 : share(sunIntensity, TONE_DAY[0], TONE_DAY[1]);
 }
 
 // What to scale a deck's three lights by, each given with its strength as the deck draws it.
@@ -92,4 +87,16 @@ export function bounced(
     blue + (sunBlue * share) / intensity,
     intensity,
   ];
+}
+
+// With the sun on the horizon a fair sky's clouds are seen pale and soft, a little of the glow's
+// colour over a light grey: the lights' own colours, summed, come out far stronger than that. So
+// from `by` degrees down to `from` the lights are drawn toward grey by up to `grey` and raised
+// together by up to `lift`, the glow opposite the sun may be `fill` times as strong as the sun, and
+// the sun's own light, blue there, is less by up to `sun`.
+export const HORIZON = { from: 2, by: 12, grey: 0.5, lift: 1.12, fill: 3, sun: 0.35 } as const;
+// How much of that a sky takes at a sun `elevation` degrees up: all of it on the horizon, and none
+// where the daytime tone has no part.
+export function horizon(elevation: number, strength: number): number {
+  return Math.min(1, Math.max(0, strength)) * (1 - share(elevation, HORIZON.from, HORIZON.by));
 }

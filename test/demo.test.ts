@@ -10,6 +10,7 @@ import {
   CLOUD_HEIGHTS,
   ENTITY,
   NOON,
+  PLACE,
   SUNRISE,
   SUNSET,
   WEATHERS,
@@ -61,6 +62,38 @@ test("sun.sun's next rising, noon and setting come after now, at 6, 12 and 18 on
       assert.equal(localHour(zone, time), at, `${name} at ${hour}`);
     }
   }
+});
+
+test('the first day is today on the scene’s clock at every hour, whatever the hour is in fact', () => {
+  const weather = weatherById('clear'),
+    dateIn = (zone: string | undefined, time: number) =>
+      new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(time);
+  for (let real = 0; real < 24; real++) {
+    const now = NOW + real * HOUR;
+    for (let hour = 0; hour < 24; hour++) {
+      const { forecasts, config } = sampleWorld({ weather, hour, units: 'us' }, now),
+        first = forecasts.daily?.[0]?.datetime ?? '';
+      assert.doesNotMatch(first, /T00:00:00/, `${hour} at ${real}`);
+      assert.equal(dateIn(config.time_zone, Date.parse(first)), dateIn(config.time_zone, now), `${hour} at ${real}`);
+    }
+  }
+});
+
+test('the moon crosses the sky as the hour is moved, and stands where it does now at the hour it is', () => {
+  const weather = weatherById('clear'),
+    moonAt = (hour: number) => {
+      const { states, config } = sampleWorld({ weather, hour, units: 'us' }, NOW);
+      return sceneInputs(states[ENTITY], states['sun.sun'], config, NOW).moonAltitude ?? Number.NaN;
+    },
+    heights = Array.from({ length: 24 }, (_, hour) => moonAt(hour));
+  assert.ok(Math.max(...heights) - Math.min(...heights) > 30, heights.map(Math.round).join(' '));
+  const there = Number(
+      new Intl.DateTimeFormat('en-US', { timeZone: PLACE.zone, hour: 'numeric', hourCycle: 'h23' }).format(NOW),
+    ),
+    { states, config } = sampleWorld({ weather, hour: there, units: 'us' }, NOW),
+    { sky_time: _, ...attributes } = states[ENTITY]?.attributes ?? {},
+    plain = sceneInputs({ state: 'sunny', attributes }, states['sun.sun'], config, NOW);
+  assert.equal(moonAt(there), plain.moonAltitude);
 });
 
 test("the sun stands on its path at the scene's hour, whatever the hour at the sample's place", () => {
