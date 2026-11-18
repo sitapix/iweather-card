@@ -1433,11 +1433,11 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
  .weather[data-layout=homeview][data-daily] .hero{inset:0;height:auto;padding:0;align-items:stretch;justify-content:flex-start}
  .weather[data-layout=homeview][data-daily] .current{flex:1;display:grid;grid-template-areas:none;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto auto auto minmax(0,1fr);gap:0;align-items:center;justify-items:start;justify-content:normal;width:100%;max-width:none;min-height:0;padding:max(12px,min(7cqw,7cqh)) var(--home-x) 0;border-radius:inherit;text-align:left;line-height:1.15}
  .weather[data-layout=homeview][data-daily] .reading{display:contents}
- .weather[data-layout=homeview][data-daily] .condition-symbol{grid-area:1 / 1;display:block;margin-right:min(2.4cqw,2.4cqh)}
- .weather[data-layout=homeview][data-daily] .condition-symbol svg{display:block;width:max(15px,min(5.8cqw,5.8cqh));height:max(15px,min(5.8cqw,5.8cqh));filter:brightness(0) invert(1)}
+ .weather[data-layout=homeview][data-daily] .condition-symbol{grid-area:1 / 1;display:block;margin-right:min(1.1cqw,1.1cqh)}
+ .weather[data-layout=homeview][data-daily] .condition-symbol svg{display:block;width:max(15px,min(6.2cqw,6.2cqh));height:max(15px,min(6.2cqw,6.2cqh));filter:brightness(0) invert(1)}
  .weather[data-layout=homeview][data-daily] .condition{grid-area:1 / 2;justify-self:start;max-width:100%;min-width:0;margin:0;font-size:max(13px,min(4.9cqw,4.9cqh));font-weight:600;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .weather[data-layout=homeview][data-daily] .condition:before{content:none}
- .weather[data-layout=homeview][data-daily] .range{grid-area:2 / 1 / 3 / 3;display:block;justify-self:start;margin:min(.5cqw,.5cqh) 0 0;color:var(--home-pale,#fff);font-size:max(12px,min(4.5cqw,4.5cqh));font-weight:500;white-space:pre;word-spacing:0}
+ .weather[data-layout=homeview][data-daily] .range{grid-area:2 / 1 / 3 / 3;display:block;justify-self:start;margin:0;color:var(--home-pale,#fff);font-size:max(13px,min(4.9cqw,4.9cqh));font-weight:600;white-space:pre;word-spacing:-.09em}
  .weather[data-layout=homeview][data-daily] .stale{grid-area:3 / 1 / 4 / -1;max-width:100%;margin:2px 0 0;font-size:max(11px,min(3cqw,3cqh));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  .weather[data-layout=homeview][data-daily] .clock{grid-area:1 / 3 / 3 / 4;display:block;align-self:start;justify-self:end;margin-left:12px;font-size:max(18px,min(8.4cqw,8.4cqh));font-weight:600;letter-spacing:-.01em;line-height:1}
  .weather[data-layout=homeview][data-daily] .temperature{grid-area:4 / 1 / 5 / -1;align-self:center;justify-self:start;padding:0;margin:0 0 0 .03em;color:var(--home-tint,#fff);font-size:max(48px,min(36cqw,36cqh));font-weight:500;letter-spacing:-.02em;line-height:.9;text-shadow:none}

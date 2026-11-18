@@ -165,10 +165,10 @@ export function homeView(ctx: TileContext, night: boolean, chosen: HomeviewRow |
 }
 
 // The temperature takes the sky's own hue, lighter and fuller than the sky behind it, and the high
-// and low a paler one: 70% and 86% light, or over a pale sky 12 points lighter than it and 8 more,
+// and low a paler one: 70% and 92% light, or over a pale sky 12 points lighter than it and 8 more,
 // short of white; with the sky's saturation raised by 1.6 and a tenth, 90% at most. A grey sky so
 // gives grey figures, and a blue one blue.
-const TINT = { light: 70, pale: 86, over: 12, paler: 8, lightest: 96, gain: 1.6, lift: 0.1, most: 0.9 } as const;
+const TINT = { light: 70, pale: 92, over: 12, paler: 8, lightest: 96, gain: 1.6, lift: 0.1, most: 0.9 } as const;
 const SEXTANTS = 6,
   SEXTANT = 60,
   GREEN_AT = 2,
