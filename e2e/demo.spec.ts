@@ -17,6 +17,7 @@ const TYPES: Readonly<Record<string, string>> = {
   css: 'text/css',
   json: 'application/json',
   avif: 'image/avif',
+  png: 'image/png',
   txt: 'text/plain',
 };
 const PLACES = {

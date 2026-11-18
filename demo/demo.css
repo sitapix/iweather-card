@@ -91,6 +91,9 @@ pre {
   font: inherit;
 }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--text);
   font-size: 19px;
   font-weight: 650;
@@ -756,15 +759,24 @@ footer > a {
     min-height: 44px;
   }
 }
-@media (max-width: 360px) {
+@media (max-width: 380px) {
+  .top {
+    column-gap: 4px;
+    padding-inline: 8px;
+  }
   .brand {
-    font-size: 17px;
+    gap: 4px;
+    font-size: 16px;
+  }
+  .brand img {
+    width: 20px;
+    height: 20px;
   }
   .top nav {
-    gap: 8px;
+    gap: 6px;
   }
   .top .primary {
-    padding-inline: 10px;
+    padding-inline: 8px;
   }
 }
 @media (forced-colors: active) {
