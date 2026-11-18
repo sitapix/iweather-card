@@ -341,9 +341,9 @@ test('a card the grid sizes fills its cell; elsewhere it keeps a height of its o
 // draws there as a sections grid's one-row card does.
 // A dashboard that leaves the height to the card, as a masonry view and the editor's preview do:
 // at its own height an automatic card fits its hours whole, the chance under each symbol included,
-// and beside the conditions its hours' panel is as tall as what it holds, centred.
+// and however wide it is its hours' panel lies under the conditions, across the card.
 const OWN_HEIGHT_WIDTHS = [340, 420, 500, 640, 720] as const,
-  SIDE_BY_SIDE = 640;
+  ACROSS = 0.9;
 test('an automatic card at its own height keeps each hour’s chance clear of its value', async () => {
   const cards = OWN_HEIGHT_WIDTHS.map(width => {
     const card = document.createElement('iweather-card');
@@ -362,11 +362,10 @@ test('an automatic card at its own height keeps each hour’s chance clear of it
     expect(chanceOverlaps(card), `${width}px`).toBe(false);
     const panel = part(card, '.forecast').getBoundingClientRect(),
       bounds = card.getBoundingClientRect(),
-      hours = part(card, '.hours').getBoundingClientRect();
+      conditions = part(card, '.current').getBoundingClientRect();
     expect(inside(panel, bounds), `${width}px`).toBe(true);
-    if (width < SIDE_BY_SIDE) continue;
-    expect(Math.abs(panel.top - bounds.top - (bounds.bottom - panel.bottom)), `${width}px`).toBeLessThan(1.5);
-    expect(panel.bottom - hours.bottom, `${width}px`).toBeLessThan(panel.height / 4);
+    expect(panel.width, `${width}px`).toBeGreaterThan(bounds.width * ACROSS);
+    expect(conditions.bottom, `${width}px`).toBeLessThanOrEqual(panel.top);
   }
   document.body.replaceChildren();
 });

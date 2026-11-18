@@ -66,7 +66,7 @@
 /* A short card with the hours under the conditions sets the conditions in two columns, the
    temperature beside the place, condition, high and low, so the hours have room for their chance
    under each symbol as well. */
-@container card (220px < height <= 300px) and (width >= 200px) and ((aspect-ratio < 9/5) or (width < 440px)){
+@container card ((220px < height <= 300px) and (width >= 200px)) or ((300px < height < 340px) and (min-aspect-ratio: 1.8/1) and (min-width:440px)){
  .weather[data-layout=auto][data-forecast=true]{--forecast-height:150px}
  .weather[data-layout=auto][data-forecast=true] .current{display:grid;grid-template-columns:auto auto;column-gap:14px;align-items:center;justify-content:center}
  .weather[data-layout=auto][data-forecast=true] .location{grid-column:2;grid-row:1;justify-self:start;font-size:17px}
@@ -79,7 +79,7 @@
    the card's width, a chance under each symbol included. */
 @container card (170px <= height <= 220px) and (width >= 200px) and ((aspect-ratio < 9/5) or (width < 440px)){.weather[data-layout=auto][data-forecast=true]{--forecast-height:110px}}
 @container card (height > 300px){.weather[data-layout=auto]{--forecast-height:clamp(144px,max(38cqh,104px + 13.5cqw),190px)}}
-@container card (min-aspect-ratio: 1.8/1) and (min-height:180px) and (min-width:440px){.weather{--pad:clamp(12px,3cqw,28px)}.hero{inset:0 57% 0 0;padding:12px}.forecast{left:43%;top:var(--pad-t);bottom:var(--pad-b);height:auto;--p-tr:var(--cr-tr);--p-bl:var(--p-base)}.current{display:flex}.temperature{font-size:clamp(48px,27cqh,96px)}.location{font-size:clamp(16px,7cqw,25px)}.condition,.range{font-size:13px}.forecast-header{flex-wrap:wrap}.hour{flex-basis:clamp(48px,8cqw,68px)}.forecast-content{padding-top:14px}.hours{align-items:center}.hour{gap:12px}.modes button{width:46px;height:34px}
+@container card (min-aspect-ratio: 1.8/1) and (min-height:180px) and (min-width:440px) and (not ((220px < height) and (height < 340px))){.weather{--pad:clamp(12px,3cqw,28px)}.hero{inset:0 57% 0 0;padding:12px}.forecast{left:43%;top:var(--pad-t);bottom:var(--pad-b);height:auto;--p-tr:var(--cr-tr);--p-bl:var(--p-base)}.current{display:flex}.temperature{font-size:clamp(48px,27cqh,96px)}.location{font-size:clamp(16px,7cqw,25px)}.condition,.range{font-size:13px}.forecast-header{flex-wrap:wrap}.hour{flex-basis:clamp(48px,8cqw,68px)}.forecast-content{padding-top:14px}.hours{align-items:center}.hour{gap:12px}.modes button{width:46px;height:34px}
  /* The hours' panel as tall as what it holds, centred beside the conditions, the sky round it. */
  .weather[data-layout=auto] .forecast{height:fit-content;margin-block:auto}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
