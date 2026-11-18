@@ -500,7 +500,12 @@ const STARS_SHOW = 0.005;
 const BLANKET_TINT = 4;
 const STORM_LID = { direct: 0.5, opposite: 0.3, level: 1.45, most: 7, day: 1.25, dusk: [6, -6], grey: 0.6 } as const;
 // A list tile's veil: its colour, the most of it, and the sky brightness (0–255) that gets it all.
-const VEIL = { color: '#c8c6c0', most: 0.45, bright: 120 } as const;
+const VEIL = { color: '#c8c6c0', most: 0.3, bright: 120 } as const;
+// A list tile's flare, larger for the tile than a whole sky's: the ring's radius as a share of the
+// frame across the tile's width, wide enough to run off the bottom and show as an arc on each side,
+// and how strong it is; the ghosts' size and strength, and how far along the sun's line to the
+// middle the coloured glow sits, lying across that line, and how much stronger it is.
+const TILE_FLARE = { ring: 1.7, ringStrength: 2.8, size: 1.9, strength: 1.7, glow: 0.62, glowStrength: 2.2 } as const;
 // The sun's shine through cloud: how far it reaches in the sun's radii, the share of that its
 // white core takes, and how strong it is.
 const SHINE = { reach: 3.4, core: 0.2, strength: 1 } as const;
@@ -1841,6 +1846,7 @@ export class WeatherScene {
   // never by more than SUN_ABOVE: its glow always reaches in. It grows with the longer side.
   // A sun that would come within SUN_CLEAR of the conditions' `text` rises that far clear
   // of them instead, cut off by the top if need be, so the sun never washes them out.
+  // A list tile's words sit in its corners, so its sun stays at the top edge between them.
   sunSpot(width: number, height: number, text?: Rect): SunSpot | undefined {
     const p = this.preset;
     if (!p) return undefined;
@@ -1850,7 +1856,7 @@ export class WeatherScene {
     const x = width * arcX(path.x),
       room = r * SUN_CLEAR;
     let y = Math.max(frameY(0.03 + path.y, height, frameUnit(width, height)), -width * SUN_ABOVE);
-    const above = text && x + room > text.x && x - room < text.x + text.width;
+    const above = !this.tile && text && x + room > text.x && x - room < text.x + text.width;
     if (above && y + room > text.y && y - room < text.y + text.height) y = text.y - room;
     return { x, y, r };
   }
@@ -1939,8 +1945,10 @@ export class WeatherScene {
       path = this.sunPath;
     if (!p?.rainbow || !path) return;
     const clear = 1 - (p.clouds[2] ?? 0) * 0.7,
-      ring = Math.round(p.rainbow[0] * frameUnit(width, height));
-    ctx.globalAlpha = clear * visible * clamp(p.rainbow[1]) * 0.45 * clamp(path.rainbow / 0.3);
+      unit = this.tile ? (width / FRAME) * TILE_FLARE.ring : frameUnit(width, height),
+      ring = Math.round(p.rainbow[0] * unit),
+      strength = this.tile ? TILE_FLARE.ringStrength : 1;
+    ctx.globalAlpha = clamp(clear * visible * clamp(p.rainbow[1]) * 0.45 * clamp(path.rainbow / 0.3) * strength);
     ctx.drawImage(this.rainbowRing(ring), sun.x - ring, sun.y - ring);
     ctx.globalAlpha = 1;
   }
@@ -2176,16 +2184,21 @@ export class WeatherScene {
     this.gpuSky?.layer(ctx);
     const dx = width / 2 - sun.x,
       dy = height / 2 - sun.y,
-      strength = ((visible * (sun.clear - 0.4)) / 0.6) * (1 - clamp((p.elevation - 35) / 40) * 0.4),
-      unit = Math.min(width, height);
+      tile = this.tile,
+      strength =
+        ((visible * (sun.clear - 0.4)) / 0.6) *
+        (1 - clamp((p.elevation - 35) / 40) * 0.4) *
+        (tile ? TILE_FLARE.strength : 1),
+      unit = Math.min(width, height) * (tile ? TILE_FLARE.size : 1),
+      along = tile ? TILE_FLARE.glow : 0.3;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    const [gx, gy] = [sun.x + dx * 0.3, sun.y + dy * 0.3],
+    const [gx, gy] = [sun.x + dx * along, sun.y + dy * along],
       glow = this.ghost('chromatic', '#ffffff'),
       length = unit * 0.16;
     ctx.translate(gx, gy);
-    ctx.rotate(Math.atan2(dy, dx));
-    ctx.globalAlpha = p.ghosts ? 0.16 * strength : 0;
+    ctx.rotate(Math.atan2(dy, dx) + (tile ? Math.PI / 2 : 0));
+    ctx.globalAlpha = p.ghosts ? clamp(0.16 * strength * (tile ? TILE_FLARE.glowStrength : 1)) : 0;
     ctx.drawImage(glow, -length / 2, -length / 4, length, length / 2);
     ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
     // The iris follows its own count, reach and breathing along the sun path.
