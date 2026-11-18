@@ -9,7 +9,7 @@ interface CloudGroup {
 // Pixel dimensions determine projected size independently of the atlas resolution.
 export const CLOUD_ART: Record<CloudArt, CloudGroup> = {
   Altostratus_Blanket: {
-    proxy: 'stratusBlanket',
+    proxy: 'altoBlanket',
     sizes: [
       [1560, 541],
       [1560, 539],
@@ -77,7 +77,7 @@ export const CLOUD_ART: Record<CloudArt, CloudGroup> = {
     ],
   },
   Cirrus_Blanket: {
-    proxy: 'stratusBlanket',
+    proxy: 'cirrusBlanket',
     sizes: [
       [1560, 692],
       [1560, 696],
@@ -132,7 +132,7 @@ export const CLOUD_ART: Record<CloudArt, CloudGroup> = {
     ],
   },
   Cumulus_SingleL: {
-    proxy: 'cumulus',
+    proxy: 'heap',
     sizes: [
       [640, 266],
       [621, 267],

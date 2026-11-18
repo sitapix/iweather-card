@@ -1,3 +1,4 @@
+import { toned } from './tone.ts';
 import { type SpriteRect, cloudSlots, cloudAtlasWidth, cloudAtlasHeight, spriteRect } from './clouds.ts';
 import type { CloudArt, CloudFamily, Range } from './presets-data.ts';
 import { context2d, hash } from '../lib/canvas.ts';
@@ -60,6 +61,9 @@ const FAMILY_ART: Record<CloudFamily, CloudArt> = {
   stratus: 'Stratus_SingleL',
   wispy: 'Wispy_Single',
 };
+// The small clouds in a deck of heaps: their size and how far below their neighbour they lie, as
+// shares of a cloud's size there, and how far from the middle of a gap they wander, in gaps.
+const SMALL = { scale: [0.1, 0.18], drop: [0.05, 0.3], wander: 0.6 } as const;
 const lerp = ([lo, hi]: Range, t: number) => lo + (hi - lo) * t;
 
 function variation(id: number, add: number): number {
@@ -125,6 +129,24 @@ export function deckClouds(decks: readonly (CloudDeck | null)[], artworkSeed = 1
         });
       }
     }
+    // Small clouds adrift in the gaps of a deck of heaps, one after each cloud of it: a share of
+    // its size, a little below it, drifting at its pace.
+    if (family === 'cumulus')
+      for (let n = 0; n < count; n++) {
+        const key = n + particleSeed,
+          size = lerp(scale, hash(key, 41)),
+          beside = clouds[n];
+        clouds.push({
+          family,
+          sprite: sprites[(n + 1) % Math.max(1, sprites.length)] ?? 0,
+          extent,
+          x: -extent + (n + 1 + (hash(key, 43) - 0.5) * SMALL.wander) * bin,
+          y: (beside?.y ?? centerY + height) - size * lerp(SMALL.drop, hash(key, 47)),
+          z: centerZ + offsetZ + (hash(key, 29) - 0.5) * spreadZ,
+          scale: size * lerp(SMALL.scale, hash(key, 53)),
+          speed: lerp(velocity, hash(key, 59)),
+        });
+      }
     return clouds;
   });
 }
@@ -241,11 +263,12 @@ export class CloudAtlas {
     ambient: Tint,
     fill: Tint = [0, 0, 0, 0],
     opacity = 1,
+    tone = 0,
   ): HTMLCanvasElement | null {
     const planes = this.planes;
     if (!planes) return null;
     const [plus, minus] = lightWeights(light, flip),
-      key = JSON.stringify([sprite, flip, plus, minus, sun, ambient, fill, opacity]),
+      key = JSON.stringify([sprite, flip, plus, minus, sun, ambient, fill, opacity, tone]),
       cached = this.cache.get(key);
     if (cached) {
       this.cache.delete(key);
@@ -276,7 +299,7 @@ export class CloudAtlas {
             (sun[channel] ?? 0) * sun[3] * direct +
             (fill[channel] ?? 0) * fill[3] * opposite +
             (ambient[channel] ?? 0) * ambient[3];
-          image.data[pixel + channel] = opacity > 0 ? Math.min(255, lightValue / opacity) : 0;
+          image.data[pixel + channel] = opacity > 0 ? Math.min(255, toned(lightValue / 255 / opacity, tone) * 255) : 0;
         }
         image.data[pixel + 3] = coverage * Math.min(1, Math.max(0, opacity)) * 255;
       }

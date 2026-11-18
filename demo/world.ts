@@ -1,5 +1,6 @@
 import {
   CONDITION,
+  type CloudAltitude,
   type EntityState,
   type ForecastEntry,
   type ForecastType,
@@ -29,6 +30,8 @@ export interface Weather {
   id: string;
   label: string;
   condition: WeatherCondition;
+  // What the integration calls the sky, where that is none of Home Assistant's own conditions.
+  said?: string;
   high: number;
   humidity: number;
   wind: number;
@@ -63,6 +66,19 @@ export const WEATHERS: readonly Weather[] = [
     rain: 0,
     visibility: 10,
     pressure: 30.02,
+  },
+  {
+    id: 'mostly-cloudy',
+    label: 'Mostly cloudy',
+    condition: CONDITION.partlyCloudy,
+    said: 'Mostly cloudy',
+    high: 68,
+    humidity: 60,
+    wind: 9,
+    cover: 75,
+    rain: 0,
+    visibility: 10,
+    pressure: 29.97,
   },
   {
     id: 'cloudy',
@@ -198,6 +214,20 @@ export const WEATHERS: readonly Weather[] = [
   },
 ];
 export const DEFAULT_WEATHER = 'partly-cloudy';
+// How high the clouds stand, for the weathers whose sky differs by it: heaps and layers low down,
+// sheets in the middle, wisps high up.
+export const CLOUD_HEIGHTS: readonly (readonly [height: CloudAltitude, label: string])[] = [
+  ['low', 'Low'],
+  ['mid', 'Middle'],
+  ['high', 'High'],
+];
+export const DEFAULT_CLOUDS: CloudAltitude = 'low';
+const HEIGHT_SHOWS: ReadonlySet<WeatherCondition> = new Set([
+  CONDITION.partlyCloudy,
+  CONDITION.cloudy,
+  CONDITION.windyVariant,
+]);
+export const hasCloudHeight = (weather: Weather): boolean => HEIGHT_SHOWS.has(weather.condition);
 export function weatherById(id: string): Weather {
   const weather = WEATHERS.find(each => each.id === id) ?? WEATHERS.find(each => each.id === DEFAULT_WEATHER);
   if (!weather) throw new Error(`No sample weather ${DEFAULT_WEATHER}.`);
@@ -552,10 +582,12 @@ export interface Scene {
   weather: Weather;
   hour: number;
   units: Units;
+  // How high its clouds stand, where the weather's sky differs by it.
+  clouds?: CloudAltitude;
 }
 
 // The sample weather for a scene, as an integration would send it.
-export function sampleWorld({ weather, hour, units }: Scene, now: number): World {
+export function sampleWorld({ weather, hour, units, clouds }: Scene, now: number): World {
   const hourly = hours(weather, hour, now),
     first = hourly[0],
     condition = atHour(weather.condition, hour),
@@ -576,10 +608,11 @@ export function sampleWorld({ weather, hour, units }: Scene, now: number): World
   const states: Record<string, EntityState> = {
     [ENTITY]: {
       entity_id: ENTITY,
-      state: condition,
+      state: weather.said ?? condition,
       attributes: {
         ...attributes,
         ...UNIT_NAMES[units],
+        ...(clouds && hasCloudHeight(weather) ? { cloud_altitude: clouds } : {}),
         friendly_name: PLACE.name,
         attribution: 'Sample weather for this page',
         supported_features: 3,

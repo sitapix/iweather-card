@@ -78,7 +78,14 @@ test('decks follow the preset decks: family, count, height and size', () => {
   assert.equal(sky[2], null);
   assert.deepEqual(
     sky.map(deck => deck?.length ?? 0),
-    [4, 3, 0, 2],
+    // A deck of heaps carries one small cloud for each of its own.
+    [4, 3, 0, 4],
+  );
+  const low = sky[3] ?? [];
+  assert.ok(
+    low
+      .slice(2)
+      .every(small => small.scale <= 3.2 * 0.18 && small.scale < Math.min(...low.slice(0, 2).map(c => c.scale))),
   );
   assert.ok(high);
   for (const cloud of high) {
@@ -91,7 +98,7 @@ test('decks follow the preset decks: family, count, height and size', () => {
 
 test('eight particles share six distinct textures and wrap through the emitter fade', () => {
   const deck: CloudDeck = ['cumulus', 8, [2, 6], 0, [1, 3], [100, 0, 0], 'Cumulus_SingleM', 0, 0, true, 8];
-  const particles = deckClouds([deck], 7)[0] ?? [],
+  const particles = (deckClouds([deck], 7)[0] ?? []).slice(0, 8),
     slots = cloudPicks('Cumulus_SingleM', 8, 6, 7);
   assert.deepEqual(
     particles.map(p => p.sprite),
@@ -111,14 +118,14 @@ test('eight particles share six distinct textures and wrap through the emitter f
 test('the outer decks capture unit size and the middle decks capture a reproducible uniform size', () => {
   const deck: CloudDeck = ['cumulus', 6, [4, 4], 0, [0, 0], [12, 8, 4]];
   const scales = (artSeed: number) =>
-    deckClouds([deck, deck, deck, deck], artSeed).map(group => group?.map(p => p.scale));
+    deckClouds([deck, deck, deck, deck], artSeed).map(group => group?.slice(0, 6).map(p => p.scale));
   const [back, midBack, midFront, front] = scales(12);
   assert.deepEqual(back, [4, 4, 4, 4, 4, 4]);
   assert.deepEqual(front, back);
   assert.ok(midBack && midFront && [...midBack, ...midFront].every(size => size >= 0 && size <= 4));
   assert.equal(new Set(midBack).size, 6);
   assert.deepEqual(scales(12), scales(31));
-  const foreground = deckClouds([null, null, deck])[2];
+  const foreground = deckClouds([null, null, deck])[2]?.slice(0, 6);
   assert.ok(foreground?.every(particle => particle.y >= 6 && particle.y <= 14 && Math.abs(particle.z) <= 2));
 });
 test('sharpening deepens an edge, leaves flat cloud alone and stays within the maps', () => {

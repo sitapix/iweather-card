@@ -6,12 +6,14 @@ import { sceneInputs } from '../src/weather/conditions.ts';
 import { ATTRIBUTION, type Place, forecastUrl, liveWorld, placesFrom } from '../demo/live.ts';
 import {
   ALERTS,
+  CLOUD_HEIGHTS,
   ENTITY,
   NOON,
   SUNRISE,
   SUNSET,
   WEATHERS,
   cardSettings,
+  hasCloudHeight,
   sampleWorld,
   sunAt,
   sunState,
@@ -20,6 +22,7 @@ import {
   yaml,
 } from '../demo/world.ts';
 import { zoneAt } from '../demo/scene-clock.ts';
+import { skyKind } from '../src/sky/presets.ts';
 
 // The demo's sample weather and its real weather, as the card is handed them.
 
@@ -80,7 +83,7 @@ test('every sample weather gives the card a whole day and ten days, in either un
         const night = hour < SUNRISE || hour >= SUNSET;
         assert.equal(
           state?.state,
-          weather.condition === 'sunny' && night ? 'clear-night' : weather.condition,
+          weather.said ?? (weather.condition === 'sunny' && night ? 'clear-night' : weather.condition),
           `${weather.id} at ${hour}`,
         );
         assert.equal(state.attributes.temperature_unit, units === 'us' ? '°F' : '°C');
@@ -269,4 +272,17 @@ test("a place's forecast becomes the weather now, the hours from the one under w
   );
   assert.equal(liveWorld(ANSWER, PARIS, 'metric', NOW).states[ENTITY]?.attributes.pressure, 1013);
   assert.throws(() => liveWorld({ error: true }, PARIS, 'us', NOW), /no forecast/);
+});
+
+test('a cloud height is offered for the weathers whose sky differs by it, and reaches the card', () => {
+  for (const weather of WEATHERS) {
+    const kinds = new Set(
+      CLOUD_HEIGHTS.map(([height]) => skyKind(weather.condition, { cloudCover: weather.cover, cloudAltitude: height })),
+    );
+    assert.equal(hasCloudHeight(weather), kinds.size > 1, weather.id);
+    for (const [height] of CLOUD_HEIGHTS) {
+      const state = sampleWorld({ weather, hour: 13, units: 'us', clouds: height }, NOW).states[ENTITY];
+      assert.equal(state?.attributes.cloud_altitude, hasCloudHeight(weather) ? height : undefined, weather.id);
+    }
+  }
 });

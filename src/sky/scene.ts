@@ -1,3 +1,4 @@
+import { bounced, exposure, paled, toneStrength } from './tone.ts';
 import {
   BOLT_POINTS,
   cloudFlash,
@@ -128,6 +129,8 @@ const CLOUD_PIXEL = 0.02;
 // Tint and illumination for one deck of cloud sprites.
 interface Tints {
   opacity: number;
+  // How much of the film's curve the deck's light takes (see tone.ts).
+  tone: number;
   direction: Direction;
   sun: Tint;
   fill: Tint;
@@ -490,6 +493,17 @@ const SUN_GLOW = 4;
 const MOON_DISC = { from: -6, to: -18 } as const;
 // The stars are drawn only above this strength (see paint).
 const STARS_SHOW = 0.005;
+// The blanket's place among a sky's cloud colours, and a storm lid's light: how much of the sun's
+// and the fill's a typical part of it takes, how light that part is to be (1 its own colour), and
+// the most its lights are raised, how much they are by day, the sun's heights between which the
+// one gives way to the other, and how far the raised lights are greyed.
+const BLANKET_TINT = 4;
+const STORM_LID = { direct: 0.5, opposite: 0.3, level: 1.45, most: 7, day: 1.25, dusk: [6, -6], grey: 0.6 } as const;
+// A list tile's veil: its colour, the most of it, and the sky brightness (0–255) that gets it all.
+const VEIL = { color: '#c8c6c0', most: 0.45, bright: 120 } as const;
+// The sun's shine through cloud: how far it reaches in the sun's radii, the share of that its
+// white core takes, and how strong it is.
+const SHINE = { reach: 3.4, core: 0.2, strength: 1 } as const;
 // The sun's spike ball shows only while the sun is more than 9° up, coming in over the next degree.
 const SPIKES = { from: 9, to: 10 } as const;
 // A body's share of the way across the card from its place on the sky arc (`along`: the
@@ -819,6 +833,11 @@ export class WeatherScene {
       this.artworkSeed = Math.floor(Math.random() * 0x7fffffff);
     }
     this.decks = deckClouds(preset.look.decks, this.artworkSeed);
+    const thundery = preset.lightning || preset.cloudFlash;
+    const stormy = preset.rain + preset.snow + preset.sleet + preset.hail > 0 || preset.lightning || preset.cloudFlash;
+    // A light as bright as it draws on a whole cloud: a deck's opacity is its alpha squared, and the
+    // light is drawn over it.
+    const lit = ([r, g, b, intensity]: Tint, alpha: number): Tint => [r, g, b, intensity / (alpha * alpha)];
     const tint = (index: number, lighting: boolean): Tints => {
       const color = rgb(L.clouds[index] ?? '#ffffff'),
         alpha = L.cloudAlpha[index] ?? 1,
@@ -827,12 +846,52 @@ export class WeatherScene {
         const [r, g, b] = rgb(tone);
         return [(r * color[0]) / 255, (g * color[1]) / 255, (b * color[2]) / 255, gain * intensity];
       };
+      const tone = lighting ? toneStrength(L.sunIntensity, stormy) : 0,
+        sun = light(L.sun, lighting ? L.sunIntensity / 1000 : 0),
+        // Under a fair sky the fill never outshines the sun: at sunrise it is the stronger by far, and
+        // alone it paints the clouds its own colour.
+        fill = light(
+          L.fill,
+          lighting ? (L.fillIntensity - Math.max(0, L.fillIntensity - L.sunIntensity) * tone) / 1000 : 0,
+        ),
+        ambient = bounced(
+          paled(light(lighting ? L.ambient : '#ffffff', lighting ? L.ambientIntensity : 1), tone),
+          sun,
+          tone,
+        ),
+        // The three scaled together, so the deck's own light and shade stay as they are (see tone.ts).
+        // A storm's lid is seen about as light as its own colour whatever the hour: its lights are
+        // raised together until a typical part of it is.
+        typical = sun[3] * STORM_LID.direct + fill[3] * STORM_LID.opposite + ambient[3],
+        lid = index === BLANKET_TINT && thundery && typical > 0,
+        // Wholly so from dusk on, and by a little under a day's sun.
+        dusk = clamp((STORM_LID.dusk[0] - preset.elevation) / (STORM_LID.dusk[0] - STORM_LID.dusk[1])),
+        raised = lid
+          ? STORM_LID.day +
+            (Math.min(STORM_LID.most, Math.max(1, (STORM_LID.level * (L.brightness[index] ?? 1)) / typical)) -
+              STORM_LID.day) *
+              dusk
+          : 1,
+        // Raised, the lights lose some of their colour: the lid is seen grey, not the dusk's blue.
+        greyed = ([r, g, b, intensity]: Tint): Tint => {
+          const grey = (r + g + b) / 3,
+            by = lid ? STORM_LID.grey * dusk : 0;
+          return [r + (grey - r) * by, g + (grey - g) * by, b + (grey - b) * by, intensity];
+        },
+        scale =
+          raised *
+          (alpha > 0 ? exposure(lit(sun, alpha), lit(fill, alpha), lit(ambient, alpha), L.sunIntensity, tone) : 1),
+        scaled = (light: Tint): Tint => {
+          const [r, g, b, intensity] = greyed(light);
+          return [r, g, b, intensity * scale];
+        };
       return {
         direction: L.direction,
-        sun: light(L.sun, lighting ? L.sunIntensity / 1000 : 0),
-        fill: light(L.fill, lighting ? L.fillIntensity / 1000 : 0),
-        ambient: light(lighting ? L.ambient : '#ffffff', lighting ? L.ambientIntensity : 1),
+        sun: scaled(sun),
+        fill: scaled(fill),
+        ambient: scaled(ambient),
         opacity: alpha * alpha,
+        tone,
       };
     };
     this.tints = preset.look.decks.map((deck, i) => tint(i, deck?.[9] ?? false));
@@ -842,7 +901,7 @@ export class WeatherScene {
       const [, size, rise, art, drift, offsetZ, , variants] = blanket;
       this.blanket = {
         sprite: cloudPicks(art, variants, 1, this.artworkSeed)[0] ?? 0,
-        tints: tint(4, blanket[6]),
+        tints: tint(BLANKET_TINT, blanket[6]),
         size,
         rise,
         z: -125 + offsetZ,
@@ -1046,6 +1105,7 @@ export class WeatherScene {
           ambient: blanket.tints.ambient,
           fill: blanket.tints.fill,
           opacity: blanket.tints.opacity,
+          tone: blanket.tints.tone,
           alpha,
         };
         draws.push(draw);
@@ -1059,6 +1119,7 @@ export class WeatherScene {
         blanket.tints.ambient,
         blanket.tints.fill,
         blanket.tints.opacity,
+        blanket.tints.tone,
       );
       if (!image) return;
       on.globalAlpha = alpha;
@@ -1122,6 +1183,8 @@ export class WeatherScene {
       }
     }
     flush();
+    if (sun && clouds) this.paintShine(ctx, sun, fade.sun);
+    if (sun) this.paintRainbow(ctx, width, height, sun, fade.sun);
     if (GRAINED.has(this.preset.kind)) this.paintGrain(ctx);
     if (p.fringe > 0.005) this.paintFringe(ctx, width, height, phase);
     if (falling) {
@@ -1147,6 +1210,12 @@ export class WeatherScene {
       surface.setTransform(1, 0, 0, 1, 0, 0);
       surface.globalAlpha = 0.07;
       surface.fillStyle = '#000000';
+      surface.fillRect(0, 0, canvas.width, canvas.height);
+      // And under a pale veil by day, as through frosted glass: the brighter the sky, the more of it.
+      const [red, green, blue] = rgb(sceneGradient(p, true).colors[1]),
+        day = clamp((red + green + blue) / 3 / VEIL.bright);
+      surface.globalAlpha = VEIL.most * day;
+      surface.fillStyle = VEIL.color;
       surface.fillRect(0, 0, canvas.width, canvas.height);
       surface.restore();
     }
@@ -1639,6 +1708,7 @@ export class WeatherScene {
         ambient: tints.ambient,
         fill: tints.fill,
         opacity: tints.opacity,
+        tone: tints.tone,
         alpha: alpha * fade,
       };
       if (queue) {
@@ -1653,6 +1723,7 @@ export class WeatherScene {
         tints.ambient,
         tints.fill,
         tints.opacity,
+        tints.tone,
       );
       if (!image) continue;
       target.globalAlpha = draw.alpha;
@@ -1859,12 +1930,39 @@ export class WeatherScene {
     // Rays and halo are sized in scene units, so they grow with the frame (see frameUnit).
     const frame = FRAME * frameUnit(width, height);
     if (p.rays) this.paintRays(ctx, frame, phase, x, y, clear * visible);
-    // Rainbow halo: its bands sit about a quarter of the frame from the sun.
-    if (p.rainbow) {
-      ctx.globalAlpha = clear * visible * clamp(p.rainbow[1]) * 0.45 * clamp(path.rainbow / 0.3);
-      const ring = Math.round((p.rainbow[0] / FRAME) * frame);
-      ctx.drawImage(this.rainbowRing(ring), x - ring, y - ring);
-    }
+    ctx.globalAlpha = 1;
+  }
+  // Rainbow halo: its bands sit about a quarter of the frame from the sun. It is a flare in the
+  // eye rather than a thing in the sky, so it lies over the clouds as over the open sky.
+  paintRainbow(ctx: CanvasRenderingContext2D, width: number, height: number, sun: SunSpot, visible: number): void {
+    const p = this.preset,
+      path = this.sunPath;
+    if (!p?.rainbow || !path) return;
+    const clear = 1 - (p.clouds[2] ?? 0) * 0.7,
+      ring = Math.round(p.rainbow[0] * frameUnit(width, height));
+    ctx.globalAlpha = clear * visible * clamp(p.rainbow[1]) * 0.45 * clamp(path.rainbow / 0.3);
+    ctx.drawImage(this.rainbowRing(ring), sun.x - ring, sun.y - ring);
+    ctx.globalAlpha = 1;
+  }
+  // The sun behind cloud: the cloud across it shines, blown out to white at the sun's place and
+  // falling away over SHINE.reach of its radii, the cloud's own shapes still showing in the fall.
+  paintShine(ctx: CanvasRenderingContext2D, sun: SunSpot, visible: number): void {
+    const p = this.preset;
+    if (!p) return;
+    const { x, y, r } = sun,
+      reach = r * SHINE.reach,
+      halo = mix('#ffffff', '#ffd9b0', p.golden),
+      shine = ctx.createRadialGradient(x, y, 0, x, y, reach);
+    shine.addColorStop(0, '#fffffffa');
+    shine.addColorStop(SHINE.core, '#ffffffee');
+    shine.addColorStop(SHINE.core * 2, `${halo}b0`);
+    shine.addColorStop(0.7, `${halo}40`);
+    shine.addColorStop(1, `${halo}00`);
+    ctx.globalAlpha = visible * SHINE.strength;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = shine;
+    ctx.fillRect(x - reach, y - reach, reach * 2, reach * 2);
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }
   // The bloom lifts the whole upper sky toward white, not just the sun's surroundings. It
@@ -2035,7 +2133,8 @@ export class WeatherScene {
     ctx.drawImage(layer, sx, sy, sw, sh, sx / k, sy / k, sw / k, sh / k);
     ctx.restore();
   }
-  // Pastel ring centred on the sun, strongest along its lower edge.
+  // Ring of spectral bands centred on the sun, violet inmost, strongest along its lower edge.
+  // The colours are full ones drawn faintly, so they tint white cloud as well as open sky.
   rainbowRing(radius: number): HTMLCanvasElement {
     const size = Math.round(radius);
     if (this.ring?.size === size) return this.ring.canvas;
@@ -2045,8 +2144,8 @@ export class WeatherScene {
       lineWidth = Math.max(2, size * 0.035);
     drawBlurred(
       canvas,
-      Math.max(1, size * 0.02),
-      ['#ffc2d8', '#ffeaa8', '#bff5c4', '#b5ecff', '#d6c4ff'].map(
+      Math.max(1, size * 0.05),
+      ['#7b6bff', '#3fb8ff', '#58e07c', '#ffd23f', '#ff5a7a'].map(
         (color, index) => (band: CanvasRenderingContext2D) => {
           band.lineWidth = lineWidth;
           band.strokeStyle = `${color}66`;
