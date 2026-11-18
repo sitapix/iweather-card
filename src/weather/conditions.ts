@@ -156,8 +156,11 @@ export function sceneInputs(
   // The light follows solar elevation while the sun's path follows the daylight interval.
   const { latitude, longitude } = location;
   const parse = (key: 'next_rising' | 'next_setting') => Date.parse(sunAttrs?.[key] ?? ''),
-    moonNow = moonAltitude(now, latitude, longitude),
-    appearance = moonAppearance(now),
+    // The moon is placed for the moment the entity's sky is of, where it tells one.
+    skyTime = Date.parse(attrs?.sky_time ?? ''),
+    moonTime = finite(skyTime) ? skyTime : now,
+    moonNow = moonAltitude(moonTime, latitude, longitude),
+    appearance = moonAppearance(moonTime),
     located = finite(latitude) && finite(longitude),
     events = located ? sunEvents(now, latitude, longitude) : undefined,
     elevation = finite(sunAttrs?.elevation)
@@ -173,7 +176,8 @@ export function sceneInputs(
           : true;
   const ahead = (time: number) => finite(time) && time >= now && time - now <= DAY,
     told = ahead(parse('next_rising')) && ahead(parse('next_setting'));
-  const moonHour = finite(moonNow) && moonNow > 0 ? moonHourAt(now, location.latitude, location.longitude) : undefined;
+  const moonHour =
+    finite(moonNow) && moonNow > 0 ? moonHourAt(moonTime, location.latitude, location.longitude) : undefined;
   return {
     ...sceneCondition(state, sun),
     // A known polar day has solar lighting but no daily disc path. Integrations with
@@ -191,10 +195,10 @@ export function sceneInputs(
     }),
     moonHour,
     moonAltitude: moonNow,
-    moonTilt: moonTilt(now, latitude, longitude),
+    moonTilt: moonTilt(moonTime, latitude, longitude),
     moonLimbAngle: appearance.limb,
     moonPhaseAngle: appearance.angle,
-    moonPhase: moonPhase(now),
+    moonPhase: moonPhase(moonTime),
     elevation,
     rising,
     cloudCover: finite(attrs?.cloud_coverage) ? attrs.cloud_coverage : undefined,

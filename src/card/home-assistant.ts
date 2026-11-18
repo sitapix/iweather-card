@@ -96,6 +96,9 @@ export interface EntityAttributes {
   cloud_coverage?: number;
   // The cloud's dominant height, supplied explicitly or lent from the forecast hour.
   cloud_altitude?: CloudAltitude;
+  // The moment its sky is of, from an entity that plays back another hour's weather: the moon is
+  // placed for then. Without it, now.
+  sky_time?: string;
   uv_index?: number;
   pressure?: number;
   pressure_unit?: string;

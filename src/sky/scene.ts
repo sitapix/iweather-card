@@ -1,4 +1,4 @@
-import { bounced, exposure, paled, toneStrength } from './tone.ts';
+import { HORIZON, bounced, exposure, horizon, paled, toneStrength } from './tone.ts';
 import {
   BOLT_POINTS,
   cloudFlash,
@@ -851,13 +851,15 @@ export class WeatherScene {
         const [r, g, b] = rgb(tone);
         return [(r * color[0]) / 255, (g * color[1]) / 255, (b * color[2]) / 255, gain * intensity];
       };
-      const tone = lighting ? toneStrength(L.sunIntensity, stormy, preset.elevation) : 0,
-        sun = light(L.sun, lighting ? L.sunIntensity / 1000 : 0),
-        // Under a fair sky the fill never outshines the sun: at sunrise it is the stronger by far, and
-        // alone it paints the clouds its own colour.
+      const tone = lighting ? toneStrength(L.sunIntensity, stormy) : 0,
+        // With the sun on the horizon a fair sky's clouds are pale and softly lit (see tone.ts).
+        low = horizon(preset.elevation, tone),
+        sun = light(L.sun, lighting ? (L.sunIntensity / 1000) * (1 - HORIZON.sun * low) : 0),
+        // Under a fair sky the fill outshines the sun only so far: at sunrise it is the stronger by
+        // far, and alone it paints the clouds its own colour.
         fill = light(
           L.fill,
-          lighting ? (L.fillIntensity - Math.max(0, L.fillIntensity - L.sunIntensity) * tone) / 1000 : 0,
+          lighting ? (L.fillIntensity - Math.max(0, L.fillIntensity - L.sunIntensity * HORIZON.fill) * tone) / 1000 : 0,
         ),
         ambient = bounced(
           paled(light(lighting ? L.ambient : '#ffffff', lighting ? L.ambientIntensity : 1), tone),
@@ -880,11 +882,12 @@ export class WeatherScene {
         // Raised, the lights lose some of their colour: the lid is seen grey, not the dusk's blue.
         greyed = ([r, g, b, intensity]: Tint): Tint => {
           const grey = (r + g + b) / 3,
-            by = lid ? STORM_LID.grey * dusk : 0;
+            by = lid ? STORM_LID.grey * dusk : HORIZON.grey * low;
           return [r + (grey - r) * by, g + (grey - g) * by, b + (grey - b) * by, intensity];
         },
         scale =
           raised *
+          (1 + (HORIZON.lift - 1) * low) *
           (alpha > 0 ? exposure(lit(sun, alpha), lit(fill, alpha), lit(ambient, alpha), L.sunIntensity, tone) : 1),
         scaled = (light: Tint): Tint => {
           const [r, g, b, intensity] = greyed(light);
