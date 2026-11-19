@@ -435,6 +435,20 @@ function domeField(
 // a ball whose surface billows, joined smoothly where they meet. The heads are brightest and
 // firmest at their tops; toward the base the cloud thins into haze rather than ending on a line, and
 // its rim is torn into wisps. Sizes are in the sprite's heights.
+// The cirrostratus sheet's fibres: how many, how long (shares of its width) and how wide, how far
+// across and up its middle they scatter, how steeply they rise, how much of the sheet is gaps, how
+// strong the fibres and the haze under them are, and how dense the whole is.
+const STREAKS = {
+  strands: 70,
+  length: [0.3, 0.8],
+  width: [0.005, 0.022],
+  spread: [0.55, 0.5],
+  rise: 0.3,
+  gaps: 0.4,
+  gain: 1.2,
+  haze: 0.05,
+  depth: 0.16,
+} as const;
 // The cirrus blanket's strands: how many groups and strands, how far a group's strands scatter
 // across and up, their lengths and widths as shares of the sprite, and how steeply they rise.
 const CIRRUS = {
@@ -900,24 +914,44 @@ export const KINDS: Readonly<Record<CloudKind, (seed: number) => Field>> = {
       return (lets * lets * lumps * groups * 3.5 + haze * groups) * band ** 0.6;
     };
   },
-  // Cirrostratus: a few brushed patches of fibrous streaks,
-  // fanning along a diagonal and fraying at their ends, high behind everything.
+  // Cirrostratus: a sheet drawn out into long fibres on a rising diagonal, thick with them through
+  // its middle and fraying to single strands at its ends, over a faint haze of the same grain.
   cirrostratus(seed) {
+    const random = (i: number, salt: number) => hash(seed, i, salt),
+      strands = Array.from({ length: STREAKS.strands }, (_, i) => {
+        const length = STREAKS.length[0] + random(i, 61) * (STREAKS.length[1] - STREAKS.length[0]),
+          start = 0.5 + (random(i, 62) - 0.5) * STREAKS.spread[0] - length / 2;
+        return [
+          start,
+          start + length,
+          0.5 + (random(i, 63) - 0.5) * STREAKS.spread[1],
+          STREAKS.width[0] + random(i, 64) ** 2 * (STREAKS.width[1] - STREAKS.width[0]),
+          0.35 + random(i, 65) * 0.65,
+        ] as const;
+      });
     return (x, y, z) => {
-      const veil = clamp(1 - Math.hypot((x - 0.5) / 0.46, (y - 0.5 + (x - 0.5) * 0.3) / 0.36));
+      const veil = clamp(1 - Math.hypot((x - 0.5) / 0.47, (y - 0.5 + (x - 0.5) * STREAKS.rise) / 0.37));
       if (veil <= 0) return 0;
-      const along = y + x * 0.3 + (fbm3(x * 2, y * 2, 0, seed + 3, 3) - 0.5) * 0.12,
-        patches = clamp((fbm3(...turned(x * 3.4, y * 2.6, z * 2), seed + 21, 4) - 0.56) * 6);
-      const strands = fbm3(x * 2, along * 14, z * 3, seed, 4),
-        fine = fbm3(x * 3, along * 70, z * 6, seed + 7, 3);
+      const patches = clamp((fbm3(...turned(x * 3.4, y * 2.6, z * 2), seed + 21, 4) - STREAKS.gaps) * 5);
+      if (patches <= 0) return 0;
+      let value = 0;
+      for (const [from, to, y0, width, strength] of strands) {
+        if (x < from || x > to) continue;
+        const taper = Math.sin(((x - from) / (to - from)) * Math.PI) ** 0.6,
+          centre = y0 - (x - 0.5) * STREAKS.rise + (fbm3(x * 5, y0 * 9, 0, seed + 3, 3) - 0.5) * 0.04,
+          across = Math.exp(-(((y - centre) / (width * (0.4 + taper))) ** 2));
+        if (across < 0.01) continue;
+        value += across * strength * taper * clamp(fbm3(x * 7, y0 * 11, 0, seed + 5, 3) * 2.2 - 0.5);
+      }
+      const along = y + x * STREAKS.rise,
+        comb = 0.35 + 0.65 * fbm3(x * 4, along * 150, 0, seed + 9, 3),
+        haze = STREAKS.haze * fbm3(x * 2, along * 10, z * 2, seed, 3);
       return (
-        clamp((strands - 0.3) * 3) *
-        (0.3 + 0.7 * fine) *
-        (0.5 + 0.7 * billow(...turned(x * 9, y * 6, z * 4), seed + 40, 3)) *
+        clamp(value * comb * STREAKS.gain + haze) *
         patches *
-        clamp(veil * 2) *
+        clamp(veil * 2.2) *
         Math.exp(-(((z - 0.5) / 0.25) ** 2)) *
-        1.1
+        STREAKS.depth
       );
     };
   },
