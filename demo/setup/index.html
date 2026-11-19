@@ -7,80 +7,94 @@
   <meta name="description" content="Install iWeather Card with HACS or manually, then choose a dashboard layout and weather source.">
   <link rel="icon" type="image/png" sizes="96x96" href="../sun.png?no-inline">
   <link rel="stylesheet" href="../demo.css">
+  <link rel="stylesheet" href="../docs.css">
+  <script type="module" src="../docs-ui.ts"></script>
 </head>
-<body>
+<body class="guide">
+  <a class="skip-link" href="#content">Skip to content</a>
   <header class="top">
     <a class="brand" href="../"><img src="../sun.png?no-inline" width="24" height="24" alt="">iWeather Card</a>
     <nav aria-label="Site navigation">
-      <a href="../">Try the demo</a>
-      <a href="../docs/configuration/">Docs</a>
+      <a href="../">Demo</a>
+      <a href="../docs/" aria-current="location">Docs</a>
       <a href="https://github.com/sitapix/iweather-card">GitHub</a>
     </nav>
   </header>
 
-  <main class="doc">
-    <h1>Set up iWeather Card</h1>
-    <p>You’ll need Home Assistant 2023.9.3 or later and a weather entity, such as <code>weather.home</code>. The card works with any weather integration and needs no API key.</p>
+  <div class="docs">
+    <nav class="docs-nav" aria-label="Documentation"><!--doc-nav--></nav>
+    <main class="doc" id="content">
+      <h1>Set up iWeather Card</h1>
+      <p>You’ll need Home Assistant 2023.9.3 or later and a weather entity, such as <code>weather.home</code>. The card works with any weather integration and needs no API key.</p>
 
-    <h2 id="install">Install the card</h2>
-    <h3 id="hacs">Install with HACS</h3>
-    <p>
-      <a class="hacs-install" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=sitapix&amp;repository=iweather-card&amp;category=plugin">
-        <img src="https://my.home-assistant.io/badges/hacs_repository.svg" width="354" height="40" alt="Open iWeather Card in HACS">
-      </a>
-    </p>
-    <p>Open the repository with the button above, install <strong>iWeather Card</strong>, then reload your browser.</p>
-    <p>If you’re adding the repository yourself, open the ⋮ menu in HACS and choose <strong>Custom repositories</strong>. Enter <code>https://github.com/sitapix/iweather-card</code>, select <strong>Dashboard</strong>, and add the repository. You can then install the card in HACS.</p>
+      <details class="doc-outline">
+        <summary>On this page</summary>
+        <ul>
+          <li><a href="#hacs">Install with HACS</a></li>
+          <li><a href="#by-hand">Install manually</a></li>
+          <li><a href="#add">Add to a dashboard</a></li>
+          <li><a href="#layouts">Choose a layout</a></li>
+          <li><a href="#online">Online data and privacy</a></li>
+          <li><a href="#more">Configuration and support</a></li>
+        </ul>
+      </details>
+      <h2 id="install">Install the card</h2>
+      <h3 id="hacs">Install with HACS</h3>
+      <p>Open the repository in HACS, install <strong>iWeather Card</strong>, then reload your browser.</p>
+      <p><a class="setup-button" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=sitapix&amp;repository=iweather-card&amp;category=plugin">Open iWeather Card in HACS</a></p>
+      <p>If you’re adding the repository yourself, open the ⋮ menu in HACS and choose <strong>Custom repositories</strong>. Enter <code>https://github.com/sitapix/iweather-card</code>, select <strong>Dashboard</strong>, and add the repository. You can then install the card in HACS.</p>
 
-    <h3 id="by-hand">Install manually</h3>
-    <ol>
-      <li>Download the card files attached to the <a href="https://github.com/sitapix/iweather-card/releases/latest">latest release</a>. If you’re building from source, run these commands in the repository with Node.js 22.18 or later and pnpm. The build writes the files to <code>dist/</code>.
-        <pre><code>pnpm install --frozen-lockfile
+      <h3 id="by-hand">Install manually</h3>
+      <ol>
+        <li>Download the card files attached to the <a href="https://github.com/sitapix/iweather-card/releases/latest">latest release</a>. If you’re building from source, run these commands in the repository with Node.js 22.18 or later and pnpm. The build writes the files to <code>dist/</code>.
+          <pre><code>pnpm install --frozen-lockfile
 pnpm build</code></pre>
-      </li>
-      <li>Copy all the files into one folder, such as <code>/config/www/iweather/</code>. The card looks there for its images, map and translations.</li>
-      <li>In <strong>Settings → Dashboards → ⋮ → Resources</strong>, add <code>/local/iweather/iweather-card.js</code> as a <strong>JavaScript module</strong>. Reload your browser.</li>
-    </ol>
-    <p>When you update a manual installation, copy the new files and change the version in the resource URL, for example to <code>/local/iweather/iweather-card.js?v=2</code>. This makes the browser load the new card.</p>
+        </li>
+        <li>Copy all the files into one folder, such as <code>/config/www/iweather/</code>. The card looks there for its images, map and translations.</li>
+        <li>In <strong>Settings → Dashboards → ⋮ → Resources</strong>, add <code>/local/iweather/iweather-card.js</code> as a <strong>JavaScript module</strong>. Reload your browser.</li>
+      </ol>
+      <p>When you update a manual installation, copy the new files and change the version in the resource URL, for example to <code>/local/iweather/iweather-card.js?v=2</code>. This makes the browser load the new card.</p>
 
-    <h2 id="add">Add the card to a dashboard</h2>
-    <p>Edit your dashboard, select <strong>Add card</strong>, then choose <strong>iWeather</strong>. The picker starts with <strong>Full page</strong> and suggests a weather entity. Check that it’s the one you want, then save.</p>
-    <p>If you prefer YAML, replace <code>weather.home</code> with your entity ID in the example below. With just these two lines, the card uses the Automatic layout and fits the space on your dashboard.</p>
-    <pre><code>type: custom:iweather-card
+      <h2 id="add">Add the card to a dashboard</h2>
+      <p>Edit your dashboard, select <strong>Add card</strong>, then choose <strong>iWeather</strong>. The picker starts with <strong>Full page</strong> and suggests a weather entity. Check that it’s the one you want, then save.</p>
+      <p>To use YAML, paste these two lines into the card’s code editor and replace <code>weather.home</code> with your weather entity ID. The Automatic layout fits the space you give it.</p>
+      <pre><code class="language-yaml">type: custom:iweather-card
 entity: weather.home</code></pre>
-    <p>For a full page with radar and historical averages, use this configuration. Change the town and entity to match your forecast.</p>
-    <pre><code>type: custom:iweather-card
+      <p>For a full page with radar and historical averages, use this configuration. Change the town and entity to match your forecast.</p>
+      <pre><code class="language-yaml">type: custom:iweather-card
 entity: weather.home
 weather_layout: page
 place_name: St. Louis
 averages: open-meteo
 map: rainviewer</code></pre>
-    <p>Tiles appear when they have data. Open <strong>Data sources</strong> in the editor to see which readings your weather entity is missing and choose sensors to supply them.</p>
+      <p>Tiles appear when they have data. Open <strong>Data sources</strong> in the editor to see which readings your weather entity is missing and choose sensors to supply them.</p>
 
-    <h2 id="layouts">Choose a layout</h2>
-    <table>
-      <thead><tr><th>Layout</th><th>YAML value</th><th>What you’ll see</th></tr></thead>
-      <tbody>
-        <tr><td>Automatic</td><td><code>auto</code></td><td>Current conditions, with more forecast detail as the card gets larger.</td></tr>
-        <tr><td>Compact</td><td><code>compact</code></td><td>A small tile with the location, temperature, conditions and today’s high and low.</td></tr>
-        <tr><td>Strip</td><td><code>strip</code></td><td>Current weather on one line. Wider cards also show the high and low.</td></tr>
-        <tr><td>Home view</td><td><code>homeview</code></td><td>A large temperature and clock. Swipe the bottom row to switch between the next four days and current readings.</td></tr>
-        <tr><td>Expanded</td><td><code>expanded</code></td><td>Current conditions above hourly and daily forecasts.</td></tr>
-        <tr><td>Full page</td><td><code>page</code></td><td>Alerts, forecasts and detail tiles, with an optional weather map. Use a panel view to fill the screen.</td></tr>
-      </tbody>
-    </table>
+      <h2 id="layouts">Choose a layout</h2>
+      <p>Select a layout to try it in the demo. The code under each name is its <code>weather_layout</code> value.</p>
+      <table class="layout-table">
+        <thead><tr><th scope="col">Layout</th><th scope="col">What you’ll see</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../#layout=auto">Automatic</a><code>auto</code></td><td>Current conditions, with more forecast detail as the card gets larger.</td></tr>
+          <tr><td><a href="../#layout=compact">Compact</a><code>compact</code></td><td>A small tile with the location, temperature, conditions and today’s high and low.</td></tr>
+          <tr><td><a href="../#layout=strip">Strip</a><code>strip</code></td><td>Current weather on one line. Wider cards also show the high and low.</td></tr>
+          <tr><td><a href="../#layout=homeview">Home view</a><code>homeview</code></td><td>A large temperature and clock. Swipe the bottom row to switch between the next four days and current readings.</td></tr>
+          <tr><td><a href="../#layout=expanded">Expanded</a><code>expanded</code></td><td>Current conditions above hourly and daily forecasts.</td></tr>
+          <tr><td><a href="../#layout=page">Full page</a><code>page</code></td><td>Alerts, forecasts and detail tiles, with an optional weather map. Use a panel view to fill the screen.</td></tr>
+        </tbody>
+      </table>
 
-    <h2 id="online">Online data and privacy</h2>
-    <p>Full page can send the forecast location to Open-Meteo for missing readings, air quality and climate averages. In the US, it can also fetch alerts from the National Weather Service. The online map requests radar, forecasts and map tiles for the area in view. Your browser contacts these services directly. The other layouts get their weather from Home Assistant.</p>
-    <p>Set <code>local_only: true</code> to turn off the built-in online services. To show a map in this mode, supply a base map with <code>map_tile_url</code>. Use local servers for both the base map and any <code>map_layers</code> overlays to keep tile requests on your network. <a href="../docs/privacy/">See which services receive location data</a>.</p>
+      <h2 id="online">Online data and privacy</h2>
+      <p>Full page can send the forecast location to Open-Meteo for missing readings, air quality and climate averages. In the US, it can also fetch alerts from the National Weather Service. The online map requests radar, forecasts and map tiles for the area in view. Your browser contacts these services directly. The other layouts get their weather from Home Assistant.</p>
+      <p>Set <code>local_only: true</code> to turn off the built-in online services. To show a map in this mode, supply a base map with <code>map_tile_url</code>. Use local servers for both the base map and any <code>map_layers</code> overlays to keep tile requests on your network. <a href="../docs/privacy/">See which services receive location data</a>.</p>
 
-    <h2 id="more">Configuration and support</h2>
-    <ul>
-      <li><a href="../docs/examples/">Example dashboard configurations</a></li>
-      <li><a href="../docs/configuration/">All options and defaults</a></li>
-      <li><a href="../docs/tiles/">Data sources for each tile</a></li>
-      <li>Include your weather integration when you <a href="https://github.com/sitapix/iweather-card/issues">report a bug</a>.</li>
-    </ul>
-  </main>
+      <h2 id="more">Configuration and support</h2>
+      <ul>
+        <li><a href="../docs/examples/">Example dashboard configurations</a></li>
+        <li><a href="../docs/configuration/">All options and defaults</a></li>
+        <li><a href="../docs/tiles/">Data sources for each tile</a></li>
+        <li>Include your weather integration when you <a href="https://github.com/sitapix/iweather-card/issues">report a bug</a>.</li>
+      </ul>
+    </main>
+  </div>
 </body>
 </html>

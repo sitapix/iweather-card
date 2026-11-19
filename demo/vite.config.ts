@@ -44,6 +44,7 @@ export const demoConfig = (dist: string, site: string) =>
         input: {
           index: here('index.html'),
           setup: here('setup/index.html'),
+          docs: here('docs/index.html'),
           ...Object.fromEntries(DOCS.map(page => [`docs-${page.slug}`, here(`docs/${page.slug}/index.html`)])),
         },
       },

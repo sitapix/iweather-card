@@ -17,16 +17,39 @@ export interface DocPage {
   slug: string;
   // What the site's list of pages calls it.
   title: string;
+  description: string;
   // The file it is read from, from the repository's root.
   source: string;
   // The one second-level section of that file it holds, by its heading.
   section?: string;
 }
 export const DOCS: readonly DocPage[] = [
-  { slug: 'examples', title: 'Examples', source: 'docs/examples.md' },
-  { slug: 'configuration', title: 'All options', source: 'docs/configuration.md' },
-  { slug: 'tiles', title: 'Detail tiles', source: 'README.md', section: 'Detail tiles' },
-  { slug: 'privacy', title: 'Privacy', source: 'README.md', section: 'What leaves your browser' },
+  {
+    slug: 'examples',
+    title: 'Dashboard examples',
+    description: 'Copy the YAML for a city tile, a wall tablet, or a dashboard with your own weather sensors.',
+    source: 'docs/examples.md',
+  },
+  {
+    slug: 'configuration',
+    title: 'Configuration',
+    description: 'Find a setting by name, check its default, and see which layouts use it.',
+    source: 'docs/configuration.md',
+  },
+  {
+    slug: 'tiles',
+    title: 'Detail tiles',
+    description: 'See what each Full page tile shows and which reading it needs to appear.',
+    source: 'README.md',
+    section: 'Detail tiles',
+  },
+  {
+    slug: 'privacy',
+    title: 'Privacy',
+    description: 'See which services receive your forecast location and how to keep requests on your network.',
+    source: 'README.md',
+    section: 'What leaves your browser',
+  },
 ];
 // The README's sections the setup page tells in its own words, and where.
 const SETUP: Readonly<Record<string, string>> = {
@@ -106,61 +129,109 @@ const ENTITIES: Readonly<Record<string, string>> = {
 const plain = (html: string) =>
   html.replace(TAGS, '').replace(/&(?:amp|lt|gt|quot|#39);/gu, entity => ENTITIES[entity] ?? entity);
 
-// A page's Markdown as the site sets it: its links led to the site's pages, its headings given
-// their anchors, and each table in a box that scrolls across by itself.
+const escaped = (text: string) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
+
+const settingSearch = `<form class="setting-search" role="search" aria-label="Configuration settings" hidden>
+  <label for="setting-query">Find a setting</label>
+  <input id="setting-query" name="setting" type="search" placeholder="Try forecast_days or radar" autocomplete="off" spellcheck="false">
+  <p role="status"></p>
+  <ul></ul>
+</form>`;
+
+// Keep the repository's table of contents on GitHub. On the site every guide gets the same outline.
+const CONTENTS_LINK = /^\[[^\]]+\]\(#[^)]+\)$/u;
+
 export function htmlOf(page: DocPage, read: (source: string) => string = readSource): string {
+  const markdown = markdownOf(page, read),
+    sections = headingsOf(markdown).filter(heading => heading.depth === 2);
+  let section = '';
   const marked = new Marked({
     gfm: true,
     walkTokens: token => {
       if (token.type === 'link' && typeof token['href'] === 'string')
         token['href'] = linkFrom(page, token['href'], read);
     },
+    renderer: {
+      heading({ depth, tokens }) {
+        const inner = this.parser.parseInline(tokens),
+          name = plain(inner),
+          id = anchorOf(name);
+        if (depth === 1) return `<h1>${inner}</h1>\n`;
+        if (depth === 2) section = name;
+        return `<h${depth} id="${id}"><a class="anchor" href="#${id}">${inner}</a></h${depth}>\n`;
+      },
+      list({ items }) {
+        return page.slug === 'configuration' && !section && items.every(item => CONTENTS_LINK.test(item.text))
+          ? ''
+          : false;
+      },
+      table({ header, rows }) {
+        const heads = header.map(cell => this.parser.parseInline(cell.tokens)),
+          options = heads[0] === 'Option' && heads[1] === 'Default',
+          titles = heads.map(head => `<th scope="col" role="columnheader">${head}</th>`).join('');
+        const body = rows.map(row => {
+          const cells = row.map((cell, i) => {
+            let value = this.parser.parseInline(cell.tokens);
+            if (options && i === 0)
+              value = value.replace(
+                /<code>([a-z_]+)<\/code>/gu,
+                (_, key: string) =>
+                  `<code class="setting-key" tabindex="-1" id="${anchorOf(section)}-${key}">${key}</code>`,
+              );
+            const label =
+              i > 0 && heads[i] !== 'Description'
+                ? `<span class="cell-label" aria-hidden="true">${heads[i] ?? ''}</span>`
+                : '';
+            return `<td role="cell">${label}${value}</td>`;
+          });
+          return `<tr role="row">${cells.join('')}</tr>`;
+        });
+        return `<table class="reference-table" role="table" data-section="${escaped(section)}"><thead role="rowgroup"><tr role="row">${titles}</tr></thead><tbody role="rowgroup">${body.join('')}</tbody></table>\n`;
+      },
+    },
   });
-  const html = marked.parse(markdownOf(page, read), { async: false });
-  return html
-    .replace(/<h([1-6])>(.*?)<\/h\1>/gsu, (_, depth: string, inner: string) => {
-      const id = anchorOf(plain(inner));
-      return depth === '1'
-        ? `<h1>${inner}</h1>`
-        : `<h${depth} id="${id}"><a class="anchor" href="#${id}">${inner}</a></h${depth}>`;
-    })
-    .replaceAll('<table>', '<div class="table"><table>')
-    .replaceAll('</table>', '</table></div>');
+  const html = marked.parse(markdown, { async: false });
+  if (!sections.length) return html;
+  const links = sections.map(heading => `<li><a href="#${heading.anchor}">${escaped(heading.text)}</a></li>`),
+    outline = `<details class="doc-outline"><summary>On this page</summary><ul>${links.join('')}</ul></details>`;
+  return html.replace('<h2 ', `${page.slug === 'configuration' ? settingSearch : ''}${outline}<h2 `);
 }
 
-const escaped = (text: string) => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
-// The list of pages beside a page, with the page's own sections under its name.
-export function navOf(page: DocPage, read: (source: string) => string = readSource): string {
-  const sections = headingsOf(markdownOf(page, read)).filter(heading => heading.depth === 2),
-    own = sections.length
-      ? `<ul>${sections.map(heading => `<li><a href="#${heading.anchor}">${escaped(heading.text)}</a></li>`).join('')}</ul>`
-      : '';
-  return [
-    '<ul>',
-    '<li><a href="../../setup/">Setup guide</a></li>',
-    ...DOCS.map(each =>
-      each === page
-        ? `<li><a href="./" aria-current="page">${escaped(each.title)}</a>${own}</li>`
-        : `<li><a href="../${each.slug}/">${escaped(each.title)}</a></li>`,
-    ),
-    '</ul>',
-  ].join('');
+export function navOf(page: DocPage | 'setup'): string {
+  const setup = page === 'setup',
+    docs = setup ? '../docs/' : '../',
+    link = (title: string, href: string, active: boolean) =>
+      `<li><a href="${href}"${active ? ' aria-current="page"' : ''}>${escaped(title)}</a></li>`;
+  return `<details class="guide-menu"><summary>Browse guides</summary><ul>${[
+    link('Docs overview', docs, false),
+    link('Setup guide', setup ? './' : '../../setup/', setup),
+    ...DOCS.map(each => link(each.title, `${docs}${each.slug}/`, each === page)),
+  ].join('')}</ul></details>`;
+}
+
+function guideList(): string {
+  return DOCS.map(
+    page =>
+      `<li><a href="./${page.slug}/" aria-labelledby="guide-${page.slug}" aria-describedby="about-${page.slug}"><strong id="guide-${page.slug}">${escaped(page.title)}</strong><span id="about-${page.slug}">${escaped(page.description)}</span></a></li>`,
+  ).join('');
 }
 
 const PAGE = /\/docs\/([^/]+)\/index\.html$/u;
-// Fills each documentation page's shell (docs/<slug>/index.html) from its Markdown, as the page is
-// served and as it is built.
 export function docPages(): Plugin {
   return {
     name: 'iweather-doc-pages',
     transformIndexHtml: {
       order: 'pre',
       handler(html, context) {
-        const slug = PAGE.exec(context.filename.replaceAll('\\', '/'))?.[1],
+        const file = context.filename.replaceAll('\\', '/');
+        if (file.endsWith('/docs/index.html')) return html.replace('<!--doc-guides-->', guideList());
+        if (file.endsWith('/setup/index.html')) return html.replace('<!--doc-nav-->', navOf('setup'));
+        const slug = PAGE.exec(file)?.[1],
           page = DOCS.find(each => each.slug === slug);
         if (!page) return html;
         return html
           .replaceAll('<!--doc-title-->', escaped(page.title))
+          .replace('<!--doc-description-->', escaped(page.description))
           .replace('<!--doc-nav-->', navOf(page))
           .replace('<!--doc-body-->', htmlOf(page));
       },

@@ -1,6 +1,6 @@
 # Configuration
 
-Every option here is also in the visual editor, which writes only the settings that differ from their defaults. The editor shows the **Full page**, **Map and online services** and **Alerts and sensors** sections when the layout is `page`. Within each layout it shows a setting only while that setting changes something: a forecast's length with the forecast, the air quality scale once a sensor is set, the averages while the page has their tile, and so on. A hidden setting keeps its value. While you edit, the preview shows the part of the card a setting changes: it scrolls there when the preview sits beside the form, and rings it for a moment.
+Look up a YAML option, its default, and what it changes. The visual editor shows the settings that apply to your layout and saves values that differ from the defaults. If you switch layouts, hidden settings keep their values.
 
 - [Card](#card)
 - [Forecast](#forecast)
@@ -26,6 +26,8 @@ Every option here is also in the visual editor, which writes only the settings t
 |---|---|---|
 | `entity` | required | Any `weather.*` entity |
 | `weather_layout` | `auto` | `auto`, `compact`, `strip` for one line, `homeview` for [a screen read from across a room](#the-home-view), `expanded`, or `page` for the full-page layout with detail tiles |
+
+As you edit, the preview highlights the part of the card that changes and scrolls to it when the preview sits beside the form. Choose **Full page** to see **Map and online services** and **Alerts and sensors**.
 
 ## Forecast
 

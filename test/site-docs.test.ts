@@ -26,7 +26,7 @@ test('a page of one section holds that section alone, under a heading of its own
   assert.match(tiles, /^# Detail tiles\n/u);
   assert.match(tiles, /\| `air_quality` \|/u);
   assert.doesNotMatch(tiles, /^## /mu);
-  assert.throws(() => markdownOf({ slug: 'none', title: 'None', source: 'README.md', section: 'No such section' }));
+  assert.throws(() => markdownOf({ ...page('tiles'), section: 'No such section' }));
 });
 
 test('headings inside a code block are no headings', () => {
@@ -55,19 +55,20 @@ test('links between the files lead between the pages, and anything else to the r
 });
 
 test('every link on every page leads somewhere that is there', () => {
-  const pages = new Map(DOCS.map(each => [each.slug, ids(htmlOf(each))])),
-    setup = ids(readFileSync(new URL('../demo/setup/index.html', import.meta.url), 'utf8'));
+  const pages = new Map([
+    ...DOCS.map(each => [`/docs/${each.slug}/`, ids(htmlOf(each))] as const),
+    ['/setup/', ids(readFileSync(new URL('../demo/setup/index.html', import.meta.url), 'utf8'))],
+    ['/docs/', ids(readFileSync(new URL('../demo/docs/index.html', import.meta.url), 'utf8'))],
+  ]);
   for (const each of DOCS) {
     const html = htmlOf(each) + navOf(each);
     assert.match(html, /<h1>/u, each.slug);
     for (const href of links(html)) {
-      if (/^[a-z][a-z0-9+.-]*:/iu.test(href)) continue;
-      const [path = '', anchor = ''] = href.split('#'),
-        to = /^\.\.\/([^/]+)\/$/u.exec(path)?.[1],
-        there =
-          path === '' || path === './' ? pages.get(each.slug) : path === '../../setup/' ? setup : pages.get(to ?? '');
+      const url = new URL(href, `https://demo.test/docs/${each.slug}/`);
+      if (url.origin !== 'https://demo.test') continue;
+      const there = pages.get(url.pathname);
       assert.ok(there, `${each.slug}: ${href}`);
-      if (anchor) assert.ok(there.has(anchor), `${each.slug}: ${href}`);
+      if (url.hash) assert.ok(there.has(url.hash.slice(1)), `${each.slug}: ${href}`);
     }
   }
 });
