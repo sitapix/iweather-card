@@ -55,6 +55,13 @@ const PATTERNS: Readonly<Record<EntitySetting, RegExp>> = {
 
 const WEATHER_MODES = ['auto', 'conditions', 'rain', 'wind'] as const;
 const WEATHER_LAYOUTS = ['auto', 'compact', 'strip', 'homeview', 'expanded', 'page'] as const;
+export const FONT_OPTIONS = [
+  { value: 'auto', label: 'Automatic' },
+  { value: 'theme', label: 'Dashboard theme' },
+  { value: 'rounded', label: 'Rounded' },
+  { value: 'custom', label: 'Custom…' },
+] as const;
+const FONTS = FONT_OPTIONS.map(option => option.value);
 // What the home view's foot opens on: the days ahead, or the readings now. A swipe turns it to the other.
 const HOMEVIEW_ROWS = ['days', 'details'] as const;
 // How large the full page draws: standard, or larger for a screen seen from across a room.
@@ -123,6 +130,7 @@ export const CONFIG_DEFAULTS = Object.freeze({
   ...WEATHER_DEFAULTS,
   ...UNIT_DEFAULTS,
   show_name: true,
+  font: 'auto',
   // The home view's clock, and what its foot opens on.
   show_clock: true,
   homeview_row: 'days',
@@ -152,6 +160,8 @@ export type CardConfig = SourceSettings &
     entity: string;
     name?: string;
     place_name?: string;
+    font: (typeof FONTS)[number];
+    font_family?: string;
     weather_mode: WeatherMode;
     weather_layout: WeatherLayout;
     homeview_row: HomeviewRow;
@@ -232,6 +242,7 @@ export function normalizeConfig(saved: unknown): CardConfig {
     show_high_low: flag('show_high_low'),
     show_daily: flag('show_daily'),
     show_name: flag('show_name'),
+    font: CONFIG_DEFAULTS.font,
     show_clock: flag('show_clock'),
     map_wind_animation: flag('map_wind_animation'),
     map_precipitation_animation: flag('map_precipitation_animation'),
@@ -261,6 +272,7 @@ export function normalizeConfig(saved: unknown): CardConfig {
   };
   result.weather_mode = choice('weather_mode', WEATHER_MODES, CONFIG_DEFAULTS.weather_mode);
   result.weather_layout = choice('weather_layout', WEATHER_LAYOUTS, CONFIG_DEFAULTS.weather_layout);
+  result.font = choice('font', FONTS, CONFIG_DEFAULTS.font);
   result.homeview_row = choice('homeview_row', HOMEVIEW_ROWS, CONFIG_DEFAULTS.homeview_row);
   result.glass_strength = choice('glass_strength', GLASS_STRENGTHS, CONFIG_DEFAULTS.glass_strength);
   result.size = choice('size', PAGE_SIZES, CONFIG_DEFAULTS.size);
@@ -412,10 +424,11 @@ export function normalizeConfig(saved: unknown): CardConfig {
     if (typeof name !== 'string') throw new Error(say('The setting {key} must be text.', { key: 'name' }));
     result.name = name;
   }
-  const place = read('place_name');
-  if (place !== undefined) {
-    if (typeof place !== 'string') throw new Error(say('The setting {key} must be text.', { key: 'place_name' }));
-    if (place.trim()) result.place_name = place.trim();
+  for (const key of ['place_name', 'font_family'] as const) {
+    const value = read(key);
+    if (value === undefined) continue;
+    if (typeof value !== 'string') throw new Error(say('The setting {key} must be text.', { key }));
+    if (value.trim()) result[key] = value.trim();
   }
   const timeZone = read('time_zone');
   if ((timeZone ?? '') !== '') {

@@ -1,6 +1,6 @@
 /* Outside a sized grid, percentage heights have nothing to resolve against. Give the
    surface a definite height, with room for the expanded forecast, before its children size. */
-:host{direction:ltr;display:block;width:100%;height:var(--iweather-height,280px);min-height:280px;min-width:0;container:card/size;border-radius:var(--ha-card-border-radius,12px);overflow:hidden;color:#fff;font-family:var(--ha-font-family-body,system-ui,"Segoe UI",sans-serif);font-variant-numeric:tabular-nums;-webkit-font-smoothing:auto;-moz-osx-font-smoothing:auto}
+:host{direction:ltr;display:block;width:100%;height:var(--iweather-height,280px);min-height:280px;min-width:0;container:card/size;border-radius:var(--ha-card-border-radius,12px);overflow:hidden;color:#fff;font-family:var(--iweather-selected-font,var(--iweather-font-family,system-ui)),sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:auto;-moz-osx-font-smoothing:auto}
 :host([data-layout=expanded]){height:var(--iweather-height,700px)}
 :host([data-layout=compact]){height:var(--iweather-height,180px);min-height:0;border-radius:var(--ha-card-border-radius,24px)}
 :host([data-layout=strip]){height:var(--iweather-height,56px);min-height:0}
@@ -1299,7 +1299,7 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 .radar.large[data-night] .wind-rail{background:#ffffff33}.radar.large[data-night] .wind-rail i{background:#fff}.radar.large[data-night] .wind-rail b{background:#ffffff40}
 .radar.large[data-night] .wind-marks{color:#ffffffc7}.radar.large[data-night] .wind-marks [data-now]{color:#fff}
 .radar.large[data-night] .map-span{background:#ffffff1a}.radar.large[data-night] .map-span .thumb{background:#c1c2c6}.radar.large[data-night] .map-span:not([data-held]) [aria-pressed=true]{color:#1c1c1e}.radar.large[data-night] .map-span[data-held] .thumb{background:transparent}
-.map-attribution{position:relative;grid-row:3;justify-self:end;z-index:3;max-width:100%;box-sizing:border-box;padding:2px 6px;border-radius:4px 0 0;background:#fff;color:#232428;font:11px/20px system-ui,sans-serif;text-align:right}
+.map-attribution{position:relative;grid-row:3;justify-self:end;z-index:3;max-width:100%;box-sizing:border-box;padding:2px 6px;border-radius:4px 0 0;background:#fff;color:#232428;font-size:11px;font-weight:400;line-height:20px;text-align:right}
 .map-attribution a{color:#154d78;text-decoration:underline;white-space:nowrap}
 @media(pointer:coarse){.radar.large .map-tools button{width:44px;height:44px}.detail:not([data-full]) .map-layers{top:60px}}
 @media(max-height:440px){.detail[data-id=map][data-full] .map-tools,.detail[data-id=map][data-full] .map-pill{flex-direction:row}}
@@ -1449,9 +1449,9 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
  .home-symbol svg{display:block;width:max(18px,min(7.6cqw,7.6cqh));height:max(18px,min(7.6cqw,7.6cqh))}
  .home-low{color:var(--home-pale,#fff)}
 }
-/* At every size the temperature is the sky's colour in rounded type, and glass where that can be
-   drawn: on a canvas over its own words (see GlassFigures), which keep their room. */
-.weather[data-layout=homeview][data-daily]{font-family:ui-rounded,var(--ha-font-family-body,system-ui,"Segoe UI",sans-serif)}
+/* Home view defaults to rounded type. The temperature takes its colour from the sky, with a glass
+   canvas over its text where supported (see GlassFigures). */
+.weather[data-layout=homeview][data-daily]{font-family:var(--iweather-selected-font,var(--iweather-font-family,ui-rounded,system-ui)),sans-serif}
 .weather[data-layout=homeview][data-daily] .current{position:relative}
 .weather[data-layout=homeview][data-daily] .temperature{color:var(--home-tint,#fff);text-shadow:none}
 .weather[data-layout=homeview][data-daily][data-figures=glass] .temperature{color:transparent}

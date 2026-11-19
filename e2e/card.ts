@@ -10,7 +10,7 @@ import { bloscStored, bucketListing, hrrrSizes } from '../test/forecast-files.ts
 const DASHBOARD = 'https://home.test',
   FOLDER = `${DASHBOARD}/hacsfiles/`,
   FILE = `${FOLDER}iweather-card.js`,
-  PAGE = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><style>:root{--ha-font-family-body:"Liberation Sans",Arial}</style><script type="module" src="${FILE}?hacstag=1234567"></script>`;
+  PAGE = `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><style>:root{--iweather-font-family:"Liberation Sans",Arial}</style><script type="module" src="${FILE}?hacstag=1234567"></script>`;
 const NOW = Date.UTC(2026, 9, 27, 17, 30, 0),
   SECONDS = Math.floor(NOW / 1000);
 // Today's charts, on a sheet's page for that day.

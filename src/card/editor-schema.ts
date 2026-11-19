@@ -5,6 +5,7 @@ import type { EntityAttributes, FormSchemaItem, Selector } from './home-assistan
 import {
   CARD_TYPE,
   CONFIG_DEFAULTS,
+  FONT_OPTIONS,
   FORECAST_LIMITS,
   REFRESH_LIMITS,
   TOP_PADDING_LIMITS,
@@ -109,6 +110,7 @@ export interface EditorContext {
   showForecast: boolean;
   showDaily: boolean;
   showName: boolean;
+  customFont: boolean;
   localOnly: boolean;
   fill: boolean;
   averagesTile: boolean;
@@ -375,11 +377,15 @@ function averagesFields(context: EditorContext): FormSchemaItem[] {
 // power doesn't draw, and which only the layouts with panels have.
 const lookSection = (
   columns: number,
-  { layout, showName, sky, lowPower, map }: EditorContext,
+  { layout, showName, customFont, sky, lowPower, map }: EditorContext,
   compact: boolean,
   home: boolean,
 ): FormSchemaItem =>
   section('Appearance', 'mdi:palette-outline', [
+    select('font', 'Font', FONT_OPTIONS),
+    ...(customFont
+      ? [text('font_family', 'Font name', 'Use a font installed on your device or provided by your dashboard.')]
+      : []),
     ...(home
       ? []
       : showName
@@ -639,6 +645,7 @@ export function schemaFor(context: Partial<EditorContext> = {}, say: EditorText 
     showForecast: context.showForecast ?? true,
     showDaily: context.showDaily ?? true,
     showName: context.showName ?? true,
+    customFont: context.customFont ?? false,
     localOnly: context.localOnly ?? false,
     fill: context.fill ?? true,
     averagesTile: context.averagesTile ?? true,
@@ -705,6 +712,7 @@ export function formData(config: Readonly<Record<string, unknown>>): Record<stri
 // The dropdowns, which a × clears: cleared, each shows its default again rather than nothing,
 // and the settings leave it out.
 const DROPDOWNS: Readonly<Record<string, unknown>> = {
+  font: CONFIG_DEFAULTS.font,
   map: DEFAULTS['map'],
   air_quality_scale: DEFAULTS['air_quality_scale'],
   averages_source: averagesSource(undefined),
@@ -772,6 +780,7 @@ export function contextOf(
     showForecast: data['show_forecast'] !== false,
     showDaily: data['show_daily'] !== false,
     showName: data['show_name'] !== false,
+    customFont: data['font'] === 'custom',
     localOnly: data['local_only'] === true,
     fill: data['open_meteo_forecast'] !== false,
     averagesTile: !isList(tiles) || tiles.includes('averages'),
@@ -781,6 +790,7 @@ export function contextOf(
 export const TYPED: ReadonlySet<string> = new Set([
   'name',
   'place_name',
+  'font_family',
   'time_zone',
   'map_tile_url',
   'map_layers',

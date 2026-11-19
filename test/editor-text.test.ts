@@ -47,6 +47,7 @@ const everyWord = () => {
   wordsOf(schemaFor({ layout: 'page', map: 'rainviewer', showName: false }), words);
   // The air's scale shows once a sensor is set.
   wordsOf(schemaFor({ layout: 'page', air: true }), words);
+  wordsOf(schemaFor({ customFont: true }), words);
   wordsOf(schemaFor({ layout: 'page', localOnly: true }), words);
   // With nothing missing, the section is named without its count.
   wordsOf(schemaFor({ layout: 'page', attributes: undefined }), words);

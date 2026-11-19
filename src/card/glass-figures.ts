@@ -154,7 +154,7 @@ export class GlassFigures {
   }
   // Shapes the glass to the words `figures` shows, laid over them in the box that holds them both.
   // Costly, so only when the words, their type, their place or the strength change, which it says.
-  shape(figures: HTMLElement, strength: GlassStrength) {
+  shape(figures: HTMLElement, strength: GlassStrength, fontsLoaded: boolean) {
     const text = figures.textContent,
       style = getComputedStyle(figures),
       font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`,
@@ -171,7 +171,7 @@ export class GlassFigures {
         dpr,
         strength,
       ]);
-    if (key === this.key || !type || !figures.offsetWidth) return false;
+    if ((!fontsLoaded && key === this.key) || !type || !figures.offsetWidth) return false;
     this.key = key;
     const { gl, canvas, mask, soft } = this,
       cut = STRENGTHS[strength],

@@ -182,6 +182,14 @@ function adoptStyles(root: ShadowRoot): string {
   return sheet ? '' : `<style>${styles}</style>`;
 }
 
+// Clearing the per-card choice lets the theme or the layout supply its font again.
+function selectedFont({ font, font_family }: CardConfig): string {
+  if (font === 'theme') return 'var(--ha-font-family-body,system-ui)';
+  if (font === 'rounded') return 'ui-rounded,system-ui';
+  if (font === 'custom' && font_family) return `"${CSS.escape(font_family)}",system-ui`;
+  return '';
+}
+
 // Shorter than this, an expanded card's full-size hero and forecast don't both fit.
 const SHORT = 320;
 // Data an integration hasn't written for this long is shown as stale. Most write hourly or
@@ -639,6 +647,7 @@ export class IWeatherCard extends HTMLElement {
       zone = this.config?.time_zone !== next.time_zone,
       repaint = this.config?.low_power !== next.low_power || this.config.weather_scene !== next.weather_scene;
     this.config = next;
+    this.style.setProperty('--iweather-selected-font', selectedFont(next));
     this.parts.weather.style.setProperty('--top-padding', String(next.top_padding / PERCENT));
     this.scene.lowPower = next.low_power;
     // New display units, or a new zone to date the days in: read the forecasts already held again.
@@ -1429,7 +1438,7 @@ export class IWeatherCard extends HTMLElement {
   // The home view's temperature is glass over the sky, where there is a sky, the settings leave its
   // refraction on and WebGL is to be had: the module comes when first wanted, and until it has, or
   // if it never does, the figures show as plain type.
-  syncFigures() {
+  syncFigures(fontsLoaded = false) {
     const { weather, temperature, figureGlass, sky } = this.parts,
       config = this.config,
       wanted =
@@ -1454,8 +1463,12 @@ export class IWeatherCard extends HTMLElement {
     const glass = wanted && this._figures && !this._figures.lost ? this._figures : undefined;
     figureGlass.hidden = !glass;
     if (glass) {
-      const shaped = glass.shape(temperature, this.config?.glass_strength ?? 'standard');
-      if (shaped) glass.paint(sky);
+      const shaped = glass.shape(temperature, this.config?.glass_strength ?? 'standard', fontsLoaded);
+      if (shaped) {
+        glass.paint(sky);
+        // A dashboard font can arrive after the canvas drew the fallback with the same dimensions.
+        if (document.fonts.status === 'loading') void document.fonts.ready.then(() => this.syncFigures(true));
+      }
       if (weather.dataset['figures'] !== 'glass') {
         weather.dataset['figures'] = 'glass';
         glass.paint(sky);

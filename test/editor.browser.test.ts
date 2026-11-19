@@ -32,6 +32,50 @@ const hass = (n: number): HomeAssistant => ({
 const fieldsOf = (schema: readonly FormSchemaItem[]): string[] =>
   schema.flatMap(item => (item.schema ? fieldsOf(item.schema) : [item.name]));
 
+test('the editor previews each font on the card and remembers a custom name', async () => {
+  const editor = document.createElement('iweather-card-editor'),
+    card = document.createElement('iweather-card'),
+    config = { entity: 'weather.home', weather_layout: 'homeview', weather_scene: false, local_only: true };
+  editor.setConfig(config);
+  card.setConfig(config);
+  const weather = hass(63);
+  card.hass = weather;
+  editor.hass = weather;
+  card.style.setProperty('--iweather-font-family', 'serif');
+  card.style.setProperty('--ha-font-family-body', 'monospace');
+  editor.addEventListener('config-changed', event => {
+    if (event instanceof CustomEvent && isRecord(event.detail)) card.setConfig(event.detail['config']);
+  });
+  document.body.replaceChildren(editor, card);
+  await wait(30);
+  const form = editor.shadowRoot?.querySelector('ha-form');
+  if (!(form instanceof FakeForm)) throw new Error('No form.');
+  const expectFont = (family: string) => {
+    expect(getComputedStyle(card).fontFamily).toBe(family);
+    expect(getComputedStyle(card.parts.temperature).fontFamily).toBe(family);
+  };
+  expectFont('serif, sans-serif');
+  form.change({ font: 'theme' });
+  expectFont('monospace, sans-serif');
+  form.change({ font: 'custom' });
+  expect(fieldsOf(form.schema)).toContain('font_family');
+  expectFont('serif, sans-serif');
+  form.change({ font_family: 'Times New Roman' });
+  editor.shadowRoot?.dispatchEvent(new FocusEvent('focusout'));
+  expectFont('"Times New Roman", system-ui, sans-serif');
+  form.change({ font: 'rounded' });
+  expect(fieldsOf(form.schema)).not.toContain('font_family');
+  expectFont('ui-rounded, system-ui, sans-serif');
+  form.change({ font: 'custom' });
+  expect(form.data['font_family']).toBe('Times New Roman');
+  expectFont('"Times New Roman", system-ui, sans-serif');
+  form.change({ font: undefined });
+  expect(form.data['font']).toBe('auto');
+  expectFont('serif, sans-serif');
+  editor.remove();
+  card.remove();
+});
+
 test('compact hides unused controls and keeps their saved values through edits and layout changes', async () => {
   const editor = document.createElement('iweather-card-editor'),
     sent: Record<string, unknown>[] = [],
