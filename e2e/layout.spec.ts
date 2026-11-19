@@ -1,5 +1,27 @@
 import { expect, test } from './card.ts';
 
+for (const [layout, font] of [
+  ['page', 'system-ui, sans-serif'],
+  ['homeview', 'ui-rounded, system-ui, sans-serif'],
+] as const)
+  test.describe(`${layout} typography`, () => {
+    test.use({ config: { weather_layout: layout, local_only: true, weather_scene: false } });
+
+    test('uses the device font until the theme sets a card font', async ({ card, page }) => {
+      const temperature = card.locator('.temperature');
+      await page.evaluate(() => {
+        const { style } = document.documentElement;
+        style.setProperty('--ha-font-family-body', 'monospace');
+        style.setProperty('--iweather-font-family', 'initial');
+      });
+      await expect(temperature).toHaveCSS('font-family', font);
+      await page.evaluate(() =>
+        document.documentElement.style.setProperty('--iweather-font-family', 'var(--ha-font-family-body)'),
+      );
+      await expect(temperature).toHaveCSS('font-family', 'monospace, sans-serif');
+    });
+  });
+
 // A preview or masonry card has a width but no parent height to inherit. Check the
 // surface and its contents: a nonzero host alone can still hide an empty surface.
 for (const layout of ['compact', 'strip', 'homeview', 'auto', 'expanded', 'page'] as const)

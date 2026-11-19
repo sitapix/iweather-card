@@ -85,6 +85,8 @@ These apply to the `homeview` layout. See [The home view](#the-home-view).
 |---|---|---|
 | `show_name` | `true` | Show the location name |
 | `name` | entity name | Location shown above the temperature |
+| `font` | `auto` | Choose under **Appearance → Font**. `auto` uses the device’s system font, with a rounded preference in Home view. `theme` follows the Home Assistant dashboard font. `rounded` uses the rounded system font in every layout where supported. `custom` uses `font_family`. |
+| `font_family` | none | One font name for **Custom…**, such as `Georgia`. Use a font installed on the viewing device or loaded by the dashboard. A blank name uses Automatic. An unavailable font falls back to the device’s system font. |
 | `place_name` | none | Your town or city, for the `page` layout. It heads the page under Home Assistant's name for your home, with a location arrow, and names the map's pin when the weather is for somewhere more than 10 km from home. Unset, the page shows `name` alone and the pin goes unnamed away from home, unless a [`zone`](#weather-for-somewhere-else) names them. The card asks no service to look your place up. |
 | `weather_scene` | `true` | Live sky, clouds, sun, moon, rain and snow |
 | `weather_animation` | `true` | Animate the sky. Off when your system asks for reduced motion. |
@@ -307,3 +309,5 @@ The editor for Compact and Strip hides forecast panels, glass refraction, haptic
 ## Styling
 
 The card draws its own surface rather than `ha-card`, so styles aimed at `ha-card { }` match nothing. It follows your theme's `--ha-card-border-radius`, and the rest can be styled from `:host` and the card's own classes.
+
+Choose **Appearance → Font** in the visual editor to preview a font on this card. To set a font for all iWeather cards using **Automatic**, add `iweather-font-family` to your Home Assistant theme. For example, `iweather-font-family: "var(--ha-font-family-body)"` makes those cards follow the dashboard font. With card-mod, set `--iweather-font-family` on the card’s `:host` to give it its own default.

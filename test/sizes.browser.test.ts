@@ -415,10 +415,10 @@ for (const section of SECTIONS)
     // As wide as a system's type gets: what fits above must fit here too.
     test(`every size fits a ${section}px section in wide type (${layout})`, { timeout: MANY_CARDS }, async () => {
       const { style } = document.documentElement,
-        type = style.getPropertyValue('--ha-font-family-body');
-      style.setProperty('--ha-font-family-body', 'Verdana,"DejaVu Sans"');
+        type = style.getPropertyValue('--iweather-font-family');
+      style.setProperty('--iweather-font-family', 'Verdana,"DejaVu Sans"');
       const { found } = await problems(section, layout);
-      style.setProperty('--ha-font-family-body', type);
+      style.setProperty('--iweather-font-family', type);
       expect(found).toEqual([]);
     });
   }

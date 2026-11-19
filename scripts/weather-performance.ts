@@ -143,7 +143,7 @@ try {
       if (url.pathname === '/weather-performance')
         return route.fulfill({
           contentType: 'text/html',
-          body: `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><style>body{margin:0;background:#f2f2f4;font:14px Arial}iweather-card{display:block;width:min(1100px,100vw)}:root{--ha-font-family-body:Arial}</style><script type="module" src="/src/iweather-card.ts"></script></html>`,
+          body: `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><style>body{margin:0;background:#f2f2f4;font:14px Arial}iweather-card{display:block;width:min(1100px,100vw)}:root{--iweather-font-family:Arial}</style><script type="module" src="/src/iweather-card.ts"></script></html>`,
         });
       if (url.pathname === '/src/sky/presets.ts') {
         const response = await route.fetch();

@@ -41,6 +41,7 @@ test('the card accepts real weather entities, fills defaults and rejects invalid
   assert.equal(config.map_precipitation_animation, true);
   assert.equal(config.forecast_hours, 24);
   assert.equal(config.show_name, true);
+  assert.equal(config.font, 'auto');
   assert.equal(config.top_padding, 50);
   assert.equal(normalizeConfig({ ...config, top_padding: 0 }).top_padding, 0);
   assert.equal(normalizeConfig({ ...config, top_padding: 200 }).top_padding, 200);
@@ -63,6 +64,8 @@ test('the card accepts real weather entities, fills defaults and rejects invalid
     { map_precipitation_animation: null },
     { weather_mode: 'humidity' },
     { weather_layout: 'tall' },
+    { font: 'serif' },
+    { font_family: 42 },
     { time_zone: 'Mars/Olympus' },
   ])
     assert.throws(() => normalizeConfig({ ...config, ...options }));
@@ -1041,6 +1044,7 @@ test('every field says which part of the card it changes, unless it changes the 
     [
       'air_quality',
       'entity',
+      'font',
       'forecast_refresh_minutes',
       'haptics',
       'local_only',

@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 
 // These tests measure what a page lays out, so they set the type it is laid out in: a machine's own
 // sans-serif would decide whether they pass. Arial and Liberation Sans have the same widths.
-document.documentElement.style.setProperty('--ha-font-family-body', '"Liberation Sans",Arial');
+document.documentElement.style.setProperty('--iweather-font-family', '"Liberation Sans",Arial');
 
 // `vi.waitFor` gives up after a second on what it last saw, without looking again, and a busy machine
 // can hold a page still for longer, so a wait could fail just before what it waits for happens. A
