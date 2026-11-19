@@ -2,6 +2,7 @@ import { languageOf } from '../src/weather/language.ts';
 import type { GlassStrength, WeatherLayout } from '../src/card/config.ts';
 import { GLASS_DEFAULTS, GLASS_OPTIONS, GLASS_STRENGTHS } from '../src/card/glass-options.ts';
 import type { CloudAltitude } from '../src/card/home-assistant.ts';
+import { copyYaml } from './copy-yaml.ts';
 import { House } from './house.ts';
 import { type Place, findPlaces, liveWeather } from './live.ts';
 import { SYMBOLS, type SymbolName } from '../src/weather/symbols.ts';
@@ -456,16 +457,8 @@ getYaml.addEventListener('click', () => {
 });
 settingsDialog.addEventListener('close', () => getYaml.focus({ preventScroll: true }));
 
-async function copyYaml() {
-  let message: string;
-  try {
-    await navigator.clipboard.writeText(code.textContent);
-    message = 'YAML copied';
-  } catch {
-    const selection = document.getSelection();
-    selection?.selectAllChildren(code);
-    message = selection?.toString() ? 'YAML selected. Use your device’s Copy command.' : 'Select the YAML to copy it.';
-  }
+async function copyDashboardYaml() {
+  const message = await copyYaml(code);
   copyFeedback.textContent = '';
   requestAnimationFrame(() => {
     if (settingsDialog.open) copyFeedback.textContent = message;
@@ -473,9 +466,9 @@ async function copyYaml() {
 }
 if ('CommandEvent' in window && 'commandForElement' in HTMLButtonElement.prototype)
   code.addEventListener('command', event => {
-    if (event instanceof CommandEvent && event.command === '--copy') void copyYaml();
+    if (event instanceof CommandEvent && event.command === '--copy') void copyDashboardYaml();
   });
-else copy.addEventListener('click', () => void copyYaml());
+else copy.addEventListener('click', () => void copyDashboardYaml());
 
 addEventListener('hashchange', () => {
   show(fromHash(location.hash));

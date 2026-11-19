@@ -18,6 +18,7 @@ const TYPES: Readonly<Record<string, string>> = {
   json: 'application/json',
   avif: 'image/avif',
   png: 'image/png',
+  webp: 'image/webp',
   txt: 'text/plain',
 };
 const PLACES = {
@@ -375,3 +376,38 @@ for (const [tag, code] of [
     await expect(demo.locator('select[name=language]')).toHaveValue(code);
   });
 }
+
+test('the docs lead from the demo to a setting and a copyable dashboard example', async ({ demo }) => {
+  await demo.goto(`${SITE}/#layout=compact`);
+  await demo.getByRole('link', { name: 'Docs', exact: true }).click();
+  await expect(demo.getByRole('heading', { name: 'iWeather Card docs' })).toBeVisible();
+  await demo.getByRole('link', { name: 'Configuration', exact: true }).click();
+
+  const search = demo.getByRole('search', { name: 'Configuration settings' }),
+    query = search.getByRole('searchbox');
+  await query.fill('absent-setting');
+  await expect(search.getByRole('status')).toContainText('No matching settings');
+  await query.fill('forecast days');
+  await search.getByRole('link', { name: /forecast_days/ }).click();
+  await expect(demo).toHaveURL(/#forecast-forecast_days$/u);
+  await expect(demo.locator(':target')).toBeInViewport();
+
+  const guides = demo.getByRole('navigation', { name: 'Documentation' }),
+    examples = guides.getByRole('link', { name: 'Dashboard examples' });
+  if (await examples.isHidden()) await guides.getByText('Browse guides').click();
+  await examples.click();
+  await demo.getByText('On this page', { exact: true }).click();
+  await demo
+    .locator('.doc-outline')
+    .getByRole('link', { name: /bedside display/ })
+    .click();
+  const snippet = demo.locator('.doc-snippet').filter({ hasText: 'weather_layout: homeview' });
+  await demo.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+  });
+  await snippet.getByRole('button', { name: 'Copy YAML' }).click();
+  await expect(snippet.getByRole('status')).toContainText('YAML selected');
+  expect(await demo.evaluate(() => document.getSelection()?.toString())).toBe(
+    await snippet.locator('code').textContent(),
+  );
+});

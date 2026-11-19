@@ -1,8 +1,8 @@
-# Make it yours
+# Dashboard examples
 
-Start with your own `weather.*` entity. Every example below works without an API key, and every option is available in the visual editor. The forecasts and readings you see depend on your integration.
+Replace `weather.home` with your weather entity ID. Paste a card example into the dashboard card’s code editor. The whole-page example goes in the dashboard’s raw configuration.
 
-In the editor, expand **Quick setup** to apply Compact, Expanded, Full page or Wall tablet. These starting points change presentation settings and offer **Undo** until your next manual edit. They keep your sources, units, actions, privacy settings, tile choices and dashboard sizing. They save ordinary card options, so there is no preset to keep in sync later.
+You can also choose **Compact**, **Expanded**, **Full page** or **Wall tablet** under **Quick setup** in the visual editor. A preset changes the presentation and keeps your data sources, units, actions, privacy settings, tiles and dashboard sizing. **Undo** is available until your next edit.
 
 ## A small city tile
 
@@ -16,6 +16,17 @@ place_name: Home
 ```
 
 Compact takes three rows in a sections dashboard. Resize it with Home Assistant's layout controls.
+
+## A clock and forecast for a bedside display
+
+Home view puts a clock and a large temperature above four columns. This example starts with current readings. Swipe the row to see the next four days, or tap a column for details.
+
+```yaml
+type: custom:iweather-card
+entity: weather.home
+weather_layout: homeview
+homeview_row: details
+```
 
 ## Weather beside your other cards
 
@@ -31,7 +42,9 @@ forecast_days: 5
 
 ## A whole weather page
 
-Paste this into a dashboard's raw configuration as a view, replacing the entity. A panel view gives the card the available screen and lets its content scroll. The online map and climate averages below are optional and contact outside services; see [privacy](../README.md#what-leaves-your-browser).
+A panel view gives the weather card the full screen. In the dashboard’s raw configuration, add the entry starting with `- title: Weather` to your existing `views:` list. The example shows where it belongs.
+
+The radar map and climate averages use [online services](../README.md#what-leaves-your-browser). You can leave out `map` and `averages`.
 
 ```yaml
 views:
