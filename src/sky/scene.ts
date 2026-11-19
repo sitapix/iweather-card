@@ -508,6 +508,8 @@ const VEIL = { color: '#c8c6c0', most: 0.3, bright: 120 } as const;
 const TILE_FLARE = { ring: 1.7, ringStrength: 2.8, size: 1.9, strength: 1.7, glow: 0.62, glowStrength: 2.2 } as const;
 // The sun's shine through cloud: how far it reaches in the sun's radii, the share of that its
 // white core takes, and how strong it is.
+// How much of its own width a far cloud's surface is smoothed over.
+const FAR_SOFT = 0.016;
 const SHINE = { reach: 3.4, core: 0.2, strength: 1 } as const;
 // The sun's spike ball shows only while the sun is more than 9° up, coming in over the next degree.
 const SPIKES = { from: 9, to: 10 } as const;
@@ -1718,6 +1720,7 @@ export class WeatherScene {
         opacity: tints.opacity,
         tone: tints.tone,
         alpha: alpha * fade,
+        soft: cloud.far ? FAR_SOFT : 0,
       };
       if (queue) {
         queue.push(draw);

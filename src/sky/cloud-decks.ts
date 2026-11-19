@@ -42,6 +42,8 @@ export interface DeckCloud {
   extent: number;
   scale: number;
   speed: number;
+  // A smaller cloud of the sky's, which stands farther off and shows less of its surface.
+  far?: boolean;
 }
 export type Tint = readonly [red: number, green: number, blue: number, intensity: number];
 export type Direction = readonly [x: number, y: number, z: number];
@@ -63,6 +65,8 @@ const FAMILY_ART: Record<CloudFamily, CloudArt> = {
 };
 // The small clouds in a deck of heaps: their size and how far below their neighbour they lie, as
 // shares of a cloud's size there, and how far from the middle of a gap they wander, in gaps.
+// The heaps a sky sets small and low are its far ones.
+const FAR_ART: CloudArt = 'Cumulus_SingleM';
 const SMALL = { scale: [0.1, 0.18], drop: [0.05, 0.3], wander: 0.6 } as const;
 const lerp = ([lo, hi]: Range, t: number) => lo + (hi - lo) * t;
 
@@ -126,6 +130,7 @@ export function deckClouds(decks: readonly (CloudDeck | null)[], artworkSeed = 1
           z: centerZ + offsetZ + (hash(key, 29) - 0.5) * spreadZ,
           scale: initialScale * lerp(scale, u),
           speed: lerp(velocity, u),
+          far: art === FAR_ART,
         });
       }
     }
@@ -145,6 +150,7 @@ export function deckClouds(decks: readonly (CloudDeck | null)[], artworkSeed = 1
           z: centerZ + offsetZ + (hash(key, 29) - 0.5) * spreadZ,
           scale: size * lerp(SMALL.scale, hash(key, 53)),
           speed: lerp(velocity, hash(key, 59)),
+          far: true,
         });
       }
     return clouds;

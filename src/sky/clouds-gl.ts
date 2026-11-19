@@ -21,6 +21,8 @@ export interface CloudDraw {
   // How much of the film's curve its light takes (see tone.ts).
   tone?: number;
   alpha: number;
+  // How much of its own width its surface is smoothed over, for a cloud that stands far off.
+  soft?: number;
 }
 
 const VERTEX = `#version 300 es
@@ -48,11 +50,12 @@ uniform vec3 uAmbient;
 uniform float uOpacity;
 uniform float uTone;
 uniform float uAlpha;
+uniform float uSoft;
 in vec2 vUv;
 out vec4 color;
 float layer(vec2 at, float k) {
   vec2 inset = .5 / vec2(textureSize(uMaps, 0).xy);
-  return texture(uMaps, vec3(clamp(at, uRect.xy + inset, uRect.xy + uRect.zw - inset), k)).r;
+  return texture(uMaps, vec3(clamp(at, uRect.xy + inset, uRect.xy + uRect.zw - inset), k), uSoft).r;
 }
 void main() {
   vec2 at = uRect.xy + vec2(uFlip > .5 ? 1. - vUv.x : vUv.x, vUv.y) * uRect.zw;
@@ -83,7 +86,8 @@ type Uniform =
   | 'uAmbient'
   | 'uOpacity'
   | 'uTone'
-  | 'uAlpha';
+  | 'uAlpha'
+  | 'uSoft';
 const PLANES = 7;
 const CHANNEL = 255;
 export { lightWeights } from './cloud-decks.ts';
@@ -143,6 +147,7 @@ export class CloudPainter {
         uOpacity: at('uOpacity'),
         uTone: at('uTone'),
         uAlpha: at('uAlpha'),
+        uSoft: at('uSoft'),
       };
     // The seven planes keep the decoded data channels, including their faintest opacity.
     const maps = gl.createTexture(),
@@ -237,6 +242,9 @@ export class CloudPainter {
       gl.uniform1f(u.uOpacity, Math.min(1, Math.max(0, cloud.opacity ?? 1)));
       gl.uniform1f(u.uTone, Math.min(1, Math.max(0, cloud.tone ?? 0)));
       gl.uniform1f(u.uAlpha, Math.min(1, Math.max(0, cloud.alpha)));
+      // Smoothed over a share of its width, so as far on a small card as on a large one: a coarser
+      // copy of its picture, by as many levels as that share of its drawn width has pixels.
+      gl.uniform1f(u.uSoft, Math.max(0, Math.log2((cloud.soft ?? 0) * cloud.width * ratio)));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     target.save();
