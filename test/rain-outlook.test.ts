@@ -27,12 +27,15 @@ test('the minute forecast decides first: falling now, or starting within the hou
   assert.equal(rainOutlook(minuteSpans(series, quarters([0]), now), dry, now), 'nextHour');
 });
 
-test('then the hourly forecast: the first wet hour, in whole hours from now, an hour under way being none', () => {
-  assert.equal(rainOutlook([], wetFrom(0), now), 'nextThreeHours', 'the hour under way');
-  assert.equal(rainOutlook([], wetFrom(3), now), 'nextThreeHours', '2 h 40 min away reads as 2 hours');
-  assert.equal(rainOutlook([], wetFrom(4), now), 'nextSixHours');
-  assert.equal(rainOutlook([], wetFrom(6), now), 'nextSixHours', '5 h 40 min away reads as 5 hours');
-  assert.equal(rainOutlook([], wetFrom(7), now), 'none');
+test('then the hourly forecast: the first wet hour, to the nearest hour from now, an hour under way being the next hour', () => {
+  assert.equal(rainOutlook([], wetFrom(0), now), 'nextHour', 'the hour under way');
+  assert.equal(rainOutlook([], wetFrom(1), now), 'nextThreeHours', '40 min away reads as 1 hour');
+  assert.equal(rainOutlook([], wetFrom(2), now), 'nextThreeHours', '1 h 40 min away reads as 2 hours');
+  assert.equal(rainOutlook([], wetFrom(3), now), 'nextSixHours', '2 h 40 min away reads as 3 hours');
+  assert.equal(rainOutlook([], wetFrom(5), now), 'nextSixHours', '4 h 40 min away reads as 5 hours');
+  assert.equal(rainOutlook([], wetFrom(6), now), 'none', '5 h 40 min away reads as 6 hours');
+  // Under half an hour over, the count rounds down.
+  assert.equal(rainOutlook([], wetFrom(3), now + 30 * MINUTE), 'nextThreeHours', '2 h 10 min away reads as 2 hours');
   assert.equal(rainOutlook([], dry, now), 'none');
   assert.equal(rainOutlook([], [], now), 'unknown');
   // An hour that began more than an hour ago is passed over.

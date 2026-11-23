@@ -19,8 +19,9 @@ export interface MinuteSpan {
 // The minute forecast decides first, where there is one: precipitation falling in the stretch under
 // way is now, and a stretch with it starting within the hour is the next hour. The hourly forecast
 // decides the rest, by the first hour that brings precipitation, passing over hours begun more than
-// an hour ago: an hour under way is no hours off, and one ahead its whole hours away and at least
-// one. Under three hours off is within three, under six within six.
+// an hour ago: an hour under way is the next hour, and one ahead is as many hours off as its start
+// is to the nearest hour, and at least one. Under three hours off is within three, under six
+// within six.
 const WITHIN = { threeHours: 3, sixHours: 6 } as const;
 export function rainOutlook(
   minutes: readonly MinuteSpan[],
@@ -38,7 +39,8 @@ export function rainOutlook(
     if (time >= now - HOUR && time < start) start = time;
   }
   if (!Number.isFinite(start)) return 'none';
-  const hours = start <= now ? 0 : Math.max(1, Math.trunc((start - now) / HOUR));
+  if (start <= now) return 'nextHour';
+  const hours = Math.max(1, Math.round((start - now) / HOUR));
   return hours < WITHIN.threeHours ? 'nextThreeHours' : hours < WITHIN.sixHours ? 'nextSixHours' : 'none';
 }
 
