@@ -920,7 +920,9 @@ export class WeatherScene {
     } else {
       this.blanket = null;
     }
-    this.stars = null;
+    // A sky with stars keeps its field, which is the same for as long as its size and their number
+    // are (see paintStars); one without lets it go.
+    if (preset.stars <= STARS_SHOW) this.stars = null;
   }
   // Frame rates by kind of sky (48 fps falling or storming, 30 clouds and fog, 25
   // clear); at 10 fps a drifting deck visibly stepped. Transitions get every frame. Stars

@@ -303,6 +303,8 @@ export class IWeatherCard extends HTMLElement {
   // Set while sync runs: a forecast stream started again there tells of it at once, and sync draws
   // the card itself once it has the rest, so the stream's word draws nothing (see sync).
   private _syncing = false;
+  // Forecasts have come and are yet to be drawn (see forecastsCame).
+  private _forecastsDue = false;
   private readonly _moons = new WeakSet<HTMLCanvasElement>();
   // The sheets a tile, a day or a panel opens.
   readonly sheets: DetailSheets = new DetailSheets(this);
@@ -372,9 +374,7 @@ export class IWeatherCard extends HTMLElement {
     // Forecasts in the card's units; a second entity's, and Open-Meteo's, are first brought into the
     // card entity's units.
     this.forecasts = new ForecastSources(
-      () => {
-        if (!this._syncing) this.render();
-      },
+      () => this.forecastsCame(),
       (list, source, type) => {
         const own = this.rawState(this.config?.entity)?.attributes;
         if (source === 'open_meteo') return convertForecastBetween(list, OPEN_METEO_UNITS, own, this.config);
@@ -386,9 +386,7 @@ export class IWeatherCard extends HTMLElement {
       },
     );
     // A nowcast weather entity for next-hour precipitation streams its own forecast.
-    this.nowcast = new WeatherForecast(() => {
-      if (!this._syncing) this.render();
-    });
+    this.nowcast = new WeatherForecast(() => this.forecastsCame());
     for (const node of [this.parts.current, this.parts.credit])
       bindPresses(
         node,
@@ -652,7 +650,7 @@ export class IWeatherCard extends HTMLElement {
     this.scene.lowPower = next.low_power;
     // New display units, or a new zone to date the days in: read the forecasts already held again.
     // (The entity's readings follow the new config the next time they are read; see readHass.)
-    if (this._rawHass && (units || zone)) this.forecasts.refresh();
+    if (this._rawHass && (units || zone)) this.reread();
     this.sync();
     if (repaint) this.paint();
   }
@@ -681,7 +679,8 @@ export class IWeatherCard extends HTMLElement {
       zone = this.timeZone;
     this._rawHass = value;
     // The days already held are dated again in a new zone (see namedDays).
-    if (old && zone !== this.timeZone) this.forecasts.refresh();
+    const dated = old !== undefined && zone !== this.timeZone;
+    if (dated) this.reread();
     // Home Assistant's own states of everything the card reads, and everything else it hands over:
     // unchanged, so are the readings made from them. Home Assistant replaces only the fields that
     // changed, and a list of the ones that matter kept missing some, such as the formatters, which
@@ -698,7 +697,8 @@ export class IWeatherCard extends HTMLElement {
       ...(this.config ? tileEntities(this.config, value) : []),
       SUN_ENTITY,
     ].filter((id): id is string => Boolean(id));
-    if (old && ids.every(id => old.states[id] === value.states[id]) && sameApartFromStates(old, value)) return;
+    if (!dated && old && ids.every(id => old.states[id] === value.states[id]) && sameApartFromStates(old, value))
+      return;
     this.sync();
     // An entity back in the state it was in, changed since: it has been somewhere else, perhaps made
     // anew by its integration reloading, which the page can miss when both come close together.
@@ -823,6 +823,25 @@ export class IWeatherCard extends HTMLElement {
       if (document.hidden) stream.suspend();
       else stream.resume();
   }
+  // Each type of forecast comes as a message of its own, and several can come at once: they are
+  // drawn together, once all have been taken in, unless something has drawn the card meanwhile.
+  forecastsCame() {
+    if (this._syncing || this._forecastsDue) return;
+    this._forecastsDue = true;
+    queueMicrotask(() => {
+      if (this._forecastsDue) this.render();
+    });
+  }
+  // The forecasts held, read again in new units or a new zone. The sync that follows draws them.
+  reread() {
+    this._syncing = true;
+    try {
+      this.forecasts.refresh();
+    } finally {
+      this._syncing = false;
+    }
+    if (!this.isConnected && this.update) this._renderDue = true;
+  }
   sync() {
     const config = this.config;
     if (!config) return;
@@ -889,6 +908,7 @@ export class IWeatherCard extends HTMLElement {
     parts.retry.textContent = t('retry');
   }
   render() {
+    this._forecastsDue = false;
     const config = this.config;
     if (!config) return;
     if (this.update && !this.inSight && !(this._nearby && this.isConnected && !document.hidden)) {
