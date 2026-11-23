@@ -238,7 +238,7 @@ function render(
     soft = false,
     neutral = false,
   }: MoonLook = {},
-): void {
+): ImageData {
   const full = Math.round(size * frame),
     out = ctx.createImageData(full, full),
     angle = 2 * Math.PI * phase,
@@ -348,6 +348,7 @@ function render(
     soften(out, SKY_SOFT.blur * size);
   }
   ctx.putImageData(out, 0, 0);
+  return out;
 }
 
 // The moon for the sky: a square canvas twice the disc's width (the halo fills the
@@ -356,6 +357,16 @@ function render(
 // out, 14 at three tenths. Returns null until the texture has loaded; cached per size,
 // phase step and warmth.
 const sprites = new Map<string, HTMLCanvasElement>();
+// The untinted moon as it was lit, per size and phase step. A tint only multiplies it, so a moon
+// whose colour changes as it rises or sets isn't lit again, nor read back from its canvas.
+const plain = new Map<string, ImageData>();
+function kept<T>(held: Map<string, T>, key: string, value: T): T {
+  held.delete(key);
+  held.set(key, value);
+  const [oldest] = held.keys();
+  if (held.size > SPRITES_KEPT && oldest !== undefined) held.delete(oldest);
+  return value;
+}
 export function skyMoon(size: number, phase: number, warm = 0, tint?: string): HTMLCanvasElement | null {
   if (!phaseImage && !map) {
     void loadSkyMoon();
@@ -372,6 +383,7 @@ export function skyMoon(size: number, phase: number, warm = 0, tint?: string): H
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = Math.round(size * 2);
   const ctx = context2d(canvas);
+  let untinted: ImageData | undefined;
   if (phaseImage) {
     const index = ((Math.round(phase * PHASE_COUNT) % PHASE_COUNT) + PHASE_COUNT) % PHASE_COUNT;
     const frame = phaseImage.naturalWidth / PHASE_COLUMNS,
@@ -389,23 +401,25 @@ export function skyMoon(size: number, phase: number, warm = 0, tint?: string): H
       width,
     );
   } else if (map) {
-    render(ctx, map, size, phase, { frame: 2, halo: 0.22, warm, neutral: tint !== undefined, soft: true });
+    const look = { frame: 2, halo: 0.22, soft: true } as const,
+      lit = `${size}:${phase}`;
+    if (tint === undefined) render(ctx, map, size, phase, { ...look, warm });
+    else untinted = kept(plain, lit, plain.get(lit) ?? render(ctx, map, size, phase, { ...look, neutral: true }));
   }
   if (tint && tint !== '#ffffff') {
     // Tint each channel independently and preserve the atlas's transparent margins.
-    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height),
+    const from = untinted ?? ctx.getImageData(0, 0, canvas.width, canvas.height),
+      pixels = untinted ? new ImageData(from.width, from.height) : from,
       [red, green, blue] = rgb(tint);
-    for (let i = 0; i < pixels.data.length; i += RGBA) {
-      pixels.data[i] = ((pixels.data[i] ?? 0) * red) / CHANNEL_MAX;
-      pixels.data[i + 1] = ((pixels.data[i + 1] ?? 0) * green) / CHANNEL_MAX;
-      pixels.data[i + 2] = ((pixels.data[i + 2] ?? 0) * blue) / CHANNEL_MAX;
+    for (let i = 0; i < from.data.length; i += RGBA) {
+      pixels.data[i] = ((from.data[i] ?? 0) * red) / CHANNEL_MAX;
+      pixels.data[i + 1] = ((from.data[i + 1] ?? 0) * green) / CHANNEL_MAX;
+      pixels.data[i + 2] = ((from.data[i + 2] ?? 0) * blue) / CHANNEL_MAX;
+      pixels.data[i + 3] = from.data[i + 3] ?? 0;
     }
     ctx.putImageData(pixels, 0, 0);
-  }
-  sprites.set(key, canvas);
-  const [oldest] = sprites.keys();
-  if (sprites.size > SPRITES_KEPT && oldest !== undefined) sprites.delete(oldest);
-  return canvas;
+  } else if (untinted) ctx.putImageData(untinted, 0, 0);
+  return kept(sprites, key, canvas);
 }
 
 // The moon for the tile, the sheet and its calendar: its disc filling `canvas`, as a photograph
