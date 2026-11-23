@@ -1326,7 +1326,7 @@ export class WeatherScene {
       hazeCanvas.width = haze.width;
       hazeCanvas.height = haze.height;
       context2d(hazeCanvas).putImageData(haze, 0, 0);
-      // Density: 3,500 faint stars and 100–200 bright ones to a phone screen.
+      // Density: 3,500 faint stars to a phone screen, and about 280 bright ones.
       const area = clamp((width * height) / (393 * 852), 0, 2),
         faint = Math.round(Math.min(7000, counts[0] * area)),
         twinklers: Twinkler[] = [];
@@ -1365,9 +1365,11 @@ export class WeatherScene {
         c.fillStyle = color(i % 5);
         c.fillRect(x, y, size, size);
       }
-      // Bright stars: about 60 to every 100,000 pt of sky, each a soft dot some 1-2 pt across in
-      // a tint of its own.
-      const count = Math.round(Math.min(400, counts[1] * area));
+      // Bright stars: one for every thirteen of the preset's stars to a phone screen, about 80 to
+      // every 100,000 pt of sky, and as thick on a sky up to four phone screens in size. Each is
+      // a soft dot some 1-2 pt across in a tint of its own.
+      const reach = clamp((width * height) / (393 * 852), 0, 4),
+        count = Math.round(Math.min(1200, (counts[0] + counts[1]) * 0.077 * reach));
       for (let i = 0; i < count; i++) {
         const m = hash(i, 158);
         twinklers.push({
