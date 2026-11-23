@@ -114,6 +114,11 @@ test('eight particles share six distinct textures and wrap through the emitter f
   assert.equal(x, -97);
   assert.ok(Math.abs(fade - 0.4) < 1e-8);
   assert.deepEqual(cloudPosition({ ...first, x: -99, speed: 1 }, 2), [99, 1 / 7.5]);
+  // A card that sees past the deck's ends has it spread until the fading starts at the card's edge.
+  const [spread, whole] = cloudPosition({ ...first, x: 50 }, 0, 370);
+  assert.equal(spread, 200);
+  assert.equal(whole, 1);
+  assert.deepEqual(cloudPosition({ ...first, x: 50 }, 0, 80), [50, 1]);
 });
 test('the outer decks capture unit size and the middle decks capture a reproducible uniform size', () => {
   const deck: CloudDeck = ['cumulus', 6, [4, 4], 0, [0, 0], [12, 8, 4]];

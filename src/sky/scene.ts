@@ -510,6 +510,8 @@ const TILE_FLARE = { ring: 1.7, ringStrength: 2.8, size: 1.9, strength: 1.7, glo
 // white core takes, and how strong it is.
 // How much of its own width a far cloud's surface is smoothed over.
 const FAR_SOFT = 0.016;
+// The size of a fringe puff, in px, at which the fringe starts to show, and at which it shows whole.
+const FRINGE_SHOWS = [40, 80] as const;
 const SHINE = { reach: 3.4, core: 0.2, strength: 1 } as const;
 // The sun's spike ball shows only while the sun is more than 9° up, coming in over the next degree.
 const SPIKES = { from: 9, to: 10 } as const;
@@ -1706,7 +1708,7 @@ export class WeatherScene {
       const size = spriteSize(cloud.sprite);
       const w = size.width * CLOUD_PIXEL * cloud.scale * projection,
         h = size.height * CLOUD_PIXEL * cloud.scale * projection;
-      const [worldX, fade] = cloudPosition(cloud, phase / 1000);
+      const [worldX, fade] = cloudPosition(cloud, phase / 1000, width / 2 / projection);
       const x = camera.centerX + worldX * projection - w / 2,
         y = camera.centerY - (cloud.y - camera.y) * projection - h / 2 - lift;
       if (x + w <= 0 || x >= width || y + h <= 0 || y >= height || fade <= 0) continue;
@@ -2430,8 +2432,12 @@ export class WeatherScene {
     const camera = cloudCamera(p, width, height, this.tile, this.textScale),
       seconds = phase / 1000,
       [spreadX, spreadY, spreadZ] = field.emitter;
+    // On a card so small that a puff's wisps would be specks, the fringe is left out.
+    const puff = (field.size * camera.focalPixels) / camera.z,
+      shows = clamp((puff - FRINGE_SHOWS[0]) / (FRINGE_SHOWS[1] - FRINGE_SHOWS[0]));
+    if (shows <= 0) return;
     ctx.save();
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = alpha * shows;
     for (let id = 0; id < field.count; id++) {
       const phaseAtBirth = hash(id, 51) * 2 * Math.PI,
         radius = field.size + field.amplitude * Math.sin(phaseAtBirth + seconds * field.frequency),

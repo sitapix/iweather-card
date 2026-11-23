@@ -156,13 +156,19 @@ export function deckClouds(decks: readonly (CloudDeck | null)[], artworkSeed = 1
     return clouds;
   });
 }
-export function cloudPosition(cloud: DeckCloud, seconds: number): [x: number, fade: number] {
-  const { extent } = cloud;
-  if (extent <= 0) return [0, 0];
-  const track = cloud.x - seconds * cloud.speed,
+// The share of a deck's half-width, at each end, over which a cloud fades.
+const EDGE = 0.075;
+// Where a cloud is across its deck, and how much of it shows: it fades at the deck's ends and comes
+// round again. A card that sees farther to each side than the deck runs (`reach`, in scene units
+// from the middle) has the deck spread until the fading starts at its edges, each cloud as far
+// along the deck as before.
+export function cloudPosition(cloud: DeckCloud, seconds: number, reach = 0): [x: number, fade: number] {
+  if (cloud.extent <= 0) return [0, 0];
+  const extent = Math.max(cloud.extent, reach / (1 - EDGE)),
+    track = (cloud.x * extent) / cloud.extent - seconds * cloud.speed,
     span = 2 * extent;
   const x = track >= -extent && track <= extent ? track : ((((track + extent) % span) + span) % span) - extent;
-  return [x, Math.min(1, (extent - Math.abs(x)) / (0.075 * extent))];
+  return [x, Math.min(1, (extent - Math.abs(x)) / (EDGE * extent))];
 }
 
 // An image decoded off the main thread: the browser decodes a Blob's bytes in the
