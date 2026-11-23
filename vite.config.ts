@@ -50,7 +50,7 @@ function styleComments(): Plugin {
 // Every dashboard loads the card's file, so what stands beside it must stay out of it, and it grows
 // only on purpose: past CARD_BYTES the build fails, and the number is raised by hand, by a little.
 const CARD = 'iweather-card.js',
-  CARD_BYTES = 1_059_000,
+  CARD_BYTES = 1_060_000,
   WORD_FILES = 'src/weather/word-files/',
   // The longest sentences of each language, which the card's file must not hold.
   SENTENCES_EACH = 3;
