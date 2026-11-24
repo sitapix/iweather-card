@@ -499,8 +499,9 @@ const STARS_SHOW = 0.005;
 // one gives way to the other, and how far the raised lights are greyed.
 const BLANKET_TINT = 4;
 const STORM_LID = { direct: 0.5, opposite: 0.3, level: 1.45, most: 7, day: 1.25, dusk: [6, -6], grey: 0.6 } as const;
-// A list tile's veil: its colour, the most of it, and the sky brightness (0–255) that gets it all.
-const VEIL = { color: '#c8c6c0', most: 0.3, bright: 120 } as const;
+// A list tile's veil: its colour, the most of it, and the sky brightnesses (0–255) that get none of
+// it, as a night's does, and all of it.
+const VEIL = { color: '#c8c6c0', most: 0.3, dark: 50, bright: 120 } as const;
 // A list tile's flare, larger for the tile than a whole sky's: the ring's radius as a share of the
 // frame across the tile's width, wide enough to run off the bottom and show as an arc on each side,
 // and how strong it is; the ghosts' size and strength, and how far along the sun's line to the
@@ -1227,7 +1228,7 @@ export class WeatherScene {
       surface.fillRect(0, 0, canvas.width, canvas.height);
       // And under a pale veil by day, as through frosted glass: the brighter the sky, the more of it.
       const [red, green, blue] = rgb(sceneGradient(p, true).colors[1]),
-        day = clamp((red + green + blue) / 3 / VEIL.bright);
+        day = clamp(((red + green + blue) / 3 - VEIL.dark) / (VEIL.bright - VEIL.dark));
       surface.globalAlpha = VEIL.most * day;
       surface.fillStyle = VEIL.color;
       surface.fillRect(0, 0, canvas.width, canvas.height);
@@ -1413,13 +1414,17 @@ export class WeatherScene {
     ctx.globalAlpha = p.stars;
     // The twinkling stars' sprites too are drawn smoothly.
     ctx.imageSmoothingQuality = 'high';
-    const enlargedHaze = this.enlarge(ctx, 'haze', haze, width, height);
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(enlargedHaze, -shift, 0);
-    ctx.drawImage(enlargedHaze, across - shift, 0);
-    ctx.restore();
-    this.hazeDrawn = { image: enlargedHaze, shift, across, alpha: p.stars };
+    // A list tile's stars stand on the plain sky, with no haze among them.
+    if (this.tile) this.hazeDrawn = undefined;
+    else {
+      const enlargedHaze = this.enlarge(ctx, 'haze', haze, width, height);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(enlargedHaze, -shift, 0);
+      ctx.drawImage(enlargedHaze, across - shift, 0);
+      ctx.restore();
+      this.hazeDrawn = { image: enlargedHaze, shift, across, alpha: p.stars };
+    }
     // Stars stay out from behind glass panels, whose refraction would smear
     // them into streaks. The cut-out follows each panel's rounded outline, so no
     // edge of it shows through the glass.

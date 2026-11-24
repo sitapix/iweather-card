@@ -88,6 +88,9 @@ const FORECAST_CONTROLS = '.modes,.retry,.hours-arrow';
 const LANDSCAPE = 1.3;
 // A night sky with at least this share of its stars showing reads as clear (see the compact card's styles).
 const STARRY = 0.5;
+// The sun's height, in degrees, under which a compact card's night words go quiet: until then a sky
+// under cloud can still be light.
+const QUIET_SUN = -12;
 // The full layout's daily list spans a grid row for every 3.4 days, two at least.
 const DAYS_PER_ROW = 3.4;
 const MIN_DAILY_ROWS = 2;
@@ -1154,6 +1157,7 @@ export class IWeatherCard extends HTMLElement {
       weather.style.setProperty('--home-tint', tint);
       weather.style.setProperty('--home-pale', pale);
       weather.dataset['starry'] = String(preset.stars >= STARRY);
+      weather.dataset['dim'] = String(preset.elevation < QUIET_SUN);
       this.paint();
       this.syncEffects();
     }
