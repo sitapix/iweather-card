@@ -160,8 +160,9 @@ function fieldAt(fields: readonly ScalarField[], at: number): ScalarField | unde
     : a;
 }
 
-// The small map plays one of two loops, by the rain's outlook (see rainOutlook). While it is falling,
-// the radar's latest frame and those after it (see AHEAD), each a step further on at the rain's drift.
+// The small map plays one of two loops, by the rain's outlook (see rainOutlook). While it is falling
+// or due within the hour, the radar's latest frame and those after it (see AHEAD), each a step
+// further on at the rain's drift.
 // Otherwise the forecast's precipitation, TILE_HOURS of it an hour a picture from the hour now.
 const TILE_HOURS = 12,
   // A forecast hour shows at this opacity at most, as the large map's field does (see the styles).
@@ -1430,13 +1431,14 @@ export class MapViews {
     const live = large && config.map === 'rainviewer' && !config.map_tile_url;
     if (live && !this.gl) void this.startGl();
     // Small, the radar plays by itself where set to (see RadarPreview): its next hour while rain is
-    // falling where the short forecast covers the place, and otherwise the forecast's hours.
+    // falling or due within the hour where the short forecast covers the place, and otherwise the
+    // forecast's hours.
     const gl = live ? this.gl : undefined,
       preview = !large && radar && this.previews(config),
       ahead = radar && gl ? this.shortFrames(view) : [],
       outlook = this.card.update?.ctx.rainOutlook,
       // Undecided, it rests on the radar now until the minute forecast comes.
-      radarLoop = preview && outlook === 'now',
+      radarLoop = preview && (outlook === 'now' || outlook === 'nextHour'),
       hoursLoop = preview && outlook !== undefined && !radarLoop,
       frames = radar ? [...allFrames, ...ahead] : [];
     // With the online map, wind and temperature come from a forecast grid over the view, the
@@ -1616,9 +1618,9 @@ export class MapViews {
       if (preview)
         this.radarPreviews.set(
           view,
-          // Never before now: the radar's latest frame carried on by the rain's drift while it falls,
-          // or else the forecast's hours, each drawn as a field over the map rather than in the
-          // radar's own layer, which then stays hidden.
+          // Never before now: the radar's latest frame carried on by the rain's drift while it falls
+          // or is due within the hour, or else the forecast's hours, each drawn as a field over the
+          // map rather than in the radar's own layer, which then stays hidden.
           new RadarPreview<TileFrame>(
             hours.length > 0 ? null : frameCanvas,
             hours.length > 0

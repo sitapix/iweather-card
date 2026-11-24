@@ -17,25 +17,25 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-test('the playhead holds on now, then crosses a gap a second, blending the two frames either side, and goes round', async () => {
+test('the playhead holds on now, then crosses a gap every half second, blending the two frames either side, and goes round', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
   const paint = vi.fn().mockResolvedValue(true),
     preview = new RadarPreview(canvas(), frames, RADAR_LABEL_STEP, paint, () => true, null);
   await vi.advanceTimersByTimeAsync(0);
   expect(shown()).toBe('0');
-  await vi.advanceTimersByTimeAsync(1900);
+  await vi.advanceTimersByTimeAsync(400);
   expect(shown()).toBe('0');
   expect(opacity(0)).toBe(1);
   // A quarter of the way to the next frame, a quarter of it shows.
-  await vi.advanceTimersByTimeAsync(350);
+  await vi.advanceTimersByTimeAsync(240);
   expect(opacity(0)).toBeCloseTo(0.75, 1);
   expect(opacity(1)).toBeCloseTo(0.25, 1);
-  await vi.advanceTimersByTimeAsync(500);
+  await vi.advanceTimersByTimeAsync(250);
   expect(shown()).toBe('1');
-  await vi.advanceTimersByTimeAsync(1000);
+  await vi.advanceTimersByTimeAsync(500);
   expect(shown()).toBe('2');
   // Past the last frame, round again from now.
-  await vi.advanceTimersByTimeAsync(400);
+  await vi.advanceTimersByTimeAsync(200);
   expect(shown()).toBe('0');
   expect(paint).toHaveBeenCalledTimes(3);
   preview.stop();
@@ -57,9 +57,9 @@ test('stationary playback leaves all frame attributes alone until the blend begi
     observer = new MutationObserver(records => changes.push(...records));
   observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['style', 'data-on'] });
   try {
-    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(400);
     expect(changes).toHaveLength(0);
-    await vi.advanceTimersByTimeAsync(1600);
+    await vi.advanceTimersByTimeAsync(400);
     expect(changes.length).toBeGreaterThan(0);
     expect(shown()).toBe('1');
   } finally {
@@ -82,13 +82,13 @@ test('a frame still to come is passed over, its neighbours blending across it, a
       () => true,
       null,
     );
-  await vi.advanceTimersByTimeAsync(2500);
+  await vi.advanceTimersByTimeAsync(770);
   expect(opacity(1)).toBe(0);
   expect(opacity(0)).toBeCloseTo(0.5, 1);
   expect(opacity(2)).toBeCloseTo(0.5, 1);
   finish(true);
   // The next time round, it shows in its place: past the hold and most of the way to it.
-  await vi.advanceTimersByTimeAsync(1500 + 2000 + 700);
+  await vi.advanceTimersByTimeAsync(730 + 500 + 370);
   expect(shown()).toBe('1');
   preview.stop();
 });
@@ -98,7 +98,7 @@ test('streamed hours reuse painted frames and keep the running playhead', async 
   const paint = vi.fn().mockResolvedValue(true);
   const mount = (node: HTMLCanvasElement) => document.body.append(node);
   const first = new RadarPreview(null, frames.slice(0, 2), RADAR_LABEL_STEP, paint, () => true, null, mount);
-  await vi.advanceTimersByTimeAsync(2600);
+  await vi.advanceTimersByTimeAsync(800);
   const showing = document.querySelector('[data-on]');
   expect(shown()).toBe('1');
   first.stop();
@@ -128,16 +128,16 @@ test('frames drawn on demand hold only the pictures the playhead is on or about 
   // Every frame is ready at once, with nothing asked of the painter: now and the next are drawn.
   expect(paint).not.toHaveBeenCalled();
   expect(held()).toEqual([0, 1]);
-  await vi.advanceTimersByTimeAsync(2500);
+  await vi.advanceTimersByTimeAsync(770);
   expect(held()).toEqual([0, 1, 2]);
   expect(opacity(0)).toBeCloseTo(0.5, 1);
   expect(opacity(1)).toBeCloseTo(0.5, 1);
-  await vi.advanceTimersByTimeAsync(2000);
+  await vi.advanceTimersByTimeAsync(1000);
   expect(held()).toEqual([2, 3, 4]);
   // Across the last gap the first frame is ready for the playhead to come round to.
-  await vi.advanceTimersByTimeAsync(2000);
-  expect(held()).toEqual([0, 4, 5]);
   await vi.advanceTimersByTimeAsync(1000);
+  expect(held()).toEqual([0, 4, 5]);
+  await vi.advanceTimersByTimeAsync(500);
   expect(shown()).toBe('0');
   expect(held()).toEqual([0, 1]);
   // Each picture was drawn once on the way round, and the first two again for the next round.
@@ -176,7 +176,7 @@ test('a hidden or disabled preview rests on now and sets off again when active',
     () => active,
     null,
   );
-  await vi.advanceTimersByTimeAsync(2600);
+  await vi.advanceTimersByTimeAsync(800);
   expect(shown()).toBe('1');
   active = false;
   preview.update();
@@ -185,7 +185,7 @@ test('a hidden or disabled preview rests on now and sets off again when active',
   expect(vi.getTimerCount()).toBe(0);
   active = true;
   preview.update();
-  await vi.advanceTimersByTimeAsync(2600);
+  await vi.advanceTimersByTimeAsync(800);
   expect(shown()).toBe('1');
   active = false;
   await vi.advanceTimersByTimeAsync(100);
@@ -237,7 +237,7 @@ test('the corner says where the playhead is from now, five minutes at a time, as
     );
   await vi.advanceTimersByTimeAsync(0);
   expect(label.textContent).toBe('Now');
-  for (let ms = 0; ms < 3950; ms += 50) {
+  for (let ms = 0; ms < 1500; ms += 50) {
     await vi.advanceTimersByTimeAsync(50);
     said.add(label.textContent);
   }

@@ -2,12 +2,13 @@ import { HOUR, MINUTE, SECOND } from '../lib/time.ts';
 import { say, sayCount } from '../weather/words.ts';
 
 // The small map's precipitation plays by itself, from now on and never before it: the radar's next
-// fifty minutes while precipitation is falling, or else the forecast's hours (see the map's views).
+// fifty minutes while precipitation is falling or due within the hour, or else the forecast's hours
+// (see the map's views).
 // A playhead runs through their times, holding at the start for NOW_HOLD, then crossing one gap
 // between pictures every FRAME_TIME, and round again. The two pictures either side of it blend by how
 // far it is between them, so the rain moves on all the while; each is painted once.
-const FRAME_TIME = SECOND,
-  NOW_HOLD = 2 * SECOND,
+const FRAME_TIME = SECOND / 2,
+  NOW_HOLD = SECOND / 2,
   TICK = SECOND / 30;
 // The corner says where the playhead is from now, to `step` (5 minutes for the radar, an hour for
 // the forecast): "Now", then "In 25 minutes" or "In 3 hours".
