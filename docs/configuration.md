@@ -48,7 +48,7 @@ These apply to the `page` layout.
 |---|---|---|
 | `size` | `standard` | How large the page draws: `standard`, `large` (a quarter larger) or `extra_large` (half as large again), for a screen seen from across a room. Text, tiles and gaps scale together, so fewer columns fit. |
 | `top_padding` | `50` | Space above the current weather, as a percentage of the original spacing: `0`–`200`. The default halves it; `100` restores the original. Text size and the gap below the weather stay the same. |
-| `sheet_style` | `auto` | How a tile opens its details: `auto` (a sheet on a phone, a popover anywhere larger), `sheet`, `card` (a sheet that covers the card and no more) or `popover`. A sheet slides up from the foot of the screen, and goes when pulled down by a finger or a mouse. |
+| `sheet_style` | `auto` | How a tile opens its details: `auto` (a sheet on a phone, a popover anywhere larger), `sheet` or `popover`. A sheet slides up from the foot of the screen, and goes when pulled down by a finger or a mouse. |
 | `tiles` | all, in the default order | The [tiles](#tiles-and-sheets) to show, in this order |
 | `alert_entities` | none | Sensors or binary sensors with weather alerts. Without them, the page shows the National Weather Service's alerts in the United States. See [Alerts](#alerts). |
 | `next_hour_entity` | none | A weather entity whose forecast steps less than an hour, or a sensor listing minute-by-minute precipitation. See [Next-hour precipitation](#next-hour-precipitation). |
@@ -76,7 +76,7 @@ These apply to the `homeview` layout. See [The home view](#the-home-view).
 | `glass_refraction` | `true` | Draw the temperature as glass that bends the sky behind it. `false`, `low_power`, or a browser without WebGL shows plain figures in the sky's colour. |
 | `show_high_low` | `true` | Today's high and low under the condition |
 | `glass_strength` | `standard` | How deep the glass temperature is cut and how far it bends the sky: `subtle`, `standard` or `strong`, or `clear` for the deepest cut without the white tint, which is harder to read over a dark sky |
-| `sheet_style` | `auto` | How a column opens its details. In this layout `auto` slides a sheet up from the foot of the screen, and once the card takes up at least 80% of the screen's width and height, as on a tablet it has to itself, the sheet covers the card exactly. `card` always keeps the sheet to the card, `sheet` always gives the screen's, and `popover` opens one beside the column. |
+| `sheet_style` | `auto` | How a column opens its details: `auto` (a sheet on a phone, a popover anywhere larger), `sheet` or `popover`. |
 | `air_quality_entity` | none | A sensor reporting an air quality index, shown among the readings |
 
 <a id="look"></a>

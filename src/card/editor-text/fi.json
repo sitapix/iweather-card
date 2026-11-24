@@ -199,6 +199,6 @@
   "Strong": "Voimakas",
   "Clear": "Kirkas",
   "Details open as": "Tiedot avautuvat",
-  "Over the card": "Kortin päälle",
-  "Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.": "Automaattinen avaa tiedot näytön alareunasta. Kun kortti täyttää lähes koko näytön, tiedot avautuvat kortin sisälle."
+  "Automatic opens a sheet on phones and a popover on larger screens.": "Automaattinen avaa tiedot puhelimessa alareunasta ja suuremmilla näytöillä pieneen paneeliin.",
+  "A large glass temperature and a clock, with the days ahead along the bottom.": "Iso lasinen lämpötilalukema ja kello. Alarivillä näkyvät tulevat päivät."
 }

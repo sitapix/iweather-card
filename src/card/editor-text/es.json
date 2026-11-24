@@ -199,6 +199,6 @@
   "Strong": "Fuerte",
   "Clear": "Transparente",
   "Details open as": "Los detalles se abren como",
-  "Over the card": "Sobre la tarjeta",
-  "Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.": "Automático abre los detalles desde la parte inferior de la pantalla. Si la tarjeta ocupa casi toda la pantalla, los detalles se abren dentro de ella."
+  "Automatic opens a sheet on phones and a popover on larger screens.": "Automático abre los detalles desde abajo en el teléfono y en un panel pequeño en pantallas más grandes.",
+  "A large glass temperature and a clock, with the days ahead along the bottom.": "Temperatura de cristal en grande y un reloj, con los próximos días en la fila inferior."
 }

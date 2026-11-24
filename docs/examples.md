@@ -2,7 +2,7 @@
 
 Replace `weather.home` with your weather entity ID. Paste a card example into the dashboard card’s code editor. The whole-page example goes in the dashboard’s raw configuration.
 
-You can also choose **Compact**, **Expanded**, **Full page** or **Wall tablet** under **Quick setup** in the visual editor. A preset changes the presentation and keeps your data sources, units, actions, privacy settings, tiles and dashboard sizing. **Undo** is available until your next edit.
+You can also choose **Compact**, **Home view**, **Expanded**, **Full page** or **Wall tablet** under **Quick setup** in the visual editor. A preset changes the presentation and keeps your data sources, units, actions, privacy settings, tiles and dashboard sizing. **Undo** is available until your next edit.
 
 ## A small city tile
 

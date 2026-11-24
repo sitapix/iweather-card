@@ -199,6 +199,6 @@
   "Strong": "Silná",
   "Clear": "Čirá",
   "Details open as": "Podrobnosti se otevřou jako",
-  "Over the card": "Přes kartu",
-  "Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.": "Automatický režim otevře podrobnosti od spodního okraje obrazovky. Když karta zabírá většinu obrazovky, otevřou se uvnitř karty."
+  "Automatic opens a sheet on phones and a popover on larger screens.": "Automatický režim otevře podrobnosti na telefonu odspodu a na větších obrazovkách v malém panelu.",
+  "A large glass temperature and a clock, with the days ahead along the bottom.": "Velká skleněná teplota a hodiny, dole nadcházející dny."
 }

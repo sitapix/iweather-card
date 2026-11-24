@@ -199,6 +199,6 @@
   "Strong": "強い",
   "Clear": "クリア",
   "Details open as": "詳細の開き方",
-  "Over the card": "カードの上",
-  "Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.": "「自動」では画面下から詳細が開きます。カードが画面の大半を占めるときはカード内に開きます。"
+  "Automatic opens a sheet on phones and a popover on larger screens.": "「自動」では、スマートフォンでは画面下から、大きな画面ではポップオーバーで詳細が開きます。",
+  "A large glass temperature and a clock, with the days ahead along the bottom.": "ガラスの気温と時計を大きく表示し、下段に今後の日々を並べます。"
 }

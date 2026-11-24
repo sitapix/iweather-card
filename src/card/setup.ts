@@ -13,6 +13,21 @@ export const SETUP_PRESETS = [
     config: { weather_layout: 'compact', show_name: true, show_high_low: true },
   },
   {
+    id: 'home',
+    label: 'Home view',
+    icon: 'mdi:home-thermometer-outline',
+    description: 'A large glass temperature and a clock, with the days ahead along the bottom.',
+    config: {
+      weather_layout: 'homeview',
+      weather_scene: true,
+      low_power: false,
+      glass_refraction: true,
+      show_high_low: true,
+      show_clock: true,
+      homeview_row: 'days',
+    },
+  },
+  {
     id: 'forecast',
     label: 'Expanded',
     icon: 'mdi:weather-partly-cloudy',

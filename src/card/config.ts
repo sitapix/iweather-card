@@ -66,8 +66,8 @@ const FONTS = FONT_OPTIONS.map(option => option.value);
 const HOMEVIEW_ROWS = ['days', 'details'] as const;
 // How large the full page draws: standard, or larger for a screen seen from across a room.
 const PAGE_SIZES = ['standard', 'large', 'extra_large'] as const;
-// A sheet from the foot of the screen, one that covers the card and no more, or a popover.
-const SHEET_STYLES = ['auto', 'sheet', 'card', 'popover'] as const;
+// A sheet from the foot of the screen, or a popover.
+const SHEET_STYLES = ['auto', 'sheet', 'popover'] as const;
 // Haptic feedback: the moon's timeline ticking past its marks; that and a tap for each view, day,
 // chart reading, tile and map control; or none.
 const HAPTICS = ['moon', 'all', 'off'] as const;
@@ -215,7 +215,9 @@ export function currentConfig(config: Readonly<Record<string, unknown>>): Record
     tap === 'none' && rest['tap_action'] === undefined ? { ...rest, tap_action: { action: 'none' } } : rest;
   // Haptic feedback was on for everything, or off.
   const haptics = tapped['haptics'];
-  return typeof haptics === 'boolean' ? { ...tapped, haptics: haptics ? 'all' : 'off' } : tapped;
+  const felt = typeof haptics === 'boolean' ? { ...tapped, haptics: haptics ? 'all' : 'off' } : tapped;
+  // A sheet could cover the card and no more. It is the screen's sheet now.
+  return felt['sheet_style'] === 'card' ? { ...felt, sheet_style: 'sheet' } : felt;
 }
 
 // Fills defaults and rejects settings the card cannot honor, with messages HA shows on the card, in

@@ -1180,6 +1180,8 @@ test('a card saved with an older setting loads as it was set', () => {
     ...card,
     tap_action: { action: 'none' },
   });
+  // A sheet kept to the card is the screen's sheet now.
+  assert.equal(normalizeConfig({ ...card, sheet_style: 'card' }).sheet_style, 'sheet');
   assert.throws(() => normalizeConfig({ ...card, hold_action: 'toggle' }), /hold_action must be an action/u);
 });
 

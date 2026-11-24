@@ -87,7 +87,7 @@ map: rainviewer
 | Expanded | `expanded` | Current conditions above the hourly and daily forecasts. Allow about 320 px of height for this layout. |
 | Full page | `page` | Forecasts, alerts and up to 12 detail tiles in two to six columns. In a panel view, current conditions stay at the top as you scroll. |
 
-**Quick setup** offers four presets. Compact, Expanded and Full page use their matching layouts. **Wall tablet** uses Full page with larger text and low-power animation. You can undo a preset until your next edit.
+**Quick setup** offers five presets. Compact, Home view, Expanded and Full page use their matching layouts, and **Home view** turns the glass temperature on. **Wall tablet** uses Full page with larger text and low-power animation. You can undo a preset until your next edit.
 
 <p align="center">
   <img src="docs/images/home-day.webp" alt="Home view by day, with the clock and temperature above readings for rain, wind, humidity and air quality." width="40%">
