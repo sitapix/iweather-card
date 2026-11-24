@@ -199,6 +199,6 @@
   "Strong": "강하게",
   "Clear": "투명하게",
   "Details open as": "세부 정보 열기 방식",
-  "Over the card": "카드 위에",
-  "Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.": "자동은 화면 아래에서 상세 정보를 엽니다. 카드가 화면을 거의 채우면 상세 정보가 카드 안에서 열립니다."
+  "Automatic opens a sheet on phones and a popover on larger screens.": "자동은 휴대폰에서 화면 아래부터 상세 정보를 열고, 큰 화면에서는 팝오버로 엽니다.",
+  "A large glass temperature and a clock, with the days ahead along the bottom.": "유리 효과의 기온과 시계를 크게 표시하고 아래쪽에 앞으로의 날씨를 보여 줍니다."
 }

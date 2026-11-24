@@ -1629,8 +1629,6 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
 /* From the foot, a sheet's words are white rather than the popover's softer white, as are the days
    ahead in its strip. */
 .detail[data-bottom]{color:#fff}.detail[data-bottom] .detail-days{--tense:#fff}.detail[data-bottom] .detail-days span{color:#fff}
-/* Over the card and no more (see coversCard): the card's own box and corners, at any width. */
-.detail[data-bottom][data-cover]{--foot-top:0px;--foot-radius:var(--ha-card-border-radius,12px);inset:var(--cover-top,0px) var(--cover-right,0px) var(--cover-bottom,0px) var(--cover-left,0px);max-width:none;border-radius:var(--foot-radius)}
 .detail[data-bottom]::-webkit-scrollbar{display:none}
 .detail[data-bottom]::before{content:"";display:block;height:100%}
 /* The sheet stands in a screen-high hold. Kept at its place (see bottom-sheet.ts), the hold's foot

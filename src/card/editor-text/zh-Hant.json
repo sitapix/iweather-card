@@ -199,6 +199,6 @@
   "Strong": "強烈",
   "Clear": "透明",
   "Details open as": "詳細資訊開啟方式",
-  "Over the card": "覆蓋卡片",
-  "Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.": "選取「自動」後，詳細資訊會從螢幕底部開啟。卡片佔滿大部分螢幕時，詳細資訊會在卡片內開啟。"
+  "Automatic opens a sheet on phones and a popover on larger screens.": "選取「自動」後，詳細資訊會在手機上從底部開啟，在較大的螢幕上則以彈出窗格顯示。",
+  "A large glass temperature and a clock, with the days ahead along the bottom.": "大字顯示玻璃氣溫與時鐘，下方顯示未來幾天。"
 }

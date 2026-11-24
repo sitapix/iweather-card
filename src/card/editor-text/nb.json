@@ -199,6 +199,6 @@
   "Strong": "Kraftig",
   "Clear": "Klar",
   "Details open as": "Detaljer åpnes som",
-  "Over the card": "Over kortet",
-  "Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.": "Automatisk åpner detaljene fra bunnen av skjermen. Når kortet fyller mesteparten av skjermen, åpnes de inne i kortet."
+  "Automatic opens a sheet on phones and a popover on larger screens.": "Automatisk åpner detaljene nedenfra på telefoner og i et lite panel på større skjermer.",
+  "A large glass temperature and a clock, with the days ahead along the bottom.": "Stor temperatur i glass og en klokke, med de kommende dagene nederst."
 }

@@ -494,11 +494,11 @@ const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean)
         'Details open as',
         [
           { value: 'auto', label: 'Automatic' },
-          { value: 'card', label: 'Over the card' },
+          { value: 'sheet', label: 'Sheet' },
           { value: 'popover', label: 'Popover' },
         ],
         columns,
-        'Automatic opens details from the bottom of the screen. When the card fills most of the screen, details open within the card.',
+        'Automatic opens a sheet on phones and a popover on larger screens.',
       ),
       field(
         'air_quality_entity',
