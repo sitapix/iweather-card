@@ -360,7 +360,7 @@ export function workOut({
     alerts,
     alertsLead: alerts.some(alert => alertLevel(alert.severity) !== 'green'),
     nextHour,
-    home: config.weather_layout === 'homeview' ? homeView(ctx, night, homeRow) : undefined,
+    home: config.weather_layout === 'homeview' ? homeView(ctx, night, homeRow, alerts, nextHour.data) : undefined,
     ctx,
   };
 }

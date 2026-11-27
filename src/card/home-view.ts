@@ -2,22 +2,26 @@ import type { TileContext } from '../cards/shared/context.ts';
 import type { HomeviewRow } from './config.ts';
 import type { TileId } from '../cards/ids.ts';
 import { airGlyphFor, airNow } from '../cards/air-quality/rules.ts';
-import { POSSIBLE } from '../cards/next-hour/rules.ts';
+import type { WeatherAlert } from '../cards/alerts/rules.ts';
+import { alertTitle } from '../cards/alerts/sheet.ts';
+import { type NextHour, POSSIBLE } from '../cards/next-hour/rules.ts';
 import { glyphs } from '../cards/shared/glyphs.ts';
 import { CONDITION } from './home-assistant.ts';
 import { CHANNEL_MAX, rgb } from '../lib/canvas.ts';
 import { clockFormat, dateFormat } from '../lib/formats.ts';
-import { esc } from '../lib/html.ts';
-import { DAY, HOUR } from '../lib/time.ts';
+import { esc, percent } from '../lib/html.ts';
+import { DAY, HOUR, MINUTES_PER_HOUR } from '../lib/time.ts';
 import { finite } from '../lib/values.ts';
 import { dateKey, dayAsHour, daysUntil } from '../weather/forecast-items.ts';
-import { iconDetails, weatherIcon } from '../weather/icons.ts';
-import { conditionPrecipitation, frozenPrecipitation, wet } from '../weather/precipitation.ts';
+import { alertIcon, alertLevel, iconDetails, weatherIcon } from '../weather/icons.ts';
+import { conditionPrecipitation, frozenPrecipitation, precipitationIntensity, wet } from '../weather/precipitation.ts';
 import { say } from '../weather/words.ts';
 
 // The home view: the weather now, to be read from across a room. Over the sky stand the condition
 // with today's high and low, the time, and the temperature as large as the card allows; at its
-// foot, four columns, which are the days ahead or the readings now.
+// foot, four columns, which are the days ahead or the readings now. An alert that is more than
+// minor takes the condition's place, under a warning sign, and the next hour takes the columns'
+// while rain or snow falls or is due within it.
 const COLUMNS = 4;
 // A column of the foot, as markup: a day's name, symbol, high and low, or a reading's symbol,
 // value and name.
@@ -32,12 +36,20 @@ export interface HomeColumn {
 export interface HomeView {
   // The time where the weather is, without its day period: 7:06.
   clock: string;
-  // The weather's symbol, beside its name.
+  // The weather's symbol, beside its name, or the warning sign beside an alert's.
   symbol: string;
+  // The alerts' title, where one stands for the weather's name: "Winter Storm Watch".
+  alert: string | undefined;
   // The row showing, and what a swipe turns it to, if there is anything to turn to.
   row: HomeviewRow;
   other: HomeviewRow | undefined;
   columns: readonly HomeColumn[];
+  // The next hour, shown in the row's place while it lasts.
+  next: HomeNext | undefined;
+}
+export interface HomeNext {
+  html: string;
+  label: string;
 }
 
 const column = (
@@ -144,10 +156,40 @@ function details(ctx: TileContext): HomeColumn[] {
   return found.slice(0, COLUMNS);
 }
 
+// The next hour: its title, then a bar for every two minutes from now, as tall as it falls hard, on
+// a line with now at one end and an hour on at the other.
+const BAR_MINUTES = 2;
+function nextHourShown({ title, text, series, unit, felt }: NextHour): HomeNext {
+  const bars = Array.from({ length: MINUTES_PER_HOUR / BAR_MINUTES }, (_, bar) => {
+    const level = Math.min(
+      1,
+      Math.max(
+        0,
+        ...series
+          .slice(bar * BAR_MINUTES, (bar + 1) * BAR_MINUTES)
+          .map(value => (value === null ? 0 : precipitationIntensity(value, unit, felt))),
+      ),
+    );
+    return level > 0 ? `<i style="height:${percent(level)}"></i>` : '<i></i>';
+  }).join('');
+  return {
+    html: `<span class="home-next-title">${esc(title)}</span><span class="home-bars">${bars}</span><span class="home-axis"><span>${esc(say('Now'))}</span><span>${esc(say('{minutes}m', { minutes: MINUTES_PER_HOUR }))}</span></span>`,
+    label: say('{title}. {text}', { title, text }),
+  };
+}
+
 // The home view as one update has it. `chosen` is the row a swipe picked, and the settings' until
 // one has; a row with nothing to show gives way to the other.
-export function homeView(ctx: TileContext, night: boolean, chosen: HomeviewRow | undefined): HomeView {
-  const rows = { days: days(ctx), details: details(ctx) },
+export function homeView(
+  ctx: TileContext,
+  night: boolean,
+  chosen: HomeviewRow | undefined,
+  alerts: readonly WeatherAlert[] = [],
+  nextHour?: NextHour,
+): HomeView {
+  const alert = alerts.some(each => alertLevel(each.severity) !== 'green') ? alertTitle(alerts) : undefined,
+    next = nextHour && nextHourShown(nextHour),
+    rows = { days: days(ctx), details: details(ctx) },
     wanted = chosen ?? ctx.config.homeview_row,
     spare: HomeviewRow = wanted === 'days' ? 'details' : 'days',
     row = rows[wanted].length > 0 ? wanted : spare;
@@ -157,10 +199,15 @@ export function homeView(ctx: TileContext, night: boolean, chosen: HomeviewRow |
       .filter(part => part.type !== 'dayPeriod' && (part.type !== 'literal' || part.value.trim() !== ''))
       .map(part => part.value)
       .join(''),
-    symbol: weatherIcon(ctx.condition, night, iconDetails(ctx.attrs, ctx.attrs)),
+    symbol:
+      alert === undefined
+        ? weatherIcon(ctx.condition, night, iconDetails(ctx.attrs, ctx.attrs))
+        : alertIcon(alerts.map(each => each.severity)),
+    alert,
     row,
-    other: row === wanted && rows[spare].length > 0 ? spare : undefined,
+    other: next === undefined && row === wanted && rows[spare].length > 0 ? spare : undefined,
     columns: rows[row],
+    next,
   };
 }
 

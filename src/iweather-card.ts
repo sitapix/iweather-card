@@ -54,6 +54,7 @@ import { bindForecastSwitch, placeThumb } from './cards/forecast/switch.ts';
 import { MapViews } from './map/views.ts';
 import { AlertPanel } from './cards/alerts/panel.ts';
 import { NextHourPanel } from './cards/next-hour/panel.ts';
+import { readsNextHour } from './cards/next-hour/rules.ts';
 import { DetailSheets } from './sheets/sheets.ts';
 import { PageScroll } from './card/page-scroll.ts';
 import { EditPreview } from './card/edit-preview.ts';
@@ -390,6 +391,18 @@ export class IWeatherCard extends HTMLElement {
     );
     // A nowcast weather entity for next-hour precipitation streams its own forecast.
     this.nowcast = new WeatherForecast(() => this.forecastsCame());
+    // The home view's alert opens the alerts' sheet, ahead of what a press on the conditions does.
+    this.parts.current.addEventListener(
+      'click',
+      event => {
+        const line = targetOf(event, '.condition, .condition-symbol');
+        if (!line || this.update?.home?.alert === undefined) return;
+        event.stopImmediatePropagation();
+        haptic(this, 'light');
+        this.sheets.open('alerts', this.parts.current, undefined, '0');
+      },
+      true,
+    );
     for (const node of [this.parts.current, this.parts.credit])
       bindPresses(
         node,
@@ -403,8 +416,8 @@ export class IWeatherCard extends HTMLElement {
     this.root.addEventListener('pointerdown', () => this.toggleAttribute('data-pointer', true), true);
   }
   // The home view's foot: a press on a column opens its sheet, a day's on that day and a reading's
-  // own; a swipe across the row, or an arrow key on it, turns it from the days ahead to the readings
-  // now and back.
+  // own, and on the next hour, its own; a swipe across the row, or an arrow key on it, turns it from
+  // the days ahead to the readings now and back.
   bindHomeRow() {
     const row = this.parts.homeRow;
     let from: { x: number; y: number } | undefined,
@@ -435,6 +448,12 @@ export class IWeatherCard extends HTMLElement {
       if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') turn();
     });
     row.addEventListener('click', event => {
+      const next = targetOf(event, '.home-next');
+      if (next && !swiped && this.update?.nextHour.data) {
+        haptic(this, 'light');
+        this.sheets.open('next_hour', next);
+        return;
+      }
       const item = targetOf(event, '.home-item'),
         ctx = this.update?.ctx;
       if (swiped || !item || !ctx || !this.update) return;
@@ -861,7 +880,7 @@ export class IWeatherCard extends HTMLElement {
       if (this.isConnected)
         this.forecasts.update(this.readHass?.connection, config.entity, own, config.forecast_entity, borrowed);
       const nowcast = config.next_hour_entity;
-      if (this.isConnected && inDomain(nowcast, 'weather') && config.weather_layout === 'page')
+      if (this.isConnected && inDomain(nowcast, 'weather') && readsNextHour(config))
         this.nowcast.update(this.readHass?.connection, nowcast, ['hourly']);
       else this.nowcast.stop();
     } finally {
@@ -1012,7 +1031,7 @@ export class IWeatherCard extends HTMLElement {
     parts.placeHome.hidden = !atHome || !home;
     setText(parts.temperature, temperature);
     // Feeling far from the temperature, the page's hero says so in place of the sky.
-    setText(parts.condition, (config.weather_layout === 'page' && feltText) || condition);
+    setText(parts.condition, (config.weather_layout === 'page' && feltText) || rest.home?.alert || condition);
     // The reading a pinned band shows, in one line of added light (see WORDS).
     const brief = addedLight(ctx.id, [
       {
@@ -1065,7 +1084,7 @@ export class IWeatherCard extends HTMLElement {
       .join('\n');
     parts.current.setAttribute(
       'aria-label',
-      `${name}, ${available ? `${fmt(attrs.temperature)} ${attrs.temperature_unit ?? say('degrees')}, ${condition}` : t('unavailable')}`,
+      `${name}, ${available ? `${fmt(attrs.temperature)} ${attrs.temperature_unit ?? say('degrees')}, ${[condition, rest.home?.alert].filter(Boolean).join(', ')}` : t('unavailable')}`,
     );
     const { high, low } = days.find(day => day.today) ?? todayRange(daily?.forecast ?? [], now, timeZone);
     setText(
@@ -1083,26 +1102,27 @@ export class IWeatherCard extends HTMLElement {
     parts.forecast.hidden = !forecast;
   }
   // The home view's own parts: the weather's symbol beside its name, the time, and the foot's four
-  // columns, drawn again only when they change.
+  // columns or the next hour, drawn again only when they change.
   drawHome({ config, home, available }: Update) {
     const { conditionSymbol, clock, homeRow } = this.parts,
       shown = available ? home : undefined;
     conditionSymbol.hidden = !shown;
     clock.hidden = !shown || !config.show_clock;
-    homeRow.hidden = !shown || shown.columns.length === 0;
+    homeRow.hidden = !shown || (shown.columns.length === 0 && !shown.next);
     const key = JSON.stringify(shown);
     if (this._homeKey === key) return;
     this._homeKey = key;
     conditionSymbol.innerHTML = shown?.symbol ?? '';
     setText(clock, shown?.clock ?? '');
-    homeRow.dataset['row'] = shown?.row ?? '';
-    homeRow.innerHTML =
-      shown?.columns
-        .map(
-          ({ key, tile, label, html }) =>
-            `<button type="button" class="home-item" data-key="${key}"${tile ? ` data-tile="${tile}"` : ''} aria-label="${esc(label)}">${html}</button>`,
-        )
-        .join('') ?? '';
+    homeRow.dataset['row'] = shown?.next ? 'next' : (shown?.row ?? '');
+    homeRow.innerHTML = shown?.next
+      ? `<button type="button" class="home-next" aria-label="${esc(shown.next.label)}">${shown.next.html}</button>`
+      : (shown?.columns
+          .map(
+            ({ key, tile, label, html }) =>
+              `<button type="button" class="home-item" data-key="${key}"${tile ? ` data-tile="${tile}"` : ''} aria-label="${esc(label)}">${html}</button>`,
+          )
+          .join('') ?? '');
   }
   // The sky. A running animation fades between scenes; still renders cut straight over.
   drawScene({ inputs, config, ctx }: Update) {

@@ -1448,6 +1448,15 @@ canvas.radar-layer.frame{width:100%;height:100%;filter:blur(1px)}.map-still{posi
  .home-item>.home-symbol{margin:min(1.2cqw,1.2cqh) 0;overflow:visible}
  .home-symbol svg{display:block;width:max(18px,min(7.6cqw,7.6cqh));height:max(18px,min(7.6cqw,7.6cqh))}
  .home-low{color:var(--home-pale,#fff)}
+ /* The next hour in the row's place: its title, a round bar for every two minutes as tall as it
+    falls hard, standing just off a faint line, and under the line now and an hour on. */
+ .weather[data-layout=homeview][data-daily] .home-row[data-row=next]{display:block;padding-right:var(--home-x);padding-left:var(--home-x);font-size:max(13px,min(4.9cqw,4.9cqh))}
+ .home-next{display:flex;flex-direction:column;width:100%;margin:0;padding:0;border:0;border-radius:12px;background:none;color:var(--home-pale,#fff);font:inherit;line-height:inherit;text-align:left;text-shadow:inherit;cursor:pointer}.home-next:active{opacity:.7}
+ .home-next-title{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .home-bars{display:flex;align-items:flex-end;gap:min(1.2cqw,1.2cqh);height:min(11.7cqw,11.7cqh);margin-top:min(3.4cqw,3.4cqh);padding-bottom:min(1.3cqw,1.3cqh);border-bottom:1px solid #ffffff40}
+ .home-bars i{flex:1;border-radius:99px;background:var(--home-tint,#fff)}
+ .home-bars i[style]{min-height:min(1.6cqw,1.6cqh)}
+ .home-axis{display:flex;justify-content:space-between;margin-top:min(.7cqw,.7cqh)}
 }
 /* Home view defaults to rounded type. The temperature takes its colour from the sky, with a glass
    canvas over its text where supported (see GlassFigures). */

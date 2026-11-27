@@ -19,6 +19,7 @@ Look up a YAML option, its default, and what it changes. The visual editor shows
 - [Filling the forecast](#filling-the-forecast)
 - [Local only](#local-only)
 - [Card sizes](#card-sizes)
+- [Styling](#styling)
 
 ## Card
 
@@ -78,6 +79,8 @@ These apply to the `homeview` layout. See [The home view](#the-home-view).
 | `glass_strength` | `standard` | How deep the glass temperature is cut and how far it bends the sky: `subtle`, `standard` or `strong`, or `clear` for the deepest cut without the white tint, which is harder to read over a dark sky |
 | `sheet_style` | `auto` | How a column opens its details: `auto` (a sheet on a phone, a popover anywhere larger), `sheet` or `popover`. |
 | `air_quality_entity` | none | A sensor reporting an air quality index, shown among the readings |
+| `alert_entities` | none | Sensors or binary sensors with weather alerts. An alert in force takes the condition's place. See [Alerts](#alerts). |
+| `next_hour_entity` | none | Minute-by-minute precipitation. While rain or snow falls or is due within the hour, its chart takes the row's place. See [Next-hour precipitation](#next-hour-precipitation). |
 
 <a id="look"></a>
 
@@ -158,6 +161,10 @@ More than 10 km from home, the zone's name heads the page and names the map's pi
 - **Days** (`homeview_row: days`): the next four days, each with its symbol, high and low.
 - **Readings** (`homeview_row: details`): how long until rain or snow, the wind, the humidity and the air quality index. A reading the weather doesn't have is left out, and the UV index fills in. The air quality index comes from `air_quality_entity`; this layout asks no outside service for one.
 
+With `alert_entities` set, an alert that is more than minor takes the condition's place under a warning sign: "Winter Storm Watch", or "Flood Watch & 1 More" for several. Pressing it opens every alert in full. This layout asks no outside service for alerts, so without a sensor it shows none.
+
+While rain or snow falls or is due within the hour, the next hour takes the row's place: a title such as "Heavy Snow Forecasted" over a bar for every two minutes, from now to an hour on, as tall as it falls hard. Pressing it opens the hour minute by minute. It needs minute-by-minute data, from `next_hour_entity` or an OpenWeatherMap entity (see [Next-hour precipitation](#next-hour-precipitation)); without that, the row stays as it is.
+
 Pressing a column opens its details: a day opens that day's forecast, and a reading its own sheet, such as the air quality's. Swiping across the row, or an arrow key on it, turns it from one to the other. Tapping anywhere above it does what `tap_action` says. The card is square unless the dashboard or `--iweather-height` gives it a height, and every size in it follows the card's shorter side, so it keeps its proportions at any size. Shorter than 250 px it lets go of the row, and under 170 px it reads as any small card does.
 
 ```yaml
@@ -235,7 +242,7 @@ With a temperature sensor, the card reads Home Assistant's own long-term statist
 
 With none set, an OpenWeatherMap entity in its One Call mode gives the next hour by itself: the card asks Home Assistant for its minute forecast every five minutes while in sight, from data Home Assistant already holds.
 
-The panel appears while precipitation falls or starts within 50 minutes. Tap it to see the hour minute by minute, with the rest of the day's forecast. Gaps in the source are unknown. For example, “Rain · Now–+4m” means the available readings cover four more minutes of rain; it does not predict when the rain will stop.
+The panel appears while precipitation falls or starts within 50 minutes, and its title says how heavy it gets: "Light Rain Forecasted", "Rain Forecasted" or "Heavy Rain Forecasted", and "Flurries", "Snow" or "Heavy Snow Forecasted" for snow. Tap it to see the hour minute by minute, with the rest of the day's forecast. Gaps in the source are unknown. For example, “Rain · Now–+4m” means the available readings cover four more minutes of rain; it does not predict when the rain will stop.
 
 ## The map
 
