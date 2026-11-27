@@ -462,7 +462,7 @@ test('an integration that gives minute precipitation when asked fills the next h
   };
   const card = await page({}, { ...hassWith(callWS), entities: { 'weather.home': { platform: 'openweathermap' } } });
   await vi.waitFor(() => {
-    expect(part(card, '.next-title').textContent).toBe('Rain Forecasted');
+    expect(part(card, '.next-title').textContent).toBe('Light Rain Forecasted');
   });
   const services = () => asked.filter(message => isRecord(message) && message['type'] === 'call_service');
   expect(services()[0]).toEqual({

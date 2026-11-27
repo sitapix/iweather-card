@@ -507,6 +507,18 @@ const homeFields = (columns: number, sky: boolean, glass: boolean, air: boolean)
         'Shows air quality in the bottom row. Leave blank to show the UV index when available.',
       ),
       ...(air ? [airScale()] : []),
+      field(
+        'alert_entities',
+        'Weather alert sensors',
+        { entity: { multiple: true, domain: SETTING_DOMAINS.alert_entities } },
+        'Choose the Home Assistant sensors that report weather alerts for this location.',
+      ),
+      field(
+        'next_hour_entity',
+        'Next-hour precipitation',
+        { entity: { domain: SETTING_DOMAINS.next_hour_entity } },
+        'Choose a weather entity with a short-term precipitation forecast or a sensor with minute-by-minute readings.',
+      ),
     ],
     true,
   );

@@ -25,6 +25,7 @@ import { type ForecastSources, forecastLacks } from '../weather/forecast.ts';
 import { openMeteoForecast } from '../weather/open-meteo.ts';
 import { AIR_REFRESH, type AirSupply, airAnswered, openMeteoAir } from '../cards/air-quality/open-meteo.ts';
 import { NWS_ALERTS_REFRESH, type NwsAlerts, nwsAlerts, nwsCovers } from '../cards/alerts/nws.ts';
+import { readsNextHour } from '../cards/next-hour/rules.ts';
 
 // How often each piece is asked for again.
 const REFRESH = {
@@ -437,16 +438,17 @@ export class WeatherRecords {
   }
   // The next hour's precipitation minute by minute, from an integration that gives it only when asked:
   // OpenWeatherMap, in its one mode with minutes, answers from what Home Assistant already holds, so
-  // asking costs nothing outside it. On the full page with no next-hour entity set, every few minutes
-  // while in sight; an entity that answers with an error, as in its other modes, only hourly.
+  // asking costs nothing outside it. On the full page and the home view with no next-hour entity set,
+  // every few minutes while in sight; an entity that answers with an error, as in its other modes,
+  // only hourly.
   async loadMinutes(now: number) {
     const { card } = this,
       config = card.config,
       hass = card.readHass,
       entity = config?.entity;
     if (
-      config?.weather_layout !== 'page' ||
-      config.next_hour_entity !== undefined ||
+      !readsNextHour(config) ||
+      config?.next_hour_entity !== undefined ||
       entity === undefined ||
       hass?.entities?.[entity]?.platform !== MINUTES.domain ||
       !hass.callWS

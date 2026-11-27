@@ -78,13 +78,14 @@ export function minuteSeries(points: readonly MinutePoint[], now: number): Rate[
 }
 
 // Named by how heavy it feels: light rain, rain, heavy rain; flurries, snow, heavy snow.
-// Sleet and hail have no lighter or heavier names. Each comes as it opens a sentence and as it reads
-// further into one, with the titles and the chance whole, as they take after what they name.
+// Sleet and hail have no lighter or heavier names. Each comes as it opens a sentence, as it reads
+// further into one, and in the title over it, with the other titles and the chance whole, as they
+// take after what they name.
 type ByLevel = readonly [light: string, moderate: string, heavy: string];
 interface NextHourKind {
   opening: ByLevel;
   within: ByLevel;
-  forecasted: string;
+  forecasted: ByLevel;
   stopping: string;
   briefly: string;
   possible: string;
@@ -94,7 +95,7 @@ interface NextHourKind {
 const RAIN: NextHourKind = {
   opening: [phrase('Light rain'), phrase('Rain'), phrase('Heavy rain')],
   within: [phrase('light rain'), phrase('rain'), phrase('heavy rain')],
-  forecasted: phrase('Rain Forecasted'),
+  forecasted: [phrase('Light Rain Forecasted'), phrase('Rain Forecasted'), phrase('Heavy Rain Forecasted')],
   stopping: phrase('Rain Stopping'),
   briefly: phrase('Rain Stopping Briefly'),
   possible: phrase('Possible Light Rain'),
@@ -106,7 +107,7 @@ const NEXT_HOUR_WORDS: Readonly<Record<string, NextHourKind>> = {
   snow: {
     opening: [phrase('Flurries'), phrase('Snow'), phrase('Heavy snow')],
     within: [phrase('flurries'), phrase('snow'), phrase('heavy snow')],
-    forecasted: phrase('Snow Forecasted'),
+    forecasted: [phrase('Flurries Forecasted'), phrase('Snow Forecasted'), phrase('Heavy Snow Forecasted')],
     stopping: phrase('Snow Stopping'),
     briefly: phrase('Snow Stopping Briefly'),
     possible: phrase('Possible Flurries'),
@@ -116,7 +117,7 @@ const NEXT_HOUR_WORDS: Readonly<Record<string, NextHourKind>> = {
   sleet: {
     opening: [phrase('Sleet'), phrase('Sleet'), phrase('Sleet')],
     within: [phrase('sleet'), phrase('sleet'), phrase('sleet')],
-    forecasted: phrase('Sleet Forecasted'),
+    forecasted: [phrase('Sleet Forecasted'), phrase('Sleet Forecasted'), phrase('Sleet Forecasted')],
     stopping: phrase('Sleet Stopping'),
     briefly: phrase('Sleet Stopping Briefly'),
     possible: phrase('Possible Sleet'),
@@ -126,7 +127,7 @@ const NEXT_HOUR_WORDS: Readonly<Record<string, NextHourKind>> = {
   hail: {
     opening: [phrase('Hail'), phrase('Hail'), phrase('Hail')],
     within: [phrase('hail'), phrase('hail'), phrase('hail')],
-    forecasted: phrase('Hail Forecasted'),
+    forecasted: [phrase('Hail Forecasted'), phrase('Hail Forecasted'), phrase('Hail Forecasted')],
     stopping: phrase('Hail Stopping'),
     briefly: phrase('Hail Stopping Briefly'),
     possible: phrase('Possible Hail'),
@@ -148,7 +149,8 @@ export const POSSIBLE = 40;
 export const NEAR_MINUTES = 50;
 
 // The next-hour panel's title, which names what falls, and its sentence, which says how hard.
-// Likely precipitation: "Rain Forecasted" over "Rain for the next hour", "Flurries starting in 5
+// Likely precipitation: "Rain Forecasted" over "Rain for the next hour", "Light Rain Forecasted"
+// over "Light rain starting in 5 min", the title naming the heaviest it falls; "Flurries starting in 5
 // min, lasting for 20 min", "Light rain for 20 min, followed by heavy rain" or "Snow starting in 5
 // min, then turning to heavy snow 20 min later"; "Rain Stopping" over "Heavy rain stopping in 10
 // min", and "Rain Stopping Briefly" when it starts again within 20 minutes. When the hour's
@@ -178,6 +180,7 @@ export function nextHourForecast(
   const word = (at: number) => words.opening[Math.max(0, at)] ?? words.opening[0];
   const opening = (at: number) => say(word(at));
   const within = (at: number) => say(words.within[Math.max(0, at)] ?? words.within[0]);
+  const forecasted = (at: number) => say(words.forecasted[Math.max(0, at)] ?? words.forecasted[0]);
   const wet = (i: number) => level(i) >= 0;
   // The heaviest level over minutes [from, to).
   const peak = (from: number, to: number) => Math.max(...series.slice(from, to).map((_, i) => level(from + i)));
@@ -207,10 +210,11 @@ export function nextHourForecast(
     };
   if ((start > 0 && series[start - 1] === null) || (now && stop < 0 && end < MINUTES_PER_HOUR)) {
     // Report only the wet interval we can see. A missing neighbor is neither a start nor a stop.
-    const offset = (minutes: number) => (minutes ? `+${say('{minutes}m', { minutes })}` : say('Now'));
+    const offset = (minutes: number) => (minutes ? `+${say('{minutes}m', { minutes })}` : say('Now')),
+      heaviest = peak(start, stop < 0 ? end : stop);
     return {
-      title: say(words.forecasted),
-      text: `${opening(peak(start, stop < 0 ? end : stop))} · ${offset(start)}–${offset(stop < 0 ? end : stop)}`,
+      title: forecasted(heaviest),
+      text: `${opening(heaviest)} · ${offset(start)}–${offset(stop < 0 ? end : stop)}`,
     };
   }
   if (now) {
@@ -218,7 +222,7 @@ export function nextHourForecast(
       const turn = change(0, end);
       if (turn > 0 && word(level(turn)) !== word(level(0)))
         return {
-          title: say(words.forecasted),
+          title: forecasted(peak(0, end)),
           text: say('{precipitation} for {minutes} min, followed by {next}', {
             precipitation: opening(level(0)),
             minutes: turn,
@@ -226,7 +230,7 @@ export function nextHourForecast(
           }),
         };
       return {
-        title: say(words.forecasted),
+        title: forecasted(peak(0, end)),
         text: say('{precipitation} for the next hour', { precipitation: opening(peak(0, end)) }),
       };
     }
@@ -248,7 +252,7 @@ export function nextHourForecast(
   }
   if (stop >= 0)
     return {
-      title: say(words.forecasted),
+      title: forecasted(peak(start, stop)),
       text: say('{precipitation} starting in {minutes} min, lasting for {lasting} min', {
         precipitation: opening(peak(start, stop)),
         minutes: start,
@@ -258,7 +262,7 @@ export function nextHourForecast(
   const turn = change(start, end);
   if (turn > 0 && word(level(turn)) !== word(level(start)))
     return {
-      title: say(words.forecasted),
+      title: forecasted(peak(start, end)),
       text: say('{precipitation} starting in {minutes} min, then turning to {next} {later} min later', {
         precipitation: opening(level(start)),
         minutes: start,
@@ -267,7 +271,7 @@ export function nextHourForecast(
       }),
     };
   return {
-    title: say(words.forecasted),
+    title: forecasted(peak(start, end)),
     text: say('{precipitation} starting in {minutes} min', {
       precipitation: opening(peak(start, end)),
       minutes: start,
@@ -299,6 +303,9 @@ export interface NextHourPanelData {
   felt: PrecipitationSymbol | undefined;
   key: string;
 }
+// The layouts that show the next hour: the page, as a panel, and the home view, in its foot.
+export const readsNextHour = (config: CardConfig | undefined): boolean =>
+  config?.weather_layout === 'page' || config?.weather_layout === 'homeview';
 // Next-hour card: a sentence and sixty minutes of intensity, shown only
 // when precipitation is on the way.
 // `chance` is the current hour's chance of precipitation, for "Possible" forecasts.
@@ -316,7 +323,7 @@ export function nextHourOf(
     chart: Rate[] = [],
     past = 0,
     unit: string = UNITS.millimeters;
-  if ((id || (minutes?.length ?? 0) > 0) && config.weather_layout === 'page') {
+  if ((id || (minutes?.length ?? 0) > 0) && readsNextHour(config)) {
     const weather = id !== undefined && inDomain(id, 'weather'),
       entity = id === undefined ? undefined : hass?.states[id];
     // With no entity set, the minutes an integration gave when asked, which are rates in mm/h.

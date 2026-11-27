@@ -138,6 +138,78 @@ test('a row with nothing to show gives way to the other, with nothing to turn to
   assert.equal(home.other, undefined);
 });
 
+// A house whose alert sensor holds these events, at one severity.
+const alerted = (severity: string, ...events: string[]): HomeAssistant => {
+  const house = hass();
+  return {
+    ...house,
+    states: {
+      ...house.states,
+      'sensor.alerts': {
+        entity_id: 'sensor.alerts',
+        state: String(events.length),
+        attributes: { Alerts: events.map(Event => ({ Event, Severity: severity })) },
+      },
+    },
+  };
+};
+test('an alert that is more than minor takes the condition’s place, under the warning sign', () => {
+  const settings = { alert_entities: ['sensor.alerts'] },
+    calm = workOut(sources(settings)).home,
+    watch = workOut(sources(settings, { hass: alerted('Severe', 'Winter Storm Watch') })).home;
+  assert.equal(calm?.alert, undefined);
+  assert.equal(watch?.alert, 'Winter Storm Watch');
+  assert.notEqual(watch.symbol, calm?.symbol);
+  assert.equal(
+    workOut(sources(settings, { hass: alerted('Severe', 'Flood Watch', 'Wind Advisory') })).home?.alert,
+    'Flood Watch & 1 More',
+  );
+  // A minor alert leaves the weather its name, and so does a sensor the settings don't name.
+  assert.equal(
+    workOut(sources(settings, { hass: alerted('Minor', 'Special Weather Statement') })).home?.alert,
+    undefined,
+  );
+  assert.equal(workOut(sources({}, { hass: alerted('Severe', 'Winter Storm Watch') })).home?.alert, undefined);
+});
+
+// A house where it snows, with a sensor listing the next hour's rates in mm/h a minute apart.
+const snowing = (rate: (minute: number) => number): HomeAssistant => {
+  const house = hass(),
+    weather = house.states['weather.home'];
+  if (!weather) throw new Error('No weather.');
+  weather.state = 'snowy';
+  house.states['sensor.minutes'] = {
+    entity_id: 'sensor.minutes',
+    state: 'ok',
+    attributes: {
+      unit_of_measurement: 'mm/h',
+      minutely: Array.from({ length: 61 }, (_, minute) => ({
+        time: new Date(NOW + minute * 60_000).toISOString(),
+        precipitation: rate(minute),
+      })),
+    },
+  };
+  return house;
+};
+test('snow within the hour takes the row’s place, under a title that says how heavy', () => {
+  const settings = { next_hour_entity: 'sensor.minutes' },
+    { home } = workOut(sources(settings, { hass: snowing(() => 8) }));
+  assert.equal(home?.next?.label, 'Heavy Snow Forecasted. Heavy snow for the next hour');
+  assert.match(home.next.html, /Heavy Snow Forecasted.*Now.*60m/);
+  // A bar for every two minutes, each as tall as the others.
+  const heights = [...home.next.html.matchAll(/<i style="height:([\d.]+)%">/g)].map(([, height]) => height);
+  assert.equal(heights.length, 30);
+  assert.equal(new Set(heights).size, 1);
+  assert.equal(home.other, undefined);
+  // Starting in 20 minutes, the first ten bars are empty.
+  const later = workOut(sources(settings, { hass: snowing(minute => (minute < 20 ? 0 : 8)) })).home;
+  assert.equal(later?.next?.html.match(/<i><\/i>/g)?.length, 10);
+  // Dry, the row is back, and turns as before.
+  const dry = workOut(sources(settings, { hass: snowing(() => 0) })).home;
+  assert.equal(dry?.next, undefined);
+  assert.equal(dry?.other, 'details');
+});
+
 test('the figures take the sky’s hue, lighter than the sky, and grey under a grey one', () => {
   assert.deepEqual(homeTints('#2d4baa'), { tint: 'hsl(226 90% 70%)', pale: 'hsl(226 90% 92%)' });
   assert.deepEqual(homeTints('#808080'), { tint: 'hsl(0 0% 70%)', pale: 'hsl(0 0% 92%)' });
@@ -166,6 +238,8 @@ test('the home view’s form offers its own settings, and none of another layout
     'sheet_style',
     'glass_refraction',
     'glass_strength',
+    'alert_entities',
+    'next_hour_entity',
   ])
     assert.ok(shown.includes(name), name);
   for (const name of [
@@ -182,7 +256,6 @@ test('the home view’s form offers its own settings, and none of another layout
     'tiles',
     'map',
     'averages_source',
-    'alert_entities',
     'pressure_unit',
     'distance_unit',
     'pressure_entity',

@@ -116,18 +116,26 @@ export interface AlertWords {
   source: string | undefined;
   count: number;
 }
+const unrepeated = <A extends { event: string }>(alerts: readonly A[]): A[] =>
+  alerts.filter((alert, i) => alerts.findIndex(other => other.event === alert.event) === i);
+// The title alone, which the home view puts in place of the weather's name.
+export function alertTitle(alerts: readonly { event: string }[]): string | undefined {
+  const [first, ...rest] = unrepeated(alerts);
+  if (!first) return undefined;
+  const counted = rest.length
+    ? sayCount('{event} & {count} More', '{event} & {count} More', rest.length, { event: first.event })
+    : first.event;
+  return counted.length <= ALERT_TITLE_LIMIT ? counted : first.event;
+}
 export function alertWords(ctx: AlertClock, alerts: readonly PanelAlert[], now: number): AlertWords {
-  const shown = alerts.filter((alert, i) => alerts.findIndex(other => other.event === alert.event) === i),
+  const shown = unrepeated(alerts),
     [first, ...rest] = shown,
     events = (list: readonly PanelAlert[]) => list.map(alert => alert.event).join(', ');
   if (!first)
     return { title: undefined, sentence: say('There is a severe weather alert.'), source: undefined, count: 0 };
-  const counted = rest.length
-      ? sayCount('{event} & {count} More', '{event} & {count} More', rest.length, { event: first.event })
-      : first.event,
-    timed = Number.isFinite(first.starts) || (Number.isFinite(first.ends) && first.ends >= now);
+  const timed = Number.isFinite(first.starts) || (Number.isFinite(first.ends) && first.ends >= now);
   return {
-    title: counted.length <= ALERT_TITLE_LIMIT ? counted : first.event,
+    title: alertTitle(shown),
     sentence: timed
       ? alertSaid(ctx, first, now, shown.length) +
         (rest.length

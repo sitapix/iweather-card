@@ -210,7 +210,7 @@ test('next-hour titles name the hour, and a low chance reads as possible', () =>
       'mm',
       'snow',
     )?.title,
-    'Snow Forecasted',
+    'Heavy Snow Forecasted',
   );
   assert.deepEqual(
     nextHourForecast(
@@ -343,7 +343,7 @@ test('next-hour snow keeps its own word and title, and a bar as high as it feels
     undefined,
   );
   assert.equal(snow.felt, 'snow');
-  assert.deepEqual([snow.data?.title, snow.data?.text], ['Snow Forecasted', 'Flurries for the next hour']);
+  assert.deepEqual([snow.data?.title, snow.data?.text], ['Flurries Forecasted', 'Flurries for the next hour']);
 });
 test('the next hour’s chart starts at the reading under way, and its minutes gone are dimmed', () => {
   const drawn = (panel: ReturnType<typeof nowcast>) => {
@@ -957,7 +957,7 @@ test('with no next-hour entity, the minutes an integration gave when asked draw 
     }));
   const panel = nextHourOf(config, { states: {} }, weather, now, undefined, undefined, minutes);
   // 1.2 mm/h is light; read as an amount a minute it would be heavy.
-  assert.deepEqual([panel.data?.title, panel.data?.text], ['Rain Forecasted', 'Light rain starting in 20 min']);
+  assert.deepEqual([panel.data?.title, panel.data?.text], ['Light Rain Forecasted', 'Light rain starting in 20 min']);
   assert.equal(panel.data?.unit, 'mm');
   assert.equal(panel.data.series[30], 1.2, 'a rate, not an amount a minute');
   // A next-hour entity set takes over from them.

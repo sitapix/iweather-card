@@ -149,7 +149,8 @@ export function weatherAlerts(
   return alertList(state, entry).flatMap(alert => alertOf(alert, state.attributes.friendly_name) ?? []);
 }
 // The alerts the page shows: from the alert sensors set, else those the card asked for itself
-// (`asked`, see loadNwsAlerts), which go by where they came from.
+// (`asked`, see loadNwsAlerts), which go by where they came from. The home view shows its sensors'
+// too, and asks for none.
 export type PageAlert = WeatherAlert & { id: string; ahead: boolean };
 const ASKED_ALERTS = 'nws';
 export function pageAlerts(
@@ -158,7 +159,7 @@ export function pageAlerts(
   now: number,
   asked: readonly WeatherAlert[] = [],
 ): PageAlert[] {
-  if (config.weather_layout !== 'page') return [];
+  if (config.weather_layout !== 'page' && config.weather_layout !== 'homeview') return [];
   const sensors = config.alert_entities ?? [],
     found = sensors.length
       ? sensors.flatMap(id => weatherAlerts(hass?.states[id], hass?.entities?.[id]).map(alert => ({ alert, id })))
